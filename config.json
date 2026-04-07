@@ -4,7 +4,7 @@
 
   "ids": {
     "TEX":   "1PFDn3GfrCOidX5mlTPqR3kFfCiu651PHT6URLMd5HXE",
-    "EU":    "1cINtzPVjgZIrzj7XhI7Kc-OeipMAuBwoC4MCO23nUP4",
+    "EU":    "1JYzGJMM0unecA5mTkBbbRuLGLn10CSPr4R8Py_0COqc",
     "MODA":  "10P866mcJVOXx25wsFTVIDbCX0sWhfQr74PKPQQeQIN4",
     "CORTE": "1PPzoiEOyJ44vX1zeKjyooqCViWxnUER9xZ7bjmZ49UU",
     "PRES":  "1vDbisrZLraeVJWXOqt_cfIrOAcHHyUxclzpfhMZrCMA",
@@ -41,11 +41,11 @@
 
   "plantasExtra": {
     "EJEMPLO": {
-      "nombre": "Nueva Planta Ejemplo",
-      "id": "ID-DEL-ARCHIVO-DRIVE",
+      "PRES EU": "Presentación EU",
+      "id": "1--El9Q8S3D2pG35ry0ts7_fZteFPyFVVRN5I9DnGopM",
       "mods": {
-        "MOD1": "EF MOD1",
-        "MOD2": "EF MOD2"
+        "PESADO": "EFIC PESADO",
+        "MOD2": "EFIC TT"
       }
     }
   },
