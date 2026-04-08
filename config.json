@@ -1,0 +1,69 @@
+{
+  "mes": "Abril",
+  "año": "2026",
+
+  "ids": {
+    "TEX":   "1PFDn3GfrCOidX5m1TPqR3kFfCiu651PHT6URLMd5HXE",
+    "EU":    "119p-5pJDBPOyBCzuzUE_JQVoVT3W1ZgFSAFWsOaXK74",
+    "MODA":  "1Rg5i5Ln9XdgATfL7hDW1nIQ5ms7tA9Xq",
+    "CORTE": "1PPzoiEOyJ44vX1zeKjyooqCViWxnUER9xZ7bjmZ49UU",
+    "PRES":  "1vDbisrZLraeVJWXOqt_cfIrOAcHHyUxclzpfhMZrCMA",
+    "SERV":  "16L-nDm-vZanyMDf5FeREbD5iVmgdDa9u97GsIf4Nqx4"
+  },
+
+  "rangos": {
+    "ok": 0.90,
+    "alerta": 0.80
+  },
+
+  "unidades_dia": {
+    "EU": {
+      "LINEA EU":  1200,
+      "MODA EU":   800,
+      "TWO&TWO":   600,
+      "YETRO":     300
+    },
+    "TEX": {
+      "TEX EVA y LAXO": 1500,
+      "TEX DISNEY":     800
+    }
+  },
+
+  "modDesc": {
+    "TEX|MOD2": "Jogger/Cargo",
+    "TEX|MOD3": "Inferiores",
+    "TEX|MOD4": "Superiores",
+    "TEX|MOD5": "Leggins",
+    "TEX|MOD6": "Jean liviano",
+    "TEX|MOD7": "Jean/Jogger",
+    "EU|M1J":   "Jean",
+    "EU|M2":    "Polo",
+    "EU|M3":    "Ribete",
+    "EU|M5":    "EU Línea",
+    "EU|M1C":   "Camisa",
+    "MODA|M4":  "EU Moda",
+    "MODA|TT1": "Inferiores",
+    "MODA|TT2": "Superiores",
+    "MODA|TT3": "Denim",
+    "MODA|M7":  "EU Moda",
+    "CORTE|CORTE":   "Corte",
+    "PRES|PRES_TEX": "Presentación TEX",
+    "SERV|EST": "Estampado",
+    "SERV|BOR": "Bordado"
+  },
+
+  "plantasExtra": {
+    "EJEMPLO": {
+      "nombre": "Nueva Planta Ejemplo",
+      "id": "ID-DEL-ARCHIVO-DRIVE",
+      "mods": { "MOD1": "EF MOD1", "MOD2": "EF MOD2" }
+    }
+  },
+
+  "modulosExtra": {
+    "TEX|MOD8": {
+      "sheet": "EF MOD8",
+      "nombre": "TEX · Módulo 8 — Nuevo producto"
+    }
+  }
+}
