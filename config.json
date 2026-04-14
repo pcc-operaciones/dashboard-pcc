@@ -18,14 +18,14 @@
 
   "unidades_dia": {
     "EU": {
-      "LINEA EU":  1200,
-      "MODA EU":   800,
-      "TWO&TWO":   600,
-      "YETRO":     300
+      "LINEA EU":  3000,
+      "MODA EU":   1300,
+      "TWO&TWO":   125,
+      "YETRO":     125
     },
     "TEX": {
-      "TEX EVA y LAXO": 1500,
-      "TEX DISNEY":     800
+      "TEX EVA y LAXO": 1160,
+      "TEX DISNEY":     540
     }
   },
 
@@ -53,17 +53,17 @@
   },
 
   "plantasExtra": {
-    "EJEMPLO": {
-      "nombre": "Nueva Planta Ejemplo",
-      "id": "ID-DEL-ARCHIVO-DRIVE",
-      "mods": { "MOD1": "EF MOD1", "MOD2": "EF MOD2" }
+    "PRES|PRES_EU": {
+      "PRES_EU": "Presentación EU",
+      "id": "1--El9Q8S3D2pG35ry0ts7_fZteFPyFVVRN5I9DnGopM",
+      "mods": { "PRES_PESADO": "EFIC PESADO", "PRES_T&T": "EFIC TT" }
     }
   },
 
   "modulosExtra": {
-    "TEX|MOD8": {
-      "sheet": "EF MOD8",
-      "nombre": "TEX · Módulo 8 — Nuevo producto"
+    "EU|PRESEN CAM": {
+      "sheet": "EF PRESC",
+      "nombre": "EU2 PRESENT CAMISA — Camisa"
     }
   }
 }
