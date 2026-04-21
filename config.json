@@ -8,7 +8,8 @@
     "MODA":  "1JYzGJMM0unecA5mTkBbbRuLGLn10CSPr4R8Py_0COqc",
     "CORTE": "1PPzoiEOyJ44vX1zeKjyooqCViWxnUER9xZ7bjmZ49UU",
     "PRES":  "1vDbisrZLraeVJWXOqt_cfIrOAcHHyUxclzpfhMZrCMA",
-    "SERV":  "16L-nDm-vZanyMDfSFeREbD5iVmgdDa9u97GsIf4Nqx4"
+    "SERV":  "16L-nDm-vZanyMDfSFeREbD5iVmgdDa9u97GsIf4Nqx4",
+    "PREU": "1--El9Q8S3D2pG35ry0ts7_fZteFPyFVVRN5I9DnGopM"
   },
 
   "rangos": {
@@ -49,7 +50,9 @@
     "CORTE|CORTE":   "Corte",
     "PRES|PRES_TEX": "Presentación TEX",
     "SERV|EST": "Estampado",
-    "SERV|BOR": "Bordado"
+    "SERV|BOR": "Bordado",
+    "PREU|PESADO": "Present. Moda",
+    "PREU|TT": "Present. TT"
   },
 
   "plantasExtra": {
