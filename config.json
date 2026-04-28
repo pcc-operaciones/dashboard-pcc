@@ -67,6 +67,10 @@
     "EU|PRESEN CAM": {
       "sheet": "EF PRESC",
       "nombre": "EU2 PRESENT CAMISA — Camisa"
+    },
+    "TEX|MOD9": {
+      "sheet": "EF MOD9",
+      "nombre": "MOD9 pantalon"
     }
   }
 }
