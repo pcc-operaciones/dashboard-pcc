@@ -37,6 +37,7 @@
     "TEX|MOD5": "Leggins",
     "TEX|MOD6": "Jean liviano",
     "TEX|MOD7": "Jean/Jogger",
+    "TEX|MOD9": "Inferiores",
     "EU|M1J":   "Jean",
     "EU|M2":    "Polo",
     "EU|M3":    "Ribete",
@@ -70,7 +71,7 @@
     },
     "TEX|MOD9": {
       "sheet": "EF MOD9",
-      "nombre": "MOD9 pantalon"
+      "nombre": "TEX - Módulo 9"
     }
   }
 }
