@@ -1,15 +1,15 @@
 {
-  "mes": "Abril",
+  "mes": "Mayo",
   "año": "2026",
 
   "ids": {
-    "TEX":   "1PFDn3GfrCOidX5mlTPqR3kFfCiu651PHT6URLMd5HXE",
-    "EU":    "1cINtzPVjgZIrzj7XhI7Kc-OeipMAuBwoC4MCO23nUP4",
-    "MODA":  "1JYzGJMM0unecA5mTkBbbRuLGLn10CSPr4R8Py_0COqc",
-    "CORTE": "1PPzoiEOyJ44vX1zeKjyooqCViWxnUER9xZ7bjmZ49UU",
+    "TEX":   "1C1dRt9_m6PqTF5aLCLi8NBrT6inNEBBUoI2Q5HqS2wU",
+    "EU":    "1Ljnf_6JRp3ye7gqezVIFGNWfEx1NQZk6uwcrLyFiPmw",
+    "MODA":  "1lUXiKZyjI9aJzZzh2HKDPq3gESqZBxehcKkfWf4Gezw",
+    "CORTE": "1HklYTPHDRGbSEtw7aflalcNIBzWjAhc0tjBkWSMZphA",
     "PRES":  "1vDbisrZLraeVJWXOqt_cfIrOAcHHyUxclzpfhMZrCMA",
-    "SERV":  "16L-nDm-vZanyMDfSFeREbD5iVmgdDa9u97GsIf4Nqx4",
-    "PREU": "1--El9Q8S3D2pG35ry0ts7_fZteFPyFVVRN5I9DnGopM"
+    "SERV":  "1X2J34ZLlqLZ2gLQ9y59PSEAO-78psKZ5zclbSzniLTg",
+    "PREU": "1jy1S6qw4r2sFedLq9EwxrNnUkFqPgY4swVVBfNjkJZM"
   },
 
   "rangos": {
