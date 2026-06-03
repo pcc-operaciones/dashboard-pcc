@@ -1,14 +1,14 @@
 {
-  "mes": "Mayo",
+  "mes": "Junio",
   "año": "2026",
 
   "ids": {
-    "TEX":   "1C1dRt9_m6PqTF5aLCLi8NBrT6inNEBBUoI2Q5HqS2wU",
-    "EU":    "1Ljnf_6JRp3ye7gqezVIFGNWfEx1NQZk6uwcrLyFiPmw",
-    "MODA":  "1lUXiKZyjI9aJzZzh2HKDPq3gESqZBxehcKkfWf4Gezw",
-    "CORTE": "1HklYTPHDRGbSEtw7aflalcNIBzWjAhc0tjBkWSMZphA",
-    "PRES":  "1vDbisrZLraeVJWXOqt_cfIrOAcHHyUxclzpfhMZrCMA",
-    "SERV":  "1X2J34ZLlqLZ2gLQ9y59PSEAO-78psKZ5zclbSzniLTg",
+    "TEX":   "1gGAyOuPav7VJCTFZM9N-m6wfxAoCjkLaUmHqkkL-MaA",
+    "EU":    "15ztBhy-EEg7tQUBw8cWCmISguyaIcURgEmVh_RODVQc",
+    "MODA":  "1DznmfFkscK1gsGOPPcUIwboHjbNckfuiUH75urb4UrY",
+    "CORTE": "1IC2ptVpHfc5gvoZjeu7gtVbcg2zF4r0f4JRHPJafdjM",
+    "PRES":  "1x120zBs0v4D4f0SG04zNxil5ZoMsAHrAX-Ye4u9iwtI",
+    "SERV":  "15CvpbgYlUpN4lU2m2OdMLqLZzqJcgiCvPS4apCZflOs",
     "PREU": "1jy1S6qw4r2sFedLq9EwxrNnUkFqPgY4swVVBfNjkJZM"
   },
 
@@ -19,14 +19,14 @@
 
   "unidades_dia": {
     "EU": {
-      "LINEA EU":  3000,
-      "MODA EU":   1300,
+      "LINEA EU":  3582,
+      "MODA EU":   1600,
       "TWO&TWO":   125,
       "YETRO":     125
     },
     "TEX": {
-      "TEX EVA y LAXO": 1160,
-      "TEX DISNEY":     540
+      "TEX EVA y LAXO": 1330,
+      "TEX DISNEY":     570
     }
   },
 
