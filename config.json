@@ -72,6 +72,10 @@
     "TEX|MOD9": {
       "sheet": "EF MOD9",
       "nombre": "TEX - Módulo 9"
+    },
+    "MODA|MOD7": {
+      "sheet": "EF M7",
+      "nombre": "MODA - Módulo 7"
     }
   }
 }
