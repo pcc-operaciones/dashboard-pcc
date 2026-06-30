@@ -34,7 +34,7 @@
     "TEX|MOD2": "Jogger/Cargo",
     "TEX|MOD3": "Inferiores",
     "TEX|MOD4": "Superiores",
-    "TEX|MOD5": "Leggins",
+    "TEX|MOD5": "Buso-Polo",
     "TEX|MOD6": "Jean liviano",
     "TEX|MOD7": "Jean/Jogger",
     "TEX|MOD9": "Inferiores",
@@ -76,6 +76,7 @@
     "MODA|MOD7": {
       "sheet": "EF M7",
       "nombre": "MODA - Módulo 7"
+    
     }
   }
 }
