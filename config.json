@@ -3,13 +3,13 @@
   "año": "2026",
 
   "ids": {
-    "TEX":   "13rYYLSHEL4m06ceMrAsjNODDeVOI_M8oKD99rsv15P0",
-    "EU":    "1PIPciyIkh_Lke3Q-GFNFcyFfbSt5W1ijrkkA5DlswiQ",
-    "MODA":  "1Awag6DblgilmVI1bSbjeweBf9aiIyMSLN31d3CP7KNw",
-    "CORTE": "1dtx2s45LLD2YPJuov5bXIix-gVto1Zba0pUYne7NNKQ",
-    "PRES":  "1mWOz1MbTDj2TlUkvAY_vShhFIN7a1IaBgvpS4ypHeGo",
-    "SERV":  "1S2s2W-R5QMJau4tlN5-MyzdZHkK6MtUk8jt4GbMsWMU",
-    "PREU": "1UwtTyvOk_5rJSs4VIrST4l_oA6i6Pd_LNJ4NU-544cs"
+    "TEX":   "1iTeQDaoNUZWeQh-DJofuGAIgNAKU3gf5wJLe1BkTAL4",
+    "EU":    "1xXp-3DOasN_HMWrlMqXiVX6tpy4Ss0VACFe3ydvG_EM",
+    "MODA":  "1xXp-3DOasN_HMWrlMqXiVX6tpy4Ss0VACFe3ydvG_EM",
+    "CORTE": "1sCkT7QRjf3U_2q6-3GqKL8mAJf2HEJxL6tcijRq8VHA",
+    "PRES":  "1jtZxfw0TwEXfzsMNqL8szjtWVIingRVaHpFBPSWqaBc",
+    "SERV":  "1VrbeEAs1o7ViD9LAsBiUNl2HJcezrYsHe3hRTiG-kBM",
+    "PREU": "10oy2xlYrS0NQl0APeAAOuds8CVt9MSLBRuExXWs6R5o"
   },
 
   "rangos": {
@@ -43,7 +43,7 @@
     "EU|M3":    "Ribete",
     "EU|M5":    "EU Línea",
     "EU|M1C":   "Camisa",
-    "MODA|M4":  "EU Moda",
+    "EU|M4":  "Ribete/Inferiores",
     "MODA|TT1": "Inferiores",
     "MODA|TT2": "Superiores",
     "MODA|TT3": "Denim",
