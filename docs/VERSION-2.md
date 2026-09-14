@@ -48,7 +48,7 @@ Consulta local del 14 de septiembre de 2026. Son resultados de esta captura, no 
 
 El cambio de rotación combina unificación de fórmula y sustitución del período fijo de 150 días. No representa un aumento real de desempeño.
 
-## Pendientes que impiden certificar el lanzamiento
+## Pendientes de conciliación y siguientes entregas
 
 1. **EU Moda:** el archivo configurado coincide con EU. Las hojas EF TT1, EF TT2, EF TT3 y EF M7 no se encuentran. Confirmar el archivo y los nombres correctos con el responsable de las hojas.
 2. **Presentación:** PREU2 no tiene ID en config.json. La entrada extra PRES|PRES_EU tiene una clave compuesta y una fuente anterior. Ambas se excluyen del resumen hasta validar ubicación y período.
@@ -66,11 +66,17 @@ El cambio de rotación combina unificación de fórmula y sustitución del perí
 2. Mejorar navegación, jerarquía visual, filtros y estados vacíos; validar los tres frentes y exportaciones.
 3. Preparar revisión final con comparativa, pruebas y notas de versión.
 
-## Lanzamiento
+## Lanzamiento autorizado — 14 de septiembre de 2026
 
-- Mantener los cambios en la rama de desarrollo hasta cerrar los pendientes.
-- Preparar una solicitud de integración a main con la lista final de cambios y evidencia.
-- Verificar qué rama y configuración publica el sitio antes de integrar.
-- Revisar y aprobar la nueva versión con el usuario.
-- Tras la aprobación, integrar y publicar; etiquetar el lanzamiento.
-- Verificar los tres frentes en producción. Si falla, revertir el cambio de lanzamiento y desplegar nuevamente la versión anterior. Un respaldo de código no revierte cambios en datos externos.
+El usuario autorizó sustituir la versión anterior por la versión revisada. Esta entrega incluye el lote de confiabilidad, fechas reales del origen en los tres frentes y avisos compactos con detalle desplegable. Los pendientes anteriores permanecen abiertos; publicar el código no certifica ni actualiza los datos externos. Las propuestas de `REVISION-VISUAL.md` no forman parte del rediseño de esta entrega.
+
+- Publicación: GitHub Pages desde `main`, carpeta raíz.
+- Sitio: https://pcc-operaciones.github.io/dashboard-pcc/
+- Validación previa: 27 pruebas aprobadas y `git diff --check` sin errores.
+- Respaldo anterior: `baseline/pre-v2-2026-09-14`.
+- Identificador previsto de esta entrega: `v2.0.0`.
+- Verificar el despliegue y los tres frentes después de integrar.
+
+### Volver a la versión anterior
+
+Crear una rama desde `main` actualizado y revertir los commits de esta entrega con `git revert`, preservando el historial. Revisar el resultado contra la etiqueta de respaldo y publicar la reversión en `main`. No usar un push forzado. Esto recupera el código anterior, pero no modifica ni restaura las hojas de Google Sheets.

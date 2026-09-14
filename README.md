@@ -10,7 +10,9 @@ Dashboard estático de Operaciones, Costos e Inventario de Producto Terminado. C
 - Plan, criterios de aceptación y pendientes: [docs/VERSION-2.md](docs/VERSION-2.md).
 - Definiciones de los cálculos modificados: [docs/INDICADORES.md](docs/INDICADORES.md).
 
-Esta rama contiene el primer lote de correcciones. Todavía no es la versión aprobada para producción.
+Versión 2 autorizada para producción el 14 de septiembre de 2026. Incluye correcciones de confiabilidad, vigencia de fuentes y avisos compactos. Los pendientes de conciliación de datos y rediseño de gráficos siguen documentados.
+
+Sitio: https://pcc-operaciones.github.io/dashboard-pcc/ (GitHub Pages, rama `main`, carpeta raíz).
 
 ## Comparación local
 
@@ -45,4 +47,4 @@ Propuestas de gráficos y cambios visuales: [revisión visual](docs/REVISION-VIS
 
 `config.json` define período, archivos, módulos y metas. El período del encabezado no certifica la vigencia del contenido de las hojas. Si la configuración falla, Operaciones no consulta automáticamente los archivos antiguos incrustados.
 
-Las credenciales de lectura presentes en el código original requieren una revisión separada de restricciones y acceso antes del lanzamiento. No copiar claves ni respuestas de negocio a documentación, pruebas o comentarios.
+Las credenciales de lectura presentes en el código original mantienen pendiente una revisión separada de restricciones y acceso. No copiar claves ni respuestas de negocio a documentación, pruebas o comentarios.
