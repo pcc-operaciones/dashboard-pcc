@@ -111,9 +111,15 @@ function render(){
  const list=[...records.values()].filter(r=>r.group===active);
  const s=summary(list);
  box.replaceChildren();
- const head=el('div',undefined,'pcc-fresh-head');
- head.append(el('strong','Vigencia de los datos · '+names[active]),el('span',s.status,'pcc-fresh-status'));
- box.append(head);
+ const details=el('details');details.open=expanded;
+ const compact=el('summary',undefined,'pcc-fresh-summary');
+ compact.append(el('span','Vigencia','pcc-fresh-title'),el('span',s.label==='Actualización de la fuente no disponible'?'Fecha del origen no disponible':'Origen: '+s.label,'pcc-fresh-date'));
+ const statuses={'Fuentes con error':'Fuentes incompletas','Hay fuentes atrasadas':'Con atraso','Fechas por confirmar':'Por confirmar','Consultando fuentes':'Consultando','Fuentes sin registros':'Sin registros','Pendiente de consulta':'Pendiente'};
+ compact.append(el('span',statuses[s.status]||s.status,'pcc-fresh-status'));
+ if(s.unknown)compact.append(el('span',s.unknown+' sin fecha completa','pcc-fresh-count'));
+ const more=el('span',undefined,'pcc-fresh-more');more.append(el('span','Ver detalle','pcc-fresh-closed'),el('span','Ocultar detalle','pcc-fresh-open'));compact.append(more);
+ details.append(compact);
+ details.append(el('h2','Vigencia de los datos · '+names[active],'pcc-fresh-heading'));
  box.dataset.state=s.status==='Vigente'?'ok':s.status==='Hay fuentes atrasadas'||s.status==='Fuentes con error'?'error':'unknown';
  const info=el('div',undefined,'pcc-fresh-info');
  const update=el('div');update.append(el('span','Fuentes actualizadas','pcc-fresh-label'),el('strong',s.label));
@@ -129,9 +135,7 @@ function render(){
    data.append(el('strong',cutComplete?'Existencias: '+span({first:cuts[0],last:cuts.at(-1)}):'Existencias: corte no informado o incompleto'));
    const mov=list.find(r=>r.sheet==='INV_Movimientos');if(mov)data.append(el('small',mov.business));
  }else data.append(el('strong',active==='ops'?'Período pendiente de configuración':'Período pendiente de carga'));
- info.append(update,data);box.append(info);
- const details=el('details');details.open=expanded;
- details.append(el('summary','Ver fuentes y fechas ('+list.length+')'));
+ info.append(update,data);details.append(info);
  const wrap=el('div',undefined,'pcc-fresh-scroll'),table=el('table');
  const header=el('tr');for(const t of ['Fuente','Actualización del origen','Corte / último registro','Estado'])header.append(el('th',t));
  const thead=el('thead');thead.append(header);table.append(thead);
@@ -142,14 +146,16 @@ function render(){
    if(r.updated?.missing||r.updated?.invalid)date.append(el('small',(r.updated.missing||0)+' registros sin fecha; '+(r.updated.invalid||0)+' fechas inválidas o futuras.'));
    if(r.state==='error'||r.state==='loading')date.append(el('small','Fechas de la última lectura correcta, si existen.'));
    if(r.queriedAt)source.append(el('small','Consultado: '+r.queriedAt.toLocaleString('es-CO',{timeZone:'America/Bogota'})+' · Colombia'));
+   if(r.state==='error'&&r.message)status.append(el('small',r.message));
    tr.append(source,date,biz,status);body.append(tr);
  }
  table.append(body);wrap.append(table);details.append(wrap);
  details.append(el('p','Vigente: todas las fuentes con fecha verificable dentro de '+limits[active]+' día(s) calendario. Umbral configurable. Un último registro no certifica que el período esté completo.','pcc-fresh-foot'));
  if(root.PCC_REVIEW)details.append(el('p','Vista de comparación: respuestas de fuentes capturadas localmente. Actualizar vuelve a leer esa captura.','pcc-fresh-foot'));
+ if(quality)details.append(quality);
  box.append(details);
 }
-const api={parseDate,dates,inspect,state,summary,track,detail,setContext,configure,readConfig,show,records};
+const api={parseDate,dates,inspect,state,summary,track,detail,setContext,configure,readConfig,show,records,refresh:render};
 root.PccFresh=api;if(typeof module!=='undefined')module.exports=api;
 if(root.document)document.addEventListener('DOMContentLoaded',()=>{if(!document.getElementById('gerencia-bar')&&document.querySelector('.topbar')){active='inv';readConfig();}render();});
 })(typeof window!=='undefined'?window:globalThis);

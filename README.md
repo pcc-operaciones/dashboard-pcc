@@ -39,6 +39,8 @@ No hay dependencias npm para estas pruebas ni para el servidor de comparación. 
 
 Cada frente muestra fechas del origen, período y detalle de sus fuentes. Ver [contrato de fechas y umbrales](docs/VIGENCIA-DATOS.md).
 
+Propuestas de gráficos y cambios visuales: [revisión visual](docs/REVISION-VISUAL.md).
+
 ## Configuración
 
 `config.json` define período, archivos, módulos y metas. El período del encabezado no certifica la vigencia del contenido de las hojas. Si la configuración falla, Operaciones no consulta automáticamente los archivos antiguos incrustados.

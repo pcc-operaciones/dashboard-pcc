@@ -46,7 +46,7 @@
     root.PccFresh?.track(key,[],'loading',meta);
     sources.set(key,{state:'loading'});render();
     try{const rows=await fn();sources.set(key,{state:rows.length?'ok':'empty',at:new Date()});root.PccFresh?.track(key,rows,rows.length?'ok':'empty',meta);render();return rows;}
-    catch(e){sources.set(key,{state:'error',message:e.message});root.PccFresh?.track(key,[],'error',meta);render();throw e;}
+    catch(e){sources.set(key,{state:'error',message:e.message});root.PccFresh?.track(key,[],'error',{...meta,message:e.message});render();throw e;}
   };
   function render(){
     if(!root.document||!document.body)return;
@@ -55,12 +55,13 @@
     const errors=[...sources].filter(([,s])=>s.state==='error'),loading=[...sources].filter(([,s])=>s.state==='loading'),ok=[...sources].filter(([,s])=>s.state==='ok').length;
     box.replaceChildren();
     const summary=document.createElement('summary');
-    summary.textContent=(errors.length?'Datos incompletos':loading.length?'Actualizando fuentes':'Estado de las fuentes')+' · '+ok+'/'+sources.size+' con datos'+(notes.size?' · '+notes.size+' observaciones':'');
+    summary.textContent=root.PccFresh?'Observaciones ('+notes.size+')':(errors.length?'Datos incompletos':loading.length?'Actualizando fuentes':'Estado de las fuentes')+' · '+ok+'/'+sources.size+' con datos'+(notes.size?' · '+notes.size+' observaciones':'');
     box.append(summary);
     const ul=document.createElement('ul');
-    for(const [key,s]of sources){const li=document.createElement('li');li.textContent=key+': '+({ok:'consultada',empty:'sin registros',loading:'cargando',error:'no disponible'}[s.state])+(s.at?' · '+s.at.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}):'')+(s.message?' · '+s.message:'');ul.append(li);}
+    if(!root.PccFresh)for(const [key,s]of sources){const li=document.createElement('li');li.textContent=key+': '+({ok:'consultada',empty:'sin registros',loading:'cargando',error:'no disponible'}[s.state])+(s.at?' · '+s.at.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}):'')+(s.message?' · '+s.message:'');ul.append(li);}
     for(const text of notes.values()){const li=document.createElement('li');li.textContent=text;ul.append(li);}
     box.append(ul);box.classList.toggle('has-error',!!errors.length);
+    root.PccFresh?.refresh();
   }
   root.PccData=api;
   if(typeof module!=='undefined')module.exports=api;

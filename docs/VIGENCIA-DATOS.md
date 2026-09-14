@@ -1,6 +1,6 @@
 # Vigencia de los datos
 
-La franja aparece en Operaciones, Costos e Inventario y permanece al cambiar sus pestañas internas. La fecha del origen nunca se reemplaza por la del botón Actualizar.
+La franja compacta aparece en Operaciones, Costos e Inventario y permanece al cambiar sus pestañas internas. La fecha del origen y el estado quedan visibles; período, fuentes y observaciones se despliegan con Ver detalle. La fecha del origen nunca se reemplaza por la del botón Actualizar.
 
 ## Significado
 

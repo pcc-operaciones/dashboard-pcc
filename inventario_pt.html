@@ -1273,7 +1273,6 @@ async function cargarTodo(){
   document.getElementById('loadingOv').classList.remove('hidden');
   document.getElementById('loadSub').textContent='Conectando con Google Sheets...';
 
-  let datosReales = false;
 
   try{
     // ── 0. Listado oficial EU Línea — gobernado 100% desde Google Sheets ──
@@ -1606,7 +1605,6 @@ async function cargarTodo(){
     const sinCosto=INV_DATA.filter(r=>(r.u0+r.u1+r.u2+r.u3)>0&&(r.c0+r.c1+r.c2+r.c3)===0).length;
     PccData.note('costos',sinCosto?sinCosto+' registros con existencias y costo cero. Validar valorización con la fuente.':null);
     PccData.note('historico','No hay cortes históricos de stock: obsolescencia y rupturas muestran solo el dato actual; la cobertura mensual es una estimación con stock actual.');
-    datosReales=true;
     const movRM=MOV_DATA.filter(m=>m.tipo==='RM').length;
     const movDRM=MOV_DATA.filter(m=>m.tipo==='DRM').length;
     document.getElementById('loadSub').textContent=`Datos cargados ✓ · ${INV_DATA.length} refs · ${movRM} despachos · ${movDRM} devoluciones`;
@@ -1649,13 +1647,7 @@ async function cargarTodo(){
 
   document.getElementById('loadingOv').classList.add('hidden');
 
-  if(datosReales){
-    const ok=document.createElement('div');
-    ok.style.cssText='position:fixed;bottom:16px;right:16px;background:#F0FDF4;border:1px solid #BBF7D0;border-left:3px solid #1E7A40;border-radius:8px;padding:10px 14px;font-size:11px;color:#14532D;z-index:100;font-family:DM Sans,sans-serif;line-height:1.5';
-    ok.innerHTML='✅ <strong>Conectado a Google Sheets.</strong><br>'+INV_DATA.length+' referencias · '+MOV_DATA.filter(m=>m.tipo==='RM').length+' despachos · '+MOV_DATA.filter(m=>m.tipo==='DRM').length+' devoluciones · '+REFS_EU_LINEA.size+' refs EU Línea'+(REFS_EU_LINEA.size===0?' <span style="color:#B03030">(⚠️ sin clasificación)</span>':'✓')+'.';
-    document.body.appendChild(ok);
-    setTimeout(()=>ok.remove(),5000);
-  }
+
 }
 
 function renderTodo(){renderResumen();renderAntiguedad();renderRotacion();renderReferencias();renderSegundas();renderCobros();renderAbastecimiento();renderOpNoRecibida();}

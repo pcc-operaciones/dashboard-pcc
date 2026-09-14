@@ -2480,11 +2480,8 @@ async function loadAll() {
   PccData.note('ops-cobertura', errs.length ? 'Operaciones: '+(tasks.length-errs.length)+' de '+tasks.length+' módulos cargados. Los indicadores excluyen las fuentes no disponibles.' : null);
   const mesLabel=cfg2?`${cfg2.mes} ${cfg2.año}`:'En vivo';
   if(_gerenciaActiva==='ops') g('liveLbl').textContent=`${mesLabel} · consulta ${hora}`;
-  if(errs.length){
-    const eb=g('errBar');
-    eb.innerHTML=`⚠ No se pudieron cargar: <b>${errs.join(' | ')}</b>. Consulta el estado de las fuentes. Los totales son parciales.`;
-    eb.classList.add('show');
-  }
+  // Los errores y su cobertura se consultan en el detalle de vigencia.
+
   renderArea(); renderPlantas(); renderMods(); renderOps(); renderDiario(); renderDiag();
 }
 
@@ -5954,7 +5951,7 @@ function switchGerencia(ger, btn, silencioso) {
     const ts = g('gUpdTs');
     if (ts) ts.textContent = _fmtTs(_updTimestamps.ops);
     const ll = g('liveLbl');
-    if (ll && !ll.textContent.includes('cargando')) {/* mantiene su valor actual */}
+    if(ll)ll.textContent='Operaciones'+(window._pccConfig?' · '+window._pccConfig.mes+' '+window._pccConfig.año:'');
   } else {
     // Ocultar nav de Operaciones
     if (navEl)  navEl.style.display = 'none';
