@@ -10,6 +10,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="data-quality.js"></script>
+<link rel="stylesheet" href="data-quality.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:#F0F4F8;color:#1C2833;}
@@ -290,7 +292,7 @@ canvas{max-width:100%;}
     </div>
   </div>
   <div class="tb-right">
-    <div class="live-pill"><div class="live-dot"></div><span class="live-lbl">En vivo</span></div>
+    <div class="live-pill"><div class="live-dot"></div><span class="live-lbl" id="inv-live-label">Sin consultar</span></div>
     <span class="date-lbl" id="fechaCorte">—</span>
     <button class="btn-ref" onclick="exportarPDF('resumen')" style="background:var(--navy);color:#fff;border-color:var(--navy)">📄 PDF</button>
     <button class="btn-ref" onclick="cargarTodo()">↻ Actualizar</button>
@@ -669,7 +671,7 @@ canvas{max-width:100%;}
     <div class="kpi-inline" style="border-left-color:var(--navy)">
       <div class="ki-lbl">Despachos período</div>
       <div class="ki-val" id="rot-despachos">—</div>
-      <div class="ki-sub">Ene–May 2026</div>
+      <div class="ki-sub" id="rot-periodo">Período pendiente</div>
     </div>
     <div class="kpi-inline" style="border-left-color:var(--teal)">
       <div class="ki-lbl">Promedio diario</div>
@@ -682,7 +684,7 @@ canvas{max-width:100%;}
       <div class="ki-sub">veces / año</div>
     </div>
     <div class="kpi-inline" style="border-left-color:var(--red);background:#FFF5F5">
-      <div class="ki-lbl">Sin movimiento +60d</div>
+      <div class="ki-lbl">Sin despachos en el período</div>
       <div class="ki-val tramo-3" id="rot-sin-mov">—</div>
       <div class="ki-sub">referencias en alerta</div>
     </div>
@@ -1030,7 +1032,9 @@ const API_KEY = 'AIzaSyC7dyZtgc9p8RIDEvkXdXxKQCbuFo8vF8k';
 const BASE    = 'https://sheets.googleapis.com/v4/spreadsheets';
 const KPI_ID  = '1JfM0ntS8wgkPHuntHGyjSyVxCMizPoB14ClcF5ai8Qs';
 const INV_SHEET_ID = '1vIHaOB4nCc9-P3C8UTvMiIUp_Crs5tW2AXN0NmCDnhU';
-const DIAS_PERIODO = 150;
+let DIAS_PERIODO = 1;
+let PERIODO_MOV={days:0,label:"Sin movimientos",missing:[]};
+let inventarioCargando=false;
 const LINEA_EU_ID  = '12rQuY0UcZdVMwbHr4mtny1ANeSR0WyfLsKPSiq4ISfA'; // Listado oficial EU Línea
 
 try{
@@ -1200,9 +1204,11 @@ function pN(v){
 
 async function fetchSheet(sid,sheet,range='A:AZ'){
   const url=`${BASE}/${sid}/values/${encodeURIComponent(sheet+'!'+range)}?key=${API_KEY}&_=${Date.now()}`;
-  const r=await fetch(url);
+  return PccData.load(sheet+' · '+sid.slice(-6),async()=>{
+  const r=await fetch(url,{signal:AbortSignal.timeout(20000),cache:'no-store'});
   if(!r.ok) throw new Error(`Error ${r.status} · ${sheet}`);
   return (await r.json()).values||[];
+  });
 }
 function normStr(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();}
 function mapCols(hdr){
@@ -1253,29 +1259,15 @@ function miniBar(u0,u1,u2,u3){
 
 // ══ CARGA ══
 async function cargarTodo(){
+  if(inventarioCargando)return;
+  inventarioCargando=true;
+  document.getElementById('inv-live-label').textContent='Consultando';
+  document.getElementById('inv-load-error')?.remove();
+  document.querySelectorAll('.page').forEach(el=>el.classList.add('pcc-unavailable'));
+  RUTA_LINEA={}; DESC_MAP={};
+  PccData.note('inventario',null);
   document.getElementById('loadingOv').classList.remove('hidden');
   document.getElementById('loadSub').textContent='Conectando con Google Sheets...';
-
-  // ── Detectar file:// — Chrome bloquea fetch desde origen local ──
-  if(location.protocol==='file:'){
-    cargarDatosPrueba();
-    document.getElementById('fechaCorte').textContent=
-      'Corte: '+new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
-    try{ renderTodo(); }catch(e){ console.error(e); }
-    document.getElementById('loadingOv').classList.add('hidden');
-    // Mostrar banner persistente con instrucciones
-    const banner=document.createElement('div');
-    banner.id='file-banner';
-    banner.style.cssText='position:fixed;top:0;left:0;right:0;background:#1B3A5C;color:#fff;font-size:12px;padding:10px 20px;z-index:999;display:flex;align-items:center;gap:12px;font-family:DM Sans,sans-serif;line-height:1.5';
-    banner.innerHTML=`<span style="font-size:18px">⚠️</span>
-      <span><strong>Modo muestra — Google Sheets no disponible desde file://</strong><br>
-      Para conectar datos reales, sube el archivo a GitHub Pages o ábrelo con un servidor local:<br>
-      <code style="background:rgba(255,255,255,.15);padding:2px 8px;border-radius:4px">python -m http.server 8080</code>
-      → abre <code style="background:rgba(255,255,255,.15);padding:2px 8px;border-radius:4px">http://localhost:8080/inventario_pt.html</code></span>
-      <button onclick="document.getElementById('file-banner').remove()" style="margin-left:auto;background:rgba(255,255,255,.2);border:none;color:#fff;padding:4px 12px;border-radius:6px;cursor:pointer;font-family:DM Sans,sans-serif;font-size:11px">✕ Cerrar</button>`;
-    document.body.prepend(banner);
-    return;
-  }
 
   let datosReales = false;
 
@@ -1283,7 +1275,8 @@ async function cargarTodo(){
     // ── 0. Listado oficial EU Línea — gobernado 100% desde Google Sheets ──
     // Se vacía el Map hardcodeado ANTES de leer Sheets: la hoja es la única fuente de verdad.
     // Si Sheets no está disponible, el catch interior mantiene el Map inicial como fallback.
-    const _backupLinea = new Map(STOCK_MIN_LINEA); // guardar por si falla la conexión
+    const _backupLinea = new Map(STOCK_MIN_LINEA); // respaldo identificado explícitamente si falla la fuente
+    PccData.note('linea',null);
     STOCK_MIN_LINEA.clear();
     REFS_EU_LINEA.clear();
     try{
@@ -1345,10 +1338,12 @@ async function cargarTodo(){
     }catch(e){
       // Si Sheets falló, restaurar el backup hardcodeado para no quedar sin datos
       _backupLinea.forEach((v,k)=>{ REFS_EU_LINEA.add(k); if(v>0) STOCK_MIN_LINEA.set(k,v); });
+      PccData.note('linea','EU Línea no disponible: clasificación y mínimos usan un respaldo local sin fecha validada. No usar para decisiones de abastecimiento.');
       console.warn('[EU Línea] Sheets no disponible — usando backup hardcodeado ('+_backupLinea.size+' refs):', e.message);
     }
     // Si Sheets respondió pero devolvió 0 refs (hoja vacía/error de parsing), restaurar backup
     if(STOCK_MIN_LINEA.size === 0){
+      PccData.note('linea','EU Línea no disponible o vacía: clasificación y mínimos usan un respaldo local sin fecha validada. No usar para decisiones de abastecimiento.');
       _backupLinea.forEach((v,k)=>{ REFS_EU_LINEA.add(k); if(v>0) STOCK_MIN_LINEA.set(k,v); });
       console.warn('[EU Línea] Sheets devolvió 0 refs — restaurando backup ('+_backupLinea.size+' refs)');
     }
@@ -1371,7 +1366,7 @@ async function cargarTodo(){
     // ── 3. Cargar INV_Movimientos (despachos por mes) ──
     document.getElementById('loadSub').textContent='Cargando INV_Movimientos...';
     const rowsMov = await Promise.race([
-      fetchSheet(INV_SHEET_ID,'INV_Movimientos','A:N'),
+      fetchSheet(INV_SHEET_ID,'INV_Movimientos','A:Q'),
       new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000))
     ]);
 
@@ -1416,8 +1411,7 @@ async function cargarTodo(){
     document.getElementById('loadSub').textContent='Cargando trazabilidad...';
     REF_MAP={};
     WIP_LINEA={};
-    RUTA_LINEA={};
-    DESC_MAP={};
+
     try{
       const rowsEU = await Promise.race([
         fetchSheet(KPI_ID,'EU_Lotes','A:AW'),
@@ -1561,6 +1555,7 @@ async function cargarTodo(){
     // Año | Mes | Tipo_Docto | Categoria_Movimiento | Entradas | Salidas |
     // Neto | Costo_Entradas | Costo_Salidas | Costo_Neto | Fecha_Actualizacion
     MOV_DATA=[];
+    const periodRows=[]; let invalidDates=0;
     if(rowsMov.length>1){
       console.log('[INV_Mov] Headers reales:', rowsMov[0]);
       const c=mapCols(rowsMov[0]);
@@ -1575,10 +1570,12 @@ async function cargarTodo(){
       let filasOk=0;
       rowsMov.slice(1).forEach(r=>{
         const ref=String(r[cRef]||'').trim(); if(!ref)return;
-        const anio=cAnio>=0?String(r[cAnio]||'').trim():'2026';
-        const mes=cMes>=0?String(r[cMes]||'').trim().padStart(2,'0'):'01';
+        const anio=cAnio>=0?String(r[cAnio]||'').trim():'';
+        const mes=cMes>=0?String(r[cMes]||'').trim().padStart(2,'0'):'';
+        if(!/^\d{4}$/.test(anio)||+mes<1||+mes>12||!mes||anio+'-'+mes>new Date().toISOString().slice(0,7)){invalidDates++;return;}
+        periodRows.push({fecha:anio+'-'+mes+'-01'});
         const tipo=cTipo>=0?String(r[cTipo]||'').trim().toUpperCase():'';
-        const fecha=anio&&mes?`${anio}-${mes}-15`:'2026-01-15';
+        const fecha=anio+'-'+mes+'-01'; // Agrupación mensual; no representa una fecha de transacción.
         const linea=cLinea>=0?String(r[cLinea]||'').trim():'';
         const entradas=cEnt>=0?pN(r[cEnt]||0):0;
         const salidas=cSal>=0?pN(r[cSal]||0):0;
@@ -1586,7 +1583,8 @@ async function cargarTodo(){
         if(tipo==='RM'  && salidas>0){MOV_DATA.push({ref,tipo:'RM', fecha,linea,entradas:0,salidas});filasOk++;}
         if(tipo==='DRM' && entradas>0){MOV_DATA.push({ref,tipo:'DRM',fecha,linea,entradas,salidas:0});filasOk++;}
         if(tipo==='EOP' && entradas>0){MOV_DATA.push({ref,tipo:'EOP',fecha,linea,entradas,salidas:0});filasOk++;}
-        // Ignorar: TRI (traslado), ENS (ensamble), EAC/AIC (ajuste), CPN, etc.
+        if(tipo==='EAC'||tipo==='AIC'){MOV_DATA.push({ref,tipo,fecha,linea,entradas,salidas});filasOk++;}
+        // Los demás documentos no participan en estos indicadores.
       });
       console.log('[INV_Mov] Filas procesadas OK:',filasOk,'de',rowsMov.length-1,
         '| RM:'+MOV_DATA.filter(m=>m.tipo==='RM').length,
@@ -1594,19 +1592,36 @@ async function cargarTodo(){
         '| EOP:'+MOV_DATA.filter(m=>m.tipo==='EOP').length);
     }
 
+    PERIODO_MOV=PccData.period(periodRows);
+    DIAS_PERIODO=PERIODO_MOV.days||1;
+    document.getElementById('rot-periodo').textContent=PERIODO_MOV.label+' · '+PERIODO_MOV.days+' días calendario';
+    PccData.note('periodo','Rotación anualizada sobre stock actual. Período: '+PERIODO_MOV.label+' ('+PERIODO_MOV.days+' días). No equivale a rotación sobre inventario promedio histórico.');
+    PccData.note('fechas',invalidDates?invalidDates+' filas excluidas por período inválido o futuro.':null);
+    PccData.note('vigencia',PERIODO_MOV.label.slice(-7)<new Date().toISOString().slice(0,7)?'Movimientos disponibles hasta '+PERIODO_MOV.label.slice(-7)+'. La consulta actual no implica que la fuente esté al día.':null);
+    PccData.note('meses',PERIODO_MOV.missing.length?'Meses sin registros: '+PERIODO_MOV.missing.join(', ')+'. Validar integridad del período.':null);
+    const sinCosto=INV_DATA.filter(r=>(r.u0+r.u1+r.u2+r.u3)>0&&(r.c0+r.c1+r.c2+r.c3)===0).length;
+    PccData.note('costos',sinCosto?sinCosto+' registros con existencias y costo cero. Validar valorización con la fuente.':null);
+    PccData.note('historico','No hay cortes históricos de stock: obsolescencia y rupturas muestran solo el dato actual; la cobertura mensual es una estimación con stock actual.');
     datosReales=true;
     const movRM=MOV_DATA.filter(m=>m.tipo==='RM').length;
     const movDRM=MOV_DATA.filter(m=>m.tipo==='DRM').length;
     document.getElementById('loadSub').textContent=`Datos cargados ✓ · ${INV_DATA.length} refs · ${movRM} despachos · ${movDRM} devoluciones`;
 
   }catch(e){
-    console.warn('Sheets inventario no disponible, usando datos de muestra:',e.message);
-    window._sheetsError = e.message;
-    cargarDatosPrueba();
+    console.warn('Inventario no disponible:',e.message);
+    INV_DATA=[]; MOV_DATA=[];
+    PccData.note('inventario','Inventario no disponible: '+e.message+'. Actualice para reintentar.');
+    document.getElementById('inv-live-label').textContent='No disponible';
+    document.getElementById('fechaCorte').textContent='Último intento: '+new Date().toLocaleString('es-CO');
+    const aviso=document.createElement('div');aviso.id='inv-load-error';aviso.className='pcc-load-error';aviso.textContent='No fue posible cargar el inventario. Los indicadores están ocultos para evitar mostrar información incompleta. Use Actualizar para reintentar.';
+    document.querySelector('.topbar').after(aviso);
+    document.getElementById('loadingOv').classList.add('hidden');
+    inventarioCargando=false;
+    return;
   }
 
   document.getElementById('fechaCorte').textContent=
-    'Corte: '+new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
+    'Consulta: '+new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
 
   // ── Verificación cruzada: totales por empresa+bodega ──
   const verif={};
@@ -1619,7 +1634,10 @@ async function cargarTodo(){
   console.log('[INV] Totales por bodega:', JSON.stringify(Object.entries(verif).sort((a,b)=>b[1].uds-a[1].uds).slice(0,10).reduce((o,[k,v])=>(o[k]=v,o),{})));
   console.log('[INV] Total INV_DATA:', INV_DATA.reduce((a,r)=>a+r.u0+r.u1+r.u2+r.u3,0), 'uds en', INV_DATA.length, 'registros');
 
-  try{ renderTodo(); }catch(e){ console.error('Error al renderizar:',e); }
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('pcc-unavailable'));
+  try{ renderTodo(); }catch(e){ console.error('Error al renderizar:',e); PccData.note('render','No se pudieron actualizar todas las vistas.'); }
+  document.getElementById('inv-live-label').textContent='Consulta completada';
+  inventarioCargando=false;
 
   // Inicializar dropdown categorías con todas las líneas disponibles
   glRebuildCats();
@@ -1627,13 +1645,7 @@ async function cargarTodo(){
 
   document.getElementById('loadingOv').classList.add('hidden');
 
-  if(window._sheetsError){
-    const aviso=document.createElement('div');
-    aviso.style.cssText='position:fixed;bottom:16px;right:16px;background:#FEF3C7;border:1px solid #FDE68A;border-left:3px solid #C07A00;border-radius:8px;padding:10px 14px;font-size:11px;color:#92400E;z-index:100;max-width:320px;font-family:DM Sans,sans-serif;line-height:1.5';
-    aviso.innerHTML='⚠️ <strong>Sin conexión a Google Sheets.</strong><br>Mostrando datos de muestra. Verifique la API Key o conexión.';
-    document.body.appendChild(aviso);
-    setTimeout(()=>aviso.remove(),6000);
-  } else if(datosReales){
+  if(datosReales){
     const ok=document.createElement('div');
     ok.style.cssText='position:fixed;bottom:16px;right:16px;background:#F0FDF4;border:1px solid #BBF7D0;border-left:3px solid #1E7A40;border-radius:8px;padding:10px 14px;font-size:11px;color:#14532D;z-index:100;font-family:DM Sans,sans-serif;line-height:1.5';
     ok.innerHTML='✅ <strong>Conectado a Google Sheets.</strong><br>'+INV_DATA.length+' referencias · '+MOV_DATA.filter(m=>m.tipo==='RM').length+' despachos · '+MOV_DATA.filter(m=>m.tipo==='DRM').length+' devoluciones · '+REFS_EU_LINEA.size+' refs EU Línea'+(REFS_EU_LINEA.size===0?' <span style="color:#B03030">(⚠️ sin clasificación)</span>':'✓')+'.';
@@ -1642,77 +1654,6 @@ async function cargarTodo(){
   }
 }
 
-function cargarDatosPrueba(){
-  const rawInv=[
-    ['105842','JOGGER HOMBRE DRIL','30','GRIS','PT001',0,0,0,0,0,0,1,34031],
-    ['105842','JOGGER HOMBRE DRIL','34','GRIS','PT001',0,0,0,0,0,0,1,34031],
-    ['105842','JOGGER HOMBRE DRIL','34','AZUL OSCU','PT001',0,0,0,0,0,0,3,102095],
-    ['105842','JOGGER HOMBRE DRIL','32','AZUL OSCU','PT001',0,0,0,0,0,0,2,68063],
-    ['105842','JOGGER HOMBRE DRIL','36','AZUL OSCU','PT001',0,0,0,0,0,0,1,34032],
-    ['105842','JOGGER HOMBRE DRIL','30','AZUL OSCU','PT001',0,0,0,0,0,0,3,102095],
-    ['105842','JOGGER HOMBRE DRIL','32','BEIGE','PT001',0,0,0,0,0,0,3,102094],
-    ['105843','CAMISA HOMBRE','L','AZUL','PT001',0,0,0,0,0,0,1,24769],
-    ['105843','CAMISA HOMBRE','L','CRUDO','PT001',0,0,0,0,0,0,4,99077],
-    ['105845','CAMISA M/L HOMBRE','XL','BLANCO','PT001',29,620081,0,0,0,0,0,0],
-    ['105845','CAMISA M/L HOMBRE','XL','AZUL OSCU','PT001',31,662845,0,0,0,0,0,0],
-    ['105845','CAMISA M/L HOMBRE','M','BLANCO','PT001',57,1218779,0,0,0,0,0,0],
-    ['105845','CAMISA M/L HOMBRE','XL','NEGRO','PT001',43,921710,0,0,0,0,1,21435],
-    ['105845','CAMISA M/L HOMBRE','L','BLANCO','PT001',34,726991,0,0,0,0,0,0],
-    ['105845','CAMISA M/L HOMBRE','M','NEGRO','PT001',85,1824137,0,0,0,0,3,64381],
-    ['105845','CAMISA M/L HOMBRE','S','BLANCO','PT001',29,620081,0,0,0,0,0,0],
-    ['105845','CAMISA M/L HOMBRE','L','NEGRO','PT001',50,1069910,0,0,0,0,2,42870],
-    ['105846','PANTALON CARGO','28','KAKI','PT001',0,0,50,850000,0,0,80,1360000],
-    ['105846','PANTALON CARGO','30','KAKI','PT001',0,0,45,765000,0,0,70,1190000],
-    ['105846','PANTALON CARGO','32','KAKI','PT001',0,0,30,510000,0,0,60,1020000],
-    ['105847','BLUSA DAMA LINO','S','CREMA','PT001',0,0,0,0,45,990000,30,660000],
-    ['105847','BLUSA DAMA LINO','M','CREMA','PT001',0,0,0,0,60,1320000,40,880000],
-    ['105847','BLUSA DAMA LINO','L','CREMA','PT001',0,0,0,0,35,770000,25,550000],
-    ['105847','BLUSA DAMA LINO','S','IVORY','PT001',0,0,0,0,20,440000,15,330000],
-    ['100652','JEAN DAMA EVA','8','AZUL MEDI','PT001',0,0,20,360000,0,0,61,1098000],
-    ['100652','JEAN DAMA EVA','10','AZUL MEDI','PT001',0,0,15,270000,0,0,40,720000],
-    ['100652','JEAN DAMA EVA','8','AZUL OSCU','PT001',100,1777915,0,0,0,0,0,0],
-    ['100652','JEAN DAMA EVA','10','AZUL OSCU','PT001',0,0,0,0,25,450082,0,0],
-    ['100729','PANTALON DAMA','6','NEGRO','PT001',0,0,0,0,30,540000,50,900000],
-    ['100729','PANTALON DAMA','8','NEGRO','PT001',0,0,0,0,25,450000,45,810000],
-    ['100729','PANTALON DAMA','10','NEGRO','PT001',0,0,0,0,20,360000,35,630000],
-    ['T001','TSHIRT BASIC','S','BLANCO','TI004',20,300000,10,150000,5,75000,0,0],
-    ['T001','TSHIRT BASIC','M','BLANCO','TI004',30,450000,15,225000,0,0,0,0],
-    ['T001','TSHIRT BASIC','L','NEGRO','TI004',25,375000,0,0,0,0,8,120000],
-    ['105842','JOGGER HOMBRE DRIL','32','GRIS','PT002',0,0,5,85000,10,170000,20,340000],
-    ['105843','CAMISA HOMBRE','M','AZUL','PT002',0,0,3,60000,0,0,8,160000],
-    ['100652','JEAN DAMA EVA','10','AZUL MEDI','PT002',0,0,0,0,7,126000,12,216000],
-  ];
-  INV_DATA=rawInv.map(r=>{
-    const ref=String(r[0]).trim();
-    const traz=REF_MAP[ref]||{};
-    const linea=traz.linea||clasificarRef(ref,traz.empresa||'','');
-    const esCobros=String(r[4]).includes('PT003')||String(r[4]).includes('COB');
-    const esSeg=!esCobros&&(String(r[4]).includes('PT002')||String(r[4]).includes('SEG'));
-    return{ref,desc:r[1],talla:String(r[2]),color:r[3],bodega:r[4],
-      linea:esSeg?'Segundas':(linea||'Sin clasificar'),descBodega:r[4],
-      temporada:traz.temporada||'—',
-      u0:r[5],c0:r[6],u1:r[7],c1:r[8],u2:r[9],c2:r[10],u3:r[11],c3:r[12],esSeg,esCobros};
-  });
-  MOV_DATA=[
-    {ref:'105845',tipo:'RM',fecha:'2026-01-15',entradas:0,salidas:150},
-    {ref:'105845',tipo:'RM',fecha:'2026-02-10',entradas:0,salidas:80},
-    {ref:'105845',tipo:'EOP',fecha:'2026-01-05',entradas:350,salidas:0},
-    {ref:'100652',tipo:'RM',fecha:'2026-01-20',entradas:0,salidas:61},
-    {ref:'100652',tipo:'RM',fecha:'2026-03-05',entradas:0,salidas:25},
-    {ref:'100652',tipo:'EOP',fecha:'2026-02-18',entradas:100,salidas:0},
-    {ref:'100729',tipo:'RM',fecha:'2026-04-10',entradas:0,salidas:45},
-    {ref:'100729',tipo:'RM',fecha:'2026-05-15',entradas:0,salidas:60},
-    {ref:'105846',tipo:'RM',fecha:'2026-01-10',entradas:0,salidas:120},
-    {ref:'105846',tipo:'RM',fecha:'2026-05-20',entradas:0,salidas:200},
-    {ref:'105846',tipo:'EOP',fecha:'2025-11-01',entradas:500,salidas:0},
-    {ref:'105847',tipo:'RM',fecha:'2026-02-20',entradas:0,salidas:30},
-    {ref:'T001',tipo:'RM',fecha:'2026-03-10',entradas:0,salidas:40},
-    {ref:'T001',tipo:'EOP',fecha:'2026-01-15',entradas:113,salidas:0},
-    {ref:'100652',tipo:'DRM',fecha:'2026-03-20',entradas:5,salidas:0},
-  ];
-}
-
-// ══ RENDER PRINCIPAL ══
 function renderTodo(){renderResumen();renderAntiguedad();renderRotacion();renderReferencias();renderSegundas();renderCobros();renderAbastecimiento();renderOpNoRecibida();}
 
 function destroyChart(k){if(window[k]){window[k].destroy();window[k]=null;}}
@@ -1728,8 +1669,8 @@ function renderResumen(){
   const despTotal=movFilt.filter(m=>m.tipo==='RM').reduce((a,m)=>a+m.salidas,0);
   const devTotal=movFilt.filter(m=>m.tipo==='DRM').reduce((a,m)=>a+m.entradas,0);
   const despDiario=despTotal/DIAS_PERIODO;
-  const cobertura=despDiario>0?Math.round(totalUds/despDiario):0;
-  const rotacion=totalUds>0?(despTotal/(totalUds+despTotal/2)*365/DIAS_PERIODO).toFixed(1):0;
+  const cobertura=PccData.coverage(totalUds,despTotal,PERIODO_MOV.days);
+  const rotacion=PccData.rotation(totalUds,despTotal,PERIODO_MOV.days)?.toFixed(1)??'—';
   const tasaDev=despTotal?(devTotal/despTotal*100).toFixed(1):'0.0';
   const obsolPct=(totalCosto?(rC/totalCosto*100).toFixed(1):'0.0')+'%';
 
@@ -1769,9 +1710,9 @@ function renderResumen(){
   // KPI cards hero
   document.getElementById('k-rotacion').textContent=rotacion;
   document.getElementById('k-rotacion-meta').textContent='Meta ≥ 4';
-  document.getElementById('k-dias').textContent=cobertura;
+  document.getElementById('k-dias').textContent=cobertura===null?'—':Math.round(cobertura);
   document.getElementById('k-dias').className='hero-val '+(cobertura>90?'bad':cobertura>60?'warn':'good');
-  document.getElementById('k-dias-trend').textContent=(cobertura>90?'▲ Exceso':'▼ OK');
+  document.getElementById('k-dias-trend').textContent=(cobertura===null?'Sin despachos':cobertura>90?'▲ Exceso':'▼ OK');
   document.getElementById('k-dias-trend').className='hero-trend '+(cobertura>90?'dn':'up');
   document.getElementById('k-obsol').textContent=obsolPct;
   document.getElementById('k-obsol-val').textContent=fmtM(rC)+' en riesgo';
@@ -1783,7 +1724,8 @@ function renderResumen(){
   if(kRupSub) kRupSub.textContent=rupTotalN+' sin stock · '+rupParcialN+' bajo mínimo';
   document.getElementById('k-total-uds').textContent=fmt(totalUds);
   // Comprometidos: suma de todos los refs en COMPROMETIDOS
-  const totalComp=Object.values(COMPROMETIDOS).reduce((a,v)=>a+v.comprometidas,0);
+  const refsVisibles=new Set(inv.map(r=>r.ref));
+  const totalComp=Object.entries(COMPROMETIDOS).filter(([ref])=>refsVisibles.has(ref)).reduce((a,[,v])=>a+v.comprometidas,0);
   const elComp=document.getElementById('k-comprometidos');
   if(elComp){ elComp.textContent=fmt(totalComp); }
   document.getElementById('k-total-costo').textContent=fmtM(totalCosto)+' en costo';
@@ -1819,29 +1761,17 @@ function renderResumen(){
     const d=despPorMes[m.key]||0;
     const diasMes=new Date(parseInt(m.key.split('-')[0]),parseInt(m.key.split('-')[1]),0).getDate();
     const dD=d/diasMes;
-    return dD>0?Math.round(totalUds/dD):0;
+    return dD>0?Math.round(totalUds/dD):null;
   });
   // Reemplazar el último con el valor actual calculado
   diasHist[diasHist.length-1]=cobertura;
 
-  // Rupturas por mes: aproximar con % de refs sin despacho ese mes vs total refs
-  const totalRefsNum=Object.keys(agRef).length||1;
-  const rupHist=mesesHist.map(m=>{
-    const refsEseMes=new Set(movFilt.filter(x=>x.tipo==='RM'&&x.fecha.startsWith(m.key)).map(x=>x.ref));
-    // Refs con stock=0 que sí despacharon antes de ese mes
-    const conMovAntes=new Set(movFilt.filter(x=>x.tipo==='RM'&&x.fecha<m.key+'-99').map(x=>x.ref));
-    const rupMes=Object.entries(agRef).filter(([ref,stock])=>stock===0&&conMovAntes.has(ref)).length;
-    return parseFloat((rupMes/totalRefsNum*100).toFixed(1));
-  });
-  rupHist[rupHist.length-1]=parseFloat(rupturaPct);
+  // Solo el corte actual; no hay inventario histórico para reconstruir rupturas.
+  const rupHist=mesesHist.map((_,i)=>i===mesesHist.length-1?parseFloat(rupturaPct):null);
 
-  // Obsolescencia: no tenemos histórico real → dejamos el último real y los anteriores simulados con tendencia
+  // Solo el corte actual; los meses anteriores no se simulan.
   const obsActual=parseFloat(obsolPct);
-  const obsHist=mesesHist.map((_,i)=>{
-    if(i===mesesHist.length-1)return obsActual;
-    // Tendencia regresiva: ±2% por mes
-    return Math.max(0,parseFloat((obsActual*(0.7+i*0.06)).toFixed(1)));
-  });
+  const obsHist=mesesHist.map((_,i)=>i===mesesHist.length-1?obsActual:null);
 
   // CHART 1 — Obsolescencia (línea+área)
   destroyChart('_ch1');
@@ -1875,7 +1805,7 @@ function renderResumen(){
         y:{display:false,beginAtZero:true,max:Math.max(...diasHist)*1.3}},
       layout:{padding:{top:20}}}
   });
-  document.getElementById('ch2-val').textContent=cobertura+'d';
+  document.getElementById('ch2-val').textContent=cobertura===null?'—':Math.round(cobertura)+'d';
 
   // CHART 3 — Rupturas: donut 3 estados EU Línea (sin stock / bajo mínimo / OK)
   destroyChart('_ch3');
@@ -2014,7 +1944,10 @@ function renderResumen(){
     const p=t?r3/t:0;
     const clr=p>=0.5?'#B03030':p>=0.25?'#C07A00':'#1E7A40';
     const lbl=p>=0.5?'🔴 Alto':p>=0.25?'🟡 Medio':'🟢 OK';
-    const cob=despDiario>0?Math.round(t/despDiario):0;
+    const refsLinea=new Set(rows.map(r=>r.ref));
+    const despLinea=movFilt.filter(m=>m.tipo==='RM'&&refsLinea.has(m.ref)).reduce((a,m)=>a+m.salidas,0);
+    const coberturaLinea=PccData.coverage(t,despLinea,PERIODO_MOV.days);
+    const cob=coberturaLinea===null?'—':Math.round(coberturaLinea);
     return `<div class="hero-card" style="border-bottom:3px solid ${clr};cursor:default">
       <div class="hero-icon" style="background:${colorL[l]}18;font-size:16px">📦</div>
       <div class="hero-body">
@@ -2297,11 +2230,11 @@ function renderRotacion(){
     agR[r.ref].stock+=r.u0+r.u1+r.u2+r.u3;
   });
   const despTotal=movFilt.filter(m=>m.tipo==='RM').reduce((a,m)=>a+m.salidas,0);
-  const stockTotal=Object.values(agR).reduce((a,r)=>a+r.stock,0)||1;
+  const stockTotal=Object.values(agR).reduce((a,r)=>a+r.stock,0);
   const diario=despTotal/DIAS_PERIODO;
-  const indiceRot=(despTotal/stockTotal*(365/DIAS_PERIODO)).toFixed(1);
+  const indiceRot=PccData.rotation(stockTotal,despTotal,PERIODO_MOV.days)?.toFixed(1)??'—';
   document.getElementById('rot-despachos').textContent=fmt(despTotal);
-  document.getElementById('rot-diario').textContent=diario.toFixed(1);
+  document.getElementById('rot-diario').textContent=PERIODO_MOV.days?diario.toFixed(1):'—';
   if(document.getElementById('rot-indice')) document.getElementById('rot-indice').textContent=indiceRot;
   const refsConMov=new Set(movFilt.filter(m=>m.tipo==='RM').map(m=>m.ref));
   document.getElementById('rot-sin-mov').textContent=Object.values(agR).filter(r=>!refsConMov.has(r.ref)).length;
@@ -2344,7 +2277,7 @@ function renderRotacion(){
   const stockL={};lineas.forEach(l=>stockL[l]=0);
   inv.forEach(r=>{if(stockL[r.linea]!==undefined)stockL[r.linea]+=r.u0+r.u1+r.u2+r.u3;});
   const tStock=inv.reduce((a,r)=>a+r.u0+r.u1+r.u2+r.u3,0)||1;
-  const cobL=lineas.map(l=>{const dD=despTotal/DIAS_PERIODO*(stockL[l]/tStock);return dD>0?Math.round(stockL[l]/dD):0;});
+  const cobL=lineas.map(l=>{const refs=new Set(inv.filter(r=>r.linea===l).map(r=>r.ref));const desp=movFilt.filter(m=>m.tipo==='RM'&&refs.has(m.ref)).reduce((a,m)=>a+m.salidas,0);const value=PccData.coverage(stockL[l],desp,PERIODO_MOV.days);return value===null?null:Math.round(value);});
   const colCob=cobL.map(v=>v>90?'#B03030':v>60?'rgba(192,122,0,.8)':'rgba(30,122,64,.8)');
   destroyChart('_chCob');
   window._chCob=new Chart(document.getElementById('chartCobertura'),{
@@ -2355,7 +2288,7 @@ function renderRotacion(){
     ]},
     options:{responsive:true,plugins:{legend:{display:false},
       tooltip:{filter:i=>i.datasetIndex===0},
-      datalabels:{display:ctx=>ctx.datasetIndex===0,anchor:'end',align:'top',color:ctx=>colCob[ctx.dataIndex],font:{size:9,weight:'700'},formatter:v=>v===0?'—':v+'d'}},
+      datalabels:{display:ctx=>ctx.datasetIndex===0,anchor:'end',align:'top',color:ctx=>colCob[ctx.dataIndex],font:{size:9,weight:'700'},formatter:v=>v===null?'—':v+'d'}},
       scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{display:false,beginAtZero:true,max:Math.max(...cobL,100)*1.35}},
       layout:{padding:{top:18}}}
   });
@@ -2535,7 +2468,7 @@ function renderSegundas(){
       options:{responsive:false,plugins:{legend:{position:'bottom',labels:{font:{size:9},padding:6,usePointStyle:true,pointStyle:'rect'}},
         datalabels:{display:ctx=>ctx.dataset.data[ctx.dataIndex]>0,color:'#fff',font:{size:9,weight:'700'},
           formatter:(v,ctx)=>{const t=ctx.dataset.data.reduce((a,b)=>a+b,0)||1;return v/t>.12?v:'';}},
-        tooltip:{callbacks:{label:ctx=>' '+ctx.parsed+' uds ('+Math.round(ctx.parsed/tU*100)+'%)'}}}}
+        tooltip:{callbacks:{label:ctx=>' '+ctx.parsed+' uds ('+(tU?Math.round(ctx.parsed/tU*100):0)+'%)'}}}}
     });
   }
   xfInitThead('seg','renderSegundas');
@@ -2568,7 +2501,7 @@ function renderSegundas(){
 // ─── COBROS ───
 function renderCobros(){
   const cobs=INV_DATA.filter(r=>r.esCobros && glFilterReal(r));
-  const tU=cobs.reduce((a,r)=>a+r.u0+r.u1+r.u2+r.u3,0)||1;
+  const tU=cobs.reduce((a,r)=>a+r.u0+r.u1+r.u2+r.u3,0);
   const tC=cobs.reduce((a,r)=>a+r.c0+r.c1+r.c2+r.c3,0);
   const u0s=cobs.reduce((a,r)=>a+r.u0,0),u1s=cobs.reduce((a,r)=>a+r.u1,0);
   const u2s=cobs.reduce((a,r)=>a+r.u2,0),r3=cobs.reduce((a,r)=>a+r.u3,0);
