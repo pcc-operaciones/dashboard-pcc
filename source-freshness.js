@@ -98,10 +98,12 @@ function detail(key,values){const r=records.get(key);if(r)Object.assign(r,values
 function setContext(group,value){if(contexts.get(group)===value)return;contexts.set(group,value);if(active===group)render();}
 function configure(config={}){for(const g of Object.keys(names)){const n=config.maxDiasSinActualizar?.[g];if(Number.isFinite(n)&&n>=0)limits[g]=n;}render();}
 async function readConfig(){try{const r=await fetch('./config.json',{cache:'no-store'});if(r.ok)configure((await r.json()).vigencia);}catch{}}
-function show(group){active=group;enabled=group!=='inv'||!root.document?.getElementById('gerencia-bar');render();}
+function show(group){active=group;enabled=group!=='gg'&&(group!=='inv'||!root.document?.getElementById('gerencia-bar'));render();}
 function el(tag,text,className){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;}
 function render(){
  if(!root.document||!document.body)return;
+ root.PccExecutive?.refresh();
+ try{if(root.parent!==root)root.parent.PccExecutive?.refresh();}catch{}
  let box=document.getElementById('pcc-freshness');
  if(!box){box=el('section',undefined,'pcc-freshness');box.id='pcc-freshness';box.setAttribute('aria-label','Vigencia de los datos');const anchor=document.getElementById('gerencia-bar')||document.querySelector('.topbar');if(anchor)anchor.after(box);else document.body.prepend(box);}
  box.hidden=!enabled;

@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Cuadro de Mando — Operaciones PCC</title>
+<title>Cuadro de Mando — PCC</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="source-freshness.css">
 <script src="data-quality.js"></script>
 <link rel="stylesheet" href="data-quality.css">
+<script src="executive-model.js?v=2.1"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;}
@@ -274,8 +275,9 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
     .modal-overlay { display:none !important; }
     @page { margin:1.2cm; size:A4 landscape; }
   }</style>
+<link rel="stylesheet" href="executive.css?v=2.1">
 </head>
-<body>
+<body data-gerencia="gg">
 <div class="wrap">
 
 <div class="loading-ov hidden" id="loadOv">
@@ -294,36 +296,13 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
 </div>
 
 <!-- FILA 2: Selector de gerencia — independiente por área -->
-<div id="gerencia-bar" style="background:#152E4A;border-bottom:1px solid rgba(255,255,255,.12);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:32px;">
-  <div style="display:flex;align-items:center;gap:0;">
-    <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.7px;margin-right:12px;">Gerencia</span>
-    <button id="gBtn-ops" onclick="switchGerencia('ops',this)"
-      style="padding:4px 14px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;
-             color:#fff;font-family:'DM Sans',sans-serif;white-space:nowrap;
-             border-bottom:2px solid #4ECCA3;margin-bottom:-1px;transition:all .15s;">
-      Operaciones PCC
-    </button>
-    <div style="width:1px;height:14px;background:rgba(255,255,255,.2);margin:0 6px;"></div>
-    <button id="gBtn-cos" onclick="switchGerencia('cos',this)"
-      style="padding:4px 14px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;
-             color:rgba(255,255,255,.45);font-family:'DM Sans',sans-serif;white-space:nowrap;
-             border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;">
-      Costos
-    </button>
-    <div style="width:1px;height:14px;background:rgba(255,255,255,.2);margin:0 6px;"></div>
-    <button id="gBtn-inv" onclick="switchGerencia('inv',this)"
-      style="padding:4px 14px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;
-             color:rgba(255,255,255,.45);font-family:'DM Sans',sans-serif;white-space:nowrap;
-             border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;">
-      📦 Inventario PT
-    </button>
-  </div>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <span id="gUpdTs" style="font-size:9px;color:rgba(255,255,255,.35);white-space:nowrap;"></span>
-    <div class="live-pill"><div class="live-dot"></div><div class="live-lbl" id="liveLbl">Cargando...</div></div>
-    <button class="btn-ref" id="btnRef" onclick="doUpdate()">↻ Actualizar</button>
-  </div>
-</div>
+<div id="gerencia-bar" style="background:#152E4A;display:flex;align-items:center;justify-content:space-between;">
+<nav class="gg-navigation" aria-label="Áreas de la empresa">
+<button class="gg-nav-button" id="gBtn-gg" onclick="switchGerencia('gg',this)">Gerencia General</button>
+<button class="gg-nav-button" id="gBtn-ops" onclick="switchGerencia('ops',this)">Operaciones PCC</button>
+<button class="gg-nav-button" id="gBtn-cos" onclick="switchGerencia('cos',this)">Costos</button>
+<button class="gg-nav-button" id="gBtn-inv" onclick="switchGerencia('inv',this)">📦 Inventario PT</button></nav><div class="gg-header-actions"><span id="gUpdTs"></span><div class="live-pill"><div class="live-lbl" id="liveLbl">Consultando áreas</div></div><button class="btn-ref" id="btnRef" onclick="doUpdate()">↻ Actualizar</button></div></div>
+<main id="page-general" aria-label="Gerencia General"></main>
 
 <div class="nav">
   <button class="nav-btn active" onclick="showPage('area',this)">Área General</button>
@@ -2450,7 +2429,9 @@ async function loadMod(pk,mk) {
 }
 
 async function loadAll() {
-  if(!window._pccConfig)return;
+  if(!window._pccConfig){window._executiveOpsStatus='error';window.PccExecutive?.refresh();return;}
+  if(window._executiveOpsStatus==='loading')return;
+  window._executiveOpsStatus='loading';window.PccExecutive?.refresh();
   g('btnRef').disabled=true;
   showLoad(true,'Conectando con Google Sheets...','Iniciando carga de módulos');
   g('errBar').classList.remove('show');
@@ -2467,7 +2448,7 @@ async function loadAll() {
     if(!ok) errs.push(`${TLBL[pk]||pk} / ${CFG[pk].mods[mk]}`);
   }
   showLoad(false);
-  g('btnRef').disabled=false;
+  if(!window._executiveUpdating)g('btnRef').disabled=false;
   // Actualizar indicadores de estado en panel de configuración
   for(const pk of Object.keys(CFG)){
     const mods=byP(pk), ok=mods.length>0&&mods.some(m=>m.daily?.length>0||m.ef!=null);
@@ -2483,6 +2464,7 @@ async function loadAll() {
   // Los errores y su cobertura se consultan en el detalle de vigencia.
 
   renderArea(); renderPlantas(); renderMods(); renderOps(); renderDiario(); renderDiag();
+  window._executiveOpsStatus=allM().length?'ready':'empty';window.PccExecutive?.refresh();
 }
 
 // ═══════════════════════════════════════════════════
@@ -3436,7 +3418,7 @@ function renderDiag() {
   loadCostos();
 
   // ── Restaurar gerencia desde localStorage ──
-  const _gerSaved = localStorage.getItem('pcc_gerencia_activa') || 'ops';
+  const _gerSaved = ['gg','ops','cos','inv'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'gg';
   switchGerencia(_gerSaved, null, true);
 
   // ── Actualización automática: 7:00 AM y 1:00 PM ──
@@ -5867,7 +5849,7 @@ const PROM_2025 = {
   EU:   { rent: 0.1473, ccu: 0.3414 },
   TODAS:{ rent: 0.1573, ccu: 0.3490 },
 };
-let _gerenciaActiva = 'ops';
+let _gerenciaActiva = 'gg';
 let COSTOS_DATA = [];
 let _costosFiltLinea = 'TODAS';
 let _costosTabActiva = 'resumen';
@@ -5886,10 +5868,10 @@ function _fmtTs(d) {
 }
 
 // ── switchGerencia: cambia entre Operaciones y Costos ──
-function switchGerencia(ger, btn, silencioso) {
+function switchGerenciaArea(ger, btn, silencioso) {
   _gerenciaActiva = ger;
   PccFresh.show(ger);
-  localStorage.setItem('pcc_gerencia_activa', ger);
+  try { localStorage.setItem('pcc_gerencia_activa', ger); } catch {}
 
   // Botones de gerencia
   const bOps = g('gBtn-ops');
@@ -5969,12 +5951,39 @@ function switchGerencia(ger, btn, silencioso) {
   }
 }
 
-// ── doUpdate: actualiza SOLO la gerencia activa ──
+
+function switchGerencia(ger,btn,silencioso){
+  ger=['gg','ops','cos','inv'].includes(ger)?ger:'gg';
+  document.body.dataset.gerencia=ger;
+  const general=document.getElementById('page-general');if(general)general.hidden=ger!=='gg';
+  if(ger==='gg'){
+    _gerenciaActiva='gg';PccFresh.show('gg');
+    const inv=document.getElementById('page-inventario');if(inv)inv.style.display='none';
+    document.getElementById('gUpdTs').textContent='';
+    document.getElementById('liveLbl').textContent='3 áreas integradas';
+    window.PccExecutive?.refresh();
+  }else switchGerenciaArea(ger,btn,silencioso);
+  for(const id of ['gg','ops','cos','inv']){
+    const b=document.getElementById('gBtn-'+id);if(b){b.removeAttribute('style');if(id===ger)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}
+  }
+  if(location.hash!=='#'+ger)history.pushState(null,'','#'+ger);
+  if(ger==='inv')requestAnimationFrame(()=>{document.getElementById('page-inventario').style.top=document.getElementById('gerencia-bar').getBoundingClientRect().bottom+'px';});
+  if(!silencioso&&ger==='gg')general?.querySelector('h1')?.focus({preventScroll:true});
+}
+window.addEventListener('resize',()=>{if(document.body.dataset.gerencia==='inv')document.getElementById('page-inventario').style.top=document.getElementById('gerencia-bar').getBoundingClientRect().bottom+'px';});
+
+
+// ── doUpdate: actualiza la gerencia activa ──
 async function doUpdate() {
+  if(window._executiveUpdating)return;
+  window._executiveUpdating=true;
   const btn = g('btnRef');
   if(btn){btn.disabled=true;btn.textContent='↻ Actualizando';}
   try {
-    if(_gerenciaActiva==='inv'){
+    if(_gerenciaActiva==='gg'){
+      await Promise.allSettled([loadAll(),loadAlertas(),loadWip(),loadCalidad(),loadCostos(),g('iframe-inventario')?.contentWindow?.cargarTodo?.()]);
+      window.PccExecutive?.refresh();
+    } else if(_gerenciaActiva==='inv'){
       const inv=g('iframe-inventario')?.contentWindow;
       if(inv && typeof inv.cargarTodo==='function') await inv.cargarTodo();
     } else if(_gerenciaActiva==='ops') {
@@ -5983,7 +5992,7 @@ async function doUpdate() {
     } else {
       await loadCostos(); _updTimestamps.cos=new Date();
     }
-  } finally { if(btn){btn.disabled=false;btn.textContent='↻ Actualizar';} }
+  } finally { window._executiveUpdating=false;if(btn){btn.disabled=false;btn.textContent='↻ Actualizar';} }
 
 }
 
@@ -6137,9 +6146,11 @@ function setCostosLinea(linea, btn) {
 
 // ── loadCostos: lee Google Sheets "Costos Unificados" ──
 async function loadCostos() {
+  if(window._executiveCostStatus==='loading')return;
+  window._executiveCostStatus='loading';window.PccExecutive?.refresh();
   try {
     const rows = await fetchSheet(COSTOS_ID, 'Costos Unificados', 'A1:DZ10000');
-    if (!rows || rows.length < 2) { console.warn('Costos: sin datos'); return; }
+    if (!rows || rows.length < 2) { window._executiveCostStatus='empty';console.warn('Costos: sin datos'); return; }
 
     // Normalizar header: quitar tildes, mayúsculas, espacios extra
     const norm = s => String(s||'').toUpperCase().trim()
@@ -6393,10 +6404,11 @@ async function loadCostos() {
     }
 
     if (_costosTabActiva === 'resumen') renderCostosResumen();
-
+    window._executiveCostStatus='ready';
   } catch(e) {
+    window._executiveCostStatus='error';
     console.warn('loadCostos error:', e.message);
-  }
+  } finally { window.PccExecutive?.refresh(); }
 }
 
 // ── normResp: unificar aliases de diseñadores ──
@@ -9965,12 +9977,14 @@ function exportTablaPDF(tableId, titulo) {
 <div id="page-inventario" style="display:none;position:fixed;inset:0;top:86px;z-index:10;">
   <iframe
     id="iframe-inventario"
-    src="inventario_pt.html"
+    src="inventario_pt.html?v=2.1"
     style="width:100%;height:100%;border:none;display:block;"
     allow="same-origin"
     title="Inventario Producto Terminado">
   </iframe>
 </div>
 
+<script src="executive-adapter.js?v=2.1"></script>
+<script src="executive.js?v=2.1"></script>
 </body>
 </html>

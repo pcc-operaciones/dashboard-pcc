@@ -48,3 +48,9 @@ Propuestas de gráficos y cambios visuales: [revisión visual](docs/REVISION-VIS
 `config.json` define período, archivos, módulos y metas. El período del encabezado no certifica la vigencia del contenido de las hojas. Si la configuración falla, Operaciones no consulta automáticamente los archivos antiguos incrustados.
 
 Las credenciales de lectura presentes en el código original mantienen pendiente una revisión separada de restricciones y acceso. No copiar claves ni respuestas de negocio a documentación, pruebas o comentarios.
+
+## Gerencia General
+
+Nueva vista en `codex/gerencia-general`: [alcance, indicadores y administración](docs/GERENCIA-GENERAL.md). La navegación inicia en Gerencia General e integra Operaciones, Costos e Inventario PT; Logística y Ventas están previstas.
+
+Revisión local: http://127.0.0.1:4173/after/#gg. Los compromisos se guardan en este navegador y se pueden exportar/importar; aún no existe administración compartida por roles.

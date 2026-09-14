@@ -8,7 +8,7 @@ const root = path.resolve(__dirname, '..');
 const baseline = 'baseline/pre-v2-2026-09-14';
 const cache = path.join(root, '.review', 'sources');
 fs.mkdirSync(cache, {recursive:true});
-const files = ['index.html','inventario_pt.html','config.json','data-quality.js','data-quality.css','source-freshness.js','source-freshness.css'];
+const files = ['index.html','inventario_pt.html','config.json','data-quality.js','data-quality.css','source-freshness.js','source-freshness.css','executive-model.js','executive-adapter.js','executive.js','executive.css'];
 const before = Object.fromEntries(files.slice(0,3).map(f=>[f,execFileSync('git',['show',`${baseline}:${f}`],{cwd:root,encoding:'utf8',maxBuffer:2000000})]));
 const originals = before['index.html'] + before['inventario_pt.html'] + before['config.json'];
 const key = originals.match(/AIza[\w-]+/)[0];

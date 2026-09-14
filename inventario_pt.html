@@ -1619,6 +1619,7 @@ async function cargarTodo(){
     document.querySelector('.topbar').after(aviso);
     document.getElementById('loadingOv').classList.add('hidden');
     inventarioCargando=false;
+    try{window.parent.PccExecutive?.refresh();}catch{}
     return;
   }
 
@@ -1640,6 +1641,7 @@ async function cargarTodo(){
   try{ renderTodo(); }catch(e){ console.error('Error al renderizar:',e); PccData.note('render','No se pudieron actualizar todas las vistas.'); }
   document.getElementById('inv-live-label').textContent='Consulta completada';
   inventarioCargando=false;
+  try{window.parent.PccExecutive?.refresh();}catch{}
 
   // Inicializar dropdown categorías con todas las líneas disponibles
   glRebuildCats();
@@ -3789,5 +3791,8 @@ cargarTodo();
 <!-- PANEL FLOTANTE FILTRO EXCEL UNIVERSAL -->
 <div class="xf-dd" id="xf-global-panel"></div>
 
+<script>
+window.PccExecutiveInventory=()=>({status:inventarioCargando?'loading':document.getElementById('inv-load-error')?'error':INV_DATA.length?'ready':'empty',rows:INV_DATA,records:[...PccFresh.records.values()]});
+</script>
 </body>
 </html>
