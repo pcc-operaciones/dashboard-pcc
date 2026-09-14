@@ -29,11 +29,15 @@ Los datos de esta comparación quedan congelados. Para una nueva sesión de capt
 ## Validación
 
 ```sh
-node --test tests/data-quality.test.cjs
+node --test tests/*.test.cjs
 git diff --check
 ```
 
 No hay dependencias npm para estas pruebas ni para el servidor de comparación. Las páginas siguen utilizando sus bibliotecas externas originales.
+
+## Vigencia de los datos
+
+Cada frente muestra fechas del origen, período y detalle de sus fuentes. Ver [contrato de fechas y umbrales](docs/VIGENCIA-DATOS.md).
 
 ## Configuración
 

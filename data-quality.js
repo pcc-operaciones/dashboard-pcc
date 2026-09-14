@@ -42,15 +42,16 @@
   const sources=new Map(),notes=new Map();
   const api={period,rotation,coverage,ops,tasks,sources,notes};
   api.note=(key,text)=>{if(text)notes.set(key,text);else notes.delete(key);render();};
-  api.load=async(key,fn)=>{
+  api.load=async(key,fn,meta={})=>{
+    root.PccFresh?.track(key,[],'loading',meta);
     sources.set(key,{state:'loading'});render();
-    try{const rows=await fn();sources.set(key,{state:rows.length?'ok':'empty',at:new Date()});render();return rows;}
-    catch(e){sources.set(key,{state:'error',message:e.message});render();throw e;}
+    try{const rows=await fn();sources.set(key,{state:rows.length?'ok':'empty',at:new Date()});root.PccFresh?.track(key,rows,rows.length?'ok':'empty',meta);render();return rows;}
+    catch(e){sources.set(key,{state:'error',message:e.message});root.PccFresh?.track(key,[],'error',meta);render();throw e;}
   };
   function render(){
     if(!root.document||!document.body)return;
     let box=document.getElementById('pcc-data-quality');
-    if(!box){box=document.createElement('details');box.id='pcc-data-quality';box.className='pcc-quality';const anchor=document.getElementById('gerencia-bar')||document.querySelector('.topbar');if(anchor)anchor.after(box);else document.body.prepend(box);}
+    if(!box){box=document.createElement('details');box.id='pcc-data-quality';box.className='pcc-quality';const anchor=document.getElementById('pcc-freshness')||document.getElementById('gerencia-bar')||document.querySelector('.topbar');if(anchor)anchor.after(box);else document.body.prepend(box);}
     const errors=[...sources].filter(([,s])=>s.state==='error'),loading=[...sources].filter(([,s])=>s.state==='loading'),ok=[...sources].filter(([,s])=>s.state==='ok').length;
     box.replaceChildren();
     const summary=document.createElement('summary');

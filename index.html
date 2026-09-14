@@ -10,6 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="source-freshness.js"></script>
+<link rel="stylesheet" href="source-freshness.css">
 <script src="data-quality.js"></script>
 <link rel="stylesheet" href="data-quality.css">
 <style>
@@ -2201,7 +2203,7 @@ async function fetchSheet(sid, sheet, range) {
     const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(20000) });
     if (!r.ok) { const e=await r.json(); throw new Error(e.error?.message||r.status); }
     return (await r.json()).values || [];
-  });
+  },{group:sheet==='Costos Unificados'?'cos':'ops',sheet});
 }
 
 // ═══════════════════════════════════════════════════
@@ -2440,6 +2442,8 @@ async function loadMod(pk,mk) {
     const rows=await fetchSheet(cfg.id, sn, 'A1:AF90');
     const {daily, cm} = parseDailyWithMap(rows);
     const sum=parseSummary(rows, daily, cm);
+    const lastDay=Math.max(0,...daily.map(d=>d.dia));
+    PccFresh.detail(sn+' · '+cfg.id.slice(-6),{label:(TLBL[pk]||pk)+' / '+mk,business:lastDay?'Último día con registro: '+lastDay+' de '+(window._pccConfig?.mes||'mes no validado')+' '+(window._pccConfig?.año||'')+' (período configurado; no certifica actualización)':'Sin días reportados'});
     MD[`${pk}|${mk}`]={...sum, daily, pk, mk, sn};
     return true;
   }catch(e){ console.warn(`${pk}/${mk}:`,e.message); return false; }
@@ -2475,7 +2479,7 @@ async function loadAll() {
   const cfg2=cargarConfigGuardada();
   PccData.note('ops-cobertura', errs.length ? 'Operaciones: '+(tasks.length-errs.length)+' de '+tasks.length+' módulos cargados. Los indicadores excluyen las fuentes no disponibles.' : null);
   const mesLabel=cfg2?`${cfg2.mes} ${cfg2.año}`:'En vivo';
-  g('liveLbl').textContent=`${mesLabel} · ${hora}`;
+  if(_gerenciaActiva==='ops') g('liveLbl').textContent=`${mesLabel} · consulta ${hora}`;
   if(errs.length){
     const eb=g('errBar');
     eb.innerHTML=`⚠ No se pudieron cargar: <b>${errs.join(' | ')}</b>. Consulta el estado de las fuentes. Los totales son parciales.`;
@@ -2640,7 +2644,7 @@ function renderArea(){
   const _mb = g('area-mes-badge');
   if (_mb) _mb.textContent = _cfg2 ? `📅 ${_cfg2.mes} ${_cfg2.año}` : '📅 En vivo';
   const _au = g('area-upd-lbl');
-  if (_au) _au.textContent = `Actualizado: ${new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}`;
+  if (_au) _au.textContent = `Consultado: ${new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}`;
 
   cont.innerHTML = catData.map((d,i) => {
     const st      = d.cu>=RANGOS.ok?'g':d.cu>=RANGOS.alerta?'y':'r';
@@ -2965,7 +2969,7 @@ function renderDiario(){
       plugins:{legend:{display:false},tooltip:{callbacks:{label:i=>i.raw!=null?i.raw.toFixed(1)+'%':'—'}}},
       scales:{y:{ticks:{callback:v=>v+'%'},grid:{color:'rgba(0,0,0,.04)'},min:0,max:130},
               x:{grid:{display:false},title:{display:true,text:'Día del mes',font:{size:11}}}}}});
-  g('dUpd').textContent=`Actualizado: ${new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}`;
+  g('dUpd').textContent=`Consultado: ${new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}`;
 }
 
 // TENDENCIA (datos históricos de KPI_PCC_MENSUAL)
@@ -3370,6 +3374,8 @@ function renderDiag() {
       const remote = await res.json();
       if(!remote.ids || !remote.mes || !remote.año) throw new Error('Configuración incompleta');
       window._pccConfig=remote;
+      PccFresh.configure(remote.vigencia);
+      PccFresh.setContext('ops',remote.mes+' '+remote.año+' · período configurado; último día reportado por módulo en Ver fuentes');
       PccData.note('config', null);
       if (remote.ids)     { for (const [pk,id] of Object.entries(remote.ids)) { if(CFG[pk]&&id) CFG[pk].id=id; } }
       if (remote.rangos)  { RANGOS = remote.rangos; }
@@ -3539,7 +3545,7 @@ function renderAlertas() {
   g('al-total').textContent    = ALERTAS_DATA.length;
   g('al-max-dias').textContent = maxDias > 0 ? maxDias + ' d' : '—';
   const fechaEl = g('al-fecha');
-  if (fechaEl && ALERTAS_DATA[0]?.fecha) fechaEl.textContent = 'Actualizado: ' + ALERTAS_DATA[0].fecha;
+  if (fechaEl && ALERTAS_DATA[0]?.fecha) fechaEl.textContent = 'Fecha del reporte: ' + ALERTAS_DATA[0].fecha;
 
   renderKanban();
 }
@@ -5879,12 +5885,13 @@ const _updTimestamps = { ops: null, cos: null };
 
 function _fmtTs(d) {
   if (!d) return '';
-  return 'Actualizado: ' + d.toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' });
+  return 'Consultado: ' + d.toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' });
 }
 
 // ── switchGerencia: cambia entre Operaciones y Costos ──
 function switchGerencia(ger, btn, silencioso) {
   _gerenciaActiva = ger;
+  PccFresh.show(ger);
   localStorage.setItem('pcc_gerencia_activa', ger);
 
   // Botones de gerencia
@@ -6281,6 +6288,7 @@ async function loadCostos() {
       return 'EU';
     };
 
+    const iSourceCosted=rows[0].findIndex(h=>String(h).trim().toUpperCase()==='FECHA COSTEO');
     COSTOS_DATA = rows.slice(1).map(r => {
       const fecha  = parseFecha(
         iPeriodo >= 0 ? r[iPeriodo] : null,
@@ -6307,6 +6315,7 @@ async function loadCostos() {
                : (iRef2 >= 0 && r[iRef2]) ? String(r[iRef2]).trim() : '',
         desc:   iDesc  >= 0 ? String(r[iDesc] ||'').trim() : '',
         fecha,
+        sourceCostedAt:r[iSourceCosted],
         linea:  normEmpresa(empresa, lineaN),
         empresa,
         subcat: iSubcat >= 0 ? String(r[iSubcat]||'').trim() : '',
@@ -6408,13 +6417,17 @@ function normResp(nombre) {
 // ── Filtrar datos según mes y línea seleccionados ──
 function _filtrarCostos() {
   const mes = g('cFiltMes')?.value || 'TODOS';
-  return COSTOS_DATA.filter(r => {
+  const filtered = COSTOS_DATA.filter(r => {
     if (_msAniosSel.length    > 0 && r.fecha && !_msAniosSel.includes(r.fecha.slice(0,4)))    return false;
     if (_msPeriodosSel.length > 0 && !_msPeriodosSel.includes(r.fecha))                       return false;
     if (_msLineasSel.length   > 0 && !_msLineasSel.includes(r.linea))                         return false;
     if (_msCatsSel.length     > 0 && !_msCatsSel.includes(r.subcat))                          return false;
     return true;
   });
+  const periods=[...new Set(filtered.map(r=>r.fecha).filter(Boolean))].sort();
+  const costed=PccFresh.dates(filtered.map(r=>r.sourceCostedAt));
+  PccFresh.setContext('cos',periods.length?periods[0]+' — '+periods.at(-1)+' · '+filtered.length+' registros filtrados'+(costed.last?' · último costeo: '+costed.last.label:' · fecha de costeo no disponible'):'Sin registros para los filtros seleccionados');
+  return filtered;
 }
 
 // ── Variables gráfico unificado ──
