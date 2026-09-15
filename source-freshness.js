@@ -12,7 +12,7 @@ function today(now=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:
 function parseDate(value){
   const v=String(value??'').trim();
   let m=v.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$/);
-  if(!m){const d=v.match(/^(\d{2})\/(\d{2})\/(\d{4})(?: (\d{2}):(\d{2})(?::(\d{2}))?)?$/);if(d)m=[v,d[3],d[2],d[1],d[4],d[5],d[6]];}
+  if(!m){const d=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?: (\d{2}):(\d{2})(?::(\d{2}))?)?$/);if(d)m=[v,d[3],d[2].padStart(2,'0'),d[1].padStart(2,'0'),d[4],d[5],d[6]];}
   if(!m)return null;
   const y=+m[1],mo=+m[2],day=+m[3],h=+(m[4]||0),min=+(m[5]||0),sec=+(m[6]||0);
   const check=new Date(Date.UTC(y,mo-1,day));
@@ -48,7 +48,13 @@ function extract(rows,keys,now){
 }
 function span(d){return !d.first?'No disponible':d.first.key===d.last.key?d.last.label:d.first.label+' — '+d.last.label;}
 function inspect(rows,meta,now=new Date()){
-  const updated=extract(rows,updateKeys,now),cutoff=extract(rows,cutoffKeys,now);
+  let updated=extract(rows,updateKeys,now);
+  const cutoff=extract(rows,cutoffKeys,now);
+  // Regla confirmada: la última OP creada identifica la generación y carga del informe.
+  if(!updated.field&&['TEX_LOTES','EU_LOTES'].includes(norm(meta.sheet))){
+    const created=extract(rows,['F_PROGRAMACION'],now);
+    if(created.field)updated={...created,first:created.last,basis:'Fecha de generación y carga del informe según la última OP creada (criterio confirmado por Gerencia).'};
+  }
   let business='Corte de los datos no disponible',businessLabel='Datos correspondientes a';
   if(meta.group==='ops'&&meta.sheet==='KPI_ALERTAS'){
     const report=extract(rows,['FECHA'],now);
@@ -145,6 +151,7 @@ function render(){
  for(const r of list){
    const tr=el('tr'),source=el('td',r.label||r.sheet),date=el('td',span(r.updated||{})),biz=el('td',r.business||'Sin fecha de datos disponible'),status=el('td',state(r));
    if(r.updated?.first){date.append(el('small',r.updated.field+' · '+r.updated.last.zone));}
+   if(r.updated?.basis)date.append(el('small',r.updated.basis));
    if(r.updated?.missing||r.updated?.invalid)date.append(el('small',(r.updated.missing||0)+' registros sin fecha; '+(r.updated.invalid||0)+' fechas inválidas o futuras.'));
    if(r.state==='error'||r.state==='loading')date.append(el('small','Fechas de la última lectura correcta, si existen.'));
    if(r.queriedAt)source.append(el('small','Consultado: '+r.queriedAt.toLocaleString('es-CO',{timeZone:'America/Bogota'})+' · Colombia'));

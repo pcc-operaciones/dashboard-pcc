@@ -47,3 +47,9 @@ Alias de actualización reconocidos: FECHA_ACTUALIZACION, FECHA_ACTUALIZACION_FU
 - En las capturas revisadas, INV_Resumen, INV_Bodegas e INV_Movimientos declaran 2026-07-10 20:03. Las fuentes sin timestamp explícito permanecen sin fecha verificable.
 
 Verificación adicional en navegador: Actualizar conserva la fecha del origen; la franja permanece al cambiar a Rotación; el filtro de Costos 2025 muestra enero–diciembre de 2025 y último costeo 30/12/2025. Se restauró 2026 después de la prueba. En pantalla estrecha la franja se adapta a una columna; el contenedor general del tablero conserva desbordamientos de navegación preexistentes que quedan fuera de este cambio.
+
+## Regla confirmada para TEX_Lotes y EU_Lotes — 15 de septiembre de 2026
+
+Gerencia confirmó que la fecha de creación de la última OP coincide con la generación y carga del último informe. En estas dos hojas, la columna F_Programacion contiene esa fecha de creación. Si no existe un campo explícito de actualización, se utiliza su máximo válido como actualización del informe completo, no como horizonte de programación ni como fechas distintas de actualización por fila. El detalle explica el criterio tanto en las áreas como en Gerencia General.
+
+Un campo explícito de actualización tiene prioridad. La regla no se aplica a otras hojas. Fechas vacías, inválidas o futuras mantienen sus avisos; una fuente fallida no se certifica por conservar una fecha anterior. No se deduce un corte de existencias o del período a partir de esta regla. Se admiten días y meses con uno o dos dígitos en fechas colombianas, siempre con validación de calendario.

@@ -30,7 +30,7 @@ function areaNode(a){
  const details=e('details'),summary=e('summary','Fechas y cobertura de las fuentes');
  details.append(summary);
  const list=e('ul',undefined,'gg-source-list');
- for(const r of a.records){const item=e('li');item.append(e('strong',r.label||r.sheet||r.key),e('span',PccFresh.state(r)+' · '+(r.updated?.first?(r.updated.first.label===r.updated.last.label?r.updated.first.label:r.updated.first.label+' — '+r.updated.last.label):'Fecha de origen no disponible')),e('span',r.business||'Corte no disponible'));list.append(item);}
+ for(const r of a.records){const item=e('li');item.append(e('strong',r.label||r.sheet||r.key),e('span',PccFresh.state(r)+' · '+(r.updated?.first?(r.updated.first.label===r.updated.last.label?r.updated.first.label:r.updated.first.label+' — '+r.updated.last.label):'Fecha de origen no disponible')),e('span',r.business||'Corte no disponible'));if(r.updated?.basis)item.append(e('span',r.updated.basis));list.append(item);}
  if(!a.records.length)list.append(e('li','Esperando consulta de las fuentes.'));
  details.append(list,e('p','Una consulta reciente no confirma la actualización del origen.','gg-caption'));n.append(details,button('Abrir '+a.name,()=>PccExecutiveOpen(a.id)));return n;
 }

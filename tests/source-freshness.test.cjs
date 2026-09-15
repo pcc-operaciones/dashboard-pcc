@@ -77,3 +77,31 @@ test('fecha de reporte de alertas se conserva sin certificar actualización',()=
  const r=f.inspect([['FECHA'],['2026-09-14']],{group:'ops',sheet:'KPI_ALERTAS'},now);
  assert.equal(r.updated.first,null);assert.match(r.business,/Fecha del reporte de alertas: 14\/09\/2026/);
 });
+
+test('fechas colombianas sin ceros iniciales mantienen validación de calendario',()=>{
+ assert.equal(f.parseDate('8/9/2026').key,'2026-09-08');
+ assert.equal(f.parseDate('8/09/2026').label,'08/09/2026');
+ assert.equal(f.parseDate('31/2/2026'),null);
+});
+test('última OP identifica generación y carga del informe en ambas hojas y frentes',()=>{
+ for(const sheet of ['EU_Lotes','TEX_Lotes'])for(const group of ['ops','inv']){
+  const r={group,state:'ok',...f.inspect([['F_Programacion'],['22/03/2024'],['8/09/2026'],['7/09/2026']],{group,sheet},now)};
+  assert.equal(r.updated.first.key,'2026-09-08');assert.equal(r.updated.last.key,'2026-09-08');
+  assert.match(r.updated.basis,/última OP creada/);assert.equal(r.cutoff.first,null);
+  assert.equal(f.summary([r],now).different,false);
+ }
+});
+test('regla de OP no oculta fechas inválidas, futuras o faltantes',()=>{
+ const r={group:'ops',state:'ok',...f.inspect([['OP','F_Programacion'],['A','14/09/2026'],['B',''],['C','31/02/2026'],['D','30/09/2026']],{sheet:'EU_Lotes'},now)};
+ assert.equal(r.updated.last.key,'2026-09-14');assert.equal(r.updated.invalid,2);assert.equal(r.updated.missing,1);
+ assert.equal(f.state(r,now),'Fecha incompleta');
+ const empty=f.inspect([['F_Programacion'],['malformada']],{sheet:'TEX_Lotes'},now);
+ assert.equal(empty.updated.first,null);
+});
+test('regla de última OP es exclusiva y respeta metadatos explícitos',()=>{
+ const rows=[['F_Programacion','FECHA_ACTUALIZACION'],['14/09/2026','10/09/2026']];
+ assert.equal(f.inspect(rows,{sheet:'EU_Lotes'},now).updated.last.key,'2026-09-10');
+ assert.equal(f.inspect([['F_Programacion'],['14/09/2026']],{sheet:'Otra_hoja'},now).updated.first,null);
+ const explicitMissing=f.inspect([['F_Programacion','FECHA_ACTUALIZACION'],['14/09/2026','']],{sheet:'EU_Lotes'},now);
+ assert.equal(explicitMissing.updated.first,null);
+});
