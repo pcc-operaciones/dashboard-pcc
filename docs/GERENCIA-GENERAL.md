@@ -63,3 +63,9 @@ Se aplicaron frontend-design y ui-ux-pro-max. La búsqueda de sistema visual dev
 ## Revisión
 
 Abrir http://127.0.0.1:4173/after/#gg con el servidor local de revisión activo. El sitio público se mantiene en la entrega anterior hasta publicar esta rama. El respaldo v2.0.0 conserva esa referencia.
+
+## Alertas gestionables — 15 de septiembre de 2026
+
+La agenda incluye únicamente fallos de consulta, atrasos confirmados por la referencia de cada fuente y desviaciones medidas (producción/eficiencia bajo meta, costeos negativos, inventario de más de 90 días). Cada alerta de fuentes enumera exclusivamente las afectadas, en detalle desplegable. Un área puede tener fuentes al día y otras atrasadas: las primeras nunca se añaden a esa alerta.
+
+Se excluyen estados de carga, fuentes al día, fechas no informadas, ausencia de actividad y períodos sin costeos sin un fallo confirmado. Esos estados siguen siendo consultables en la ficha del área, pero no generan por sí mismos una tarea correctiva. Las alertas desaparecen al resolverse su condición. Los compromisos creados por el usuario conservan su seguimiento independiente. No se alteran los indicadores ni el umbral configurado.

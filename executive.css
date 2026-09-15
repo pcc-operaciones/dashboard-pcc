@@ -78,3 +78,10 @@ body[data-gerencia=gg] #pcc-freshness{display:none;}
 
 #gerencia-bar #gUpdTs{font-size:12px;color:#CBD8E6;}
 .gg-period small{display:block;margin-top:8px;}
+
+.gg-issue details{font-size:13px;margin-top:8px;}
+.gg-issue summary{cursor:pointer;min-height:44px;display:flex;align-items:center;color:var(--gg-ink);}
+.gg-issue summary:before{content:"+";margin-right:8px;}
+.gg-issue details[open] summary:before{content:"−";}
+.gg-issue ul{padding-left:18px;overflow-wrap:anywhere;}
+.gg-issue li{margin-bottom:6px;}

@@ -5,18 +5,24 @@
   function period(config){const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];const m=months.indexOf(String(config?.mes||'').toLowerCase());return m<0||!/^20\d{2}$/.test(String(config?.año))?null:config.año+'-'+String(m+1).padStart(2,'0');}
   function costSummary(rows,key){const selected=key?rows.filter(r=>r.fecha===key):[],valid=selected.filter(r=>finite(r.rent));return {count:selected.length,rent:valid.length?valid.reduce((s,r)=>s+r.rent,0)/valid.length:null,negative:valid.length?valid.filter(r=>r.rent<0).length:null,missing:selected.length-valid.length};}
   function inventorySummary(rows){const selected=rows.filter(r=>!r.esSeg&&!r.esCobros);if(!selected.length)return {units:null,aged:null,agedShare:null};const units=selected.reduce((s,r)=>s+['u0','u1','u2','u3'].reduce((n,k)=>n+(finite(r[k])?r[k]:0),0),0),aged=selected.reduce((s,r)=>s+(finite(r.u3)?r.u3:0),0);return {units,aged,agedShare:units>0?aged/units:null};}
-  function build(input,deps){
+  function build(input,deps,now=new Date()){
     const key=period(input.config),label=key?input.config.mes+' '+input.config.año:'Período no configurado';
     const result={key,label,areas:[],metrics:[],issues:[]};
-    const issue=(area,id,title,action,priority=2)=>result.issues.push({area,id,title,action,priority,owner:areas.find(a=>a.id===area).owner});
+    const issue=(area,id,title,action,priority=2,sources=[])=>result.issues.push({area,id,title,action,priority,sources,owner:areas.find(a=>a.id===area).owner});
     for(const area of areas){
       if(!area.active){result.areas.push({...area,status:'Por incorporar'});continue;}
-      const source=input[area.id]||{},records=source.records||[],fresh=deps.fresh.summary(records);
+      const source=input[area.id]||{},records=source.records||[],fresh=deps.fresh.summary(records,now);
       const ready=source.status==='ready'&&(area.id==='inv'||!!key);
       const status=!key&&area.id!=='inv'?'Período no configurado':source.status==='loading'||!source.status?'Consultando':source.status==='error'?'No disponible':source.status==='empty'?'Sin registros':fresh.status;
       const a={...area,status,fresh,records,ready};result.areas.push(a);
       if(source.status==='error')issue(area.id,area.id+'-error','No se pudo actualizar '+area.name,'Reintentar la consulta y revisar el acceso a las fuentes.',0);
-      else if(ready&&fresh.status!=='Vigente'&&fresh.status!=='Sin actividad registrada')issue(area.id,area.id+'-fresh',area.name+': '+fresh.status.toLowerCase(),'Confirmar actualización, cobertura y corte con el responsable de las fuentes.',1);
+      else if(ready){
+        const failures=records.filter(r=>r.state==='error');
+        const late=records.filter(r=>deps.fresh.state(r,now)==='Atrasado');
+        const evidence=rows=>rows.map(r=>({name:r.label||r.sheet||r.key,reference:deps.fresh.referenceLabel(r),basis:r.freshnessBasis==='activity'?'Última actividad':'Actualización del informe'}));
+        if(failures.length)issue(area.id,area.id+'-source-errors',failures.length+' fuente(s) no disponibles','Restablecer el acceso o corregir la configuración de las fuentes afectadas.',0,evidence(failures));
+        if(late.length)issue(area.id,area.id+'-source-delay',late.length+' fuente(s) con atraso confirmado','Actualizar los informes o registrar la actividad pendiente en las fuentes afectadas.',1,evidence(late));
+      }
       const metric=(id,title,value,unit,note,target)=>result.metrics.push({id,area:area.id,title,value:ready?value:null,unit,note,target,status,period:area.id==='inv'?'Último inventario disponible':label});
       if(area.id==='ops'){
         const mods=source.mods||[],ef=mods.length?deps.data.ops(mods,'ef'):null,compliance=mods.length?deps.data.ops(mods,'cumpl'):null;
@@ -30,7 +36,6 @@
         metric('cost-rent','Rentabilidad de costeos',c.rent,'percent','Promedio por registro; no es margen real de ventas');
         metric('cost-negative','Costeos con rentabilidad negativa',c.negative,'number',c.count+' registros del mes · '+c.missing+' sin rentabilidad');
         if(ready&&c.negative>0)issue('cos','cos-negative',c.negative+' costeos con rentabilidad negativa','Conciliar costo y precio por referencia antes de acordar ajustes.');
-        if(ready&&!c.count)issue('cos','cos-empty','Sin costeos para '+label,'Confirmar el período y la carga de costeos con el área.',1);
       }
       if(area.id==='inv'){
         const inv=inventorySummary(source.rows||[]);a.inventory=inv;
