@@ -20,19 +20,19 @@ function metricNode(m){
    const marker=e('div',undefined,'gg-bullet-target');marker.style.left=(m.target/max*100)+'%';bar.append(fill,marker);
    const scale=e('div',undefined,'gg-scale');scale.append(e('span','0%'),e('span','Meta '+format(m.target,'percent')),e('span',format(max,'percent')));n.append(bar,scale);
  }
- n.append(e('small',m.status+' · Origen: '+a.fresh.label,'gg-source'));return n;
+ n.append(e('small',m.status+' · Referencia: '+a.fresh.label,'gg-source'));return n;
 }
 function areaNode(a){
  const n=e('article',undefined,'gg-area'+(!a.active?' gg-area-future':'')),header=e('div',undefined,'gg-area-header');
  const status=e('span',a.status,'gg-status');status.dataset.ok=String(a.status==='Vigente');header.append(e('h3',a.name),status);n.append(header);
  if(!a.active){n.append(e('p',a.scope,'gg-caption'),e('p','Se integrará a esta vista cuando su cuadro de mando esté disponible.','gg-caption'));return n;}
- n.append(e('p',a.owner,'gg-caption'),e('p','Origen: '+a.fresh.label,'gg-caption'));
+ n.append(e('p',a.owner,'gg-caption'),e('p','Referencia: '+a.fresh.label,'gg-caption'));
  const details=e('details'),summary=e('summary','Fechas y cobertura de las fuentes');
  details.append(summary);
  const list=e('ul',undefined,'gg-source-list');
- for(const r of a.records){const item=e('li');item.append(e('strong',r.label||r.sheet||r.key),e('span',PccFresh.displayState(r)+' · '+(r.updated?.first?(r.updated.first.label===r.updated.last.label?r.updated.first.label:r.updated.first.label+' — '+r.updated.last.label):'Fecha de carga no informada')),e('span',r.business||'Corte no disponible'));if(r.updated?.basis)item.append(e('span',r.updated.basis));list.append(item);}
+ for(const r of a.records){const item=e('li');item.append(e('strong',r.label||r.sheet||r.key),e('span',PccFresh.displayState(r)+' · '+PccFresh.referenceLabel(r)),e('span',r.business||'Corte no disponible'));if(r.freshnessBasis==='activity')item.append(e('span','Vigencia según última actividad; módulo en línea.'));else if(r.updated?.basis)item.append(e('span',r.updated.basis));list.append(item);}
  if(!a.records.length)list.append(e('li','Esperando consulta de las fuentes.'));
- details.append(list,e('p','Una consulta reciente no confirma la actualización del origen.','gg-caption'));n.append(details,button('Abrir '+a.name,()=>PccExecutiveOpen(a.id)));return n;
+ details.append(list,e('p','Módulos en línea: última actividad. Informes: actualización del origen.','gg-caption'));n.append(details,button('Abrir '+a.name,()=>PccExecutiveOpen(a.id)));return n;
 }
 function issueNode(issue){
  const n=e('article',undefined,'gg-issue'),area=M.areas.find(a=>a.id===issue.area),copy=e('div'),actions=e('div',undefined,'gg-actions');

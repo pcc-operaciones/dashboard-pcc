@@ -2175,14 +2175,14 @@ let modFilt='todos', estFilt='todos';
 // ═══════════════════════════════════════════════════
 // FETCH SHEETS
 // ═══════════════════════════════════════════════════
-async function fetchSheet(sid, sheet, range) {
+async function fetchSheet(sid, sheet, range, meta={}) {
   const key = window._apiKey || API_KEY_DEFAULT;
   const url = `${BASE}/${sid}/values/${encodeURIComponent(sheet+'!'+range)}?key=${key}&_=${Date.now()}`;
   return PccData.load(sheet + ' · ' + sid.slice(-6), async () => {
     const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(20000) });
     if (!r.ok) { const e=await r.json(); throw new Error(e.error?.message||r.status); }
     return (await r.json()).values || [];
-  },{group:sheet==='Costos Unificados'?'cos':'ops',sheet});
+  },{group:sheet==='Costos Unificados'?'cos':'ops',sheet,...meta});
 }
 
 // ═══════════════════════════════════════════════════
@@ -2418,7 +2418,7 @@ function parseSummary(rows, daily, cm) {
 async function loadMod(pk,mk) {
   const cfg=CFG[pk]; const sn=cfg.mods[mk];
   try{
-    const rows=await fetchSheet(cfg.id, sn, 'A1:AF90');
+    const rows=await fetchSheet(cfg.id, sn, 'A1:AF90',{freshnessBasis:'activity'});
     const {daily, cm} = parseDailyWithMap(rows);
     const sum=parseSummary(rows, daily, cm);
     PccFresh.detail(sn+' · '+cfg.id.slice(-6),{label:(TLBL[pk]||pk)+' / '+mk,...PccFresh.operationalReport(daily,window._pccConfig)});

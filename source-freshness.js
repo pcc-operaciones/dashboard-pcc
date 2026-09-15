@@ -50,16 +50,21 @@ function operationalReport(daily,config,now=new Date()){
   const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const month=months.indexOf(String(config?.mes||'').toLowerCase())+1;
   const year=String(config?.año||'');
-  if(!month||!/^20\d{2}$/.test(year))return {reportedThrough:null,business:'Período de operación no configurado'};
+  if(!month||!/^20\d{2}$/.test(year))return {freshnessBasis:'activity',reportedThrough:null,business:'Período de operación no configurado'};
   const current=today(now);
   const reported=daily.filter(d=>d.pro>0||d.real>0||d.ing>0).map(d=>Number.isInteger(d.dia)?parseDate(year+'-'+String(month).padStart(2,'0')+'-'+String(d.dia).padStart(2,'0')):null).filter(d=>d&&d.date<=current).sort((a,b)=>a.key.localeCompare(b.key));
   const last=reported.at(-1)||null;
-  return {reportedThrough:last,business:last?'Actividad registrada hasta: '+last.label:'Sin actividad de operación registrada en el período'};
+  return {freshnessBasis:'activity',reportedThrough:last,business:last?'Actividad registrada hasta: '+last.label:'Sin actividad de operación registrada en el período'};
 }
+function reference(rec){
+ if(rec.freshnessBasis==='activity')return {first:rec.reportedThrough||null,last:rec.reportedThrough||null,missing:0,invalid:0,field:'Última actividad registrada'};
+ return rec.updated||{};
+}
+function referenceLabel(rec){const date=reference(rec);return date.first?span(date):rec.freshnessBasis==='activity'?'Sin actividad registrada':'Fecha de actualización no informada';}
 function displayState(rec,now=new Date()){
-  const value=state(rec,now);
-  if(value==='Fecha no disponible')return rec.state==='ok'&&rec.reportedThrough?'Datos registrados':'Fecha de carga no informada';
-  return value;
+ const value=state(rec,now);
+ if(rec.freshnessBasis==='activity')return value==='Vigente'?'Actividad al día':value==='Atrasado'?'Actividad atrasada':value;
+ return value==='Fecha no disponible'?'Fecha de actualización no informada':value;
 }
 function span(d){return !d.first?'No disponible':d.first.key===d.last.key?d.last.label:d.first.label+' — '+d.last.label;}
 function inspect(rows,meta,now=new Date()){
@@ -94,17 +99,18 @@ function state(rec,now=new Date()){
   if(rec.state==='error')return 'Error de consulta';
   if(rec.state==='loading')return 'Consultando';
   if(rec.state==='empty')return 'Sin registros';
-  const u=rec.updated;
-  if(!u?.first)return 'Fecha no disponible';
+  const u=reference(rec);
+  if(!u?.first)return rec.freshnessBasis==='activity'?'Sin actividad registrada':'Fecha no disponible';
   const age=Math.floor((Date.parse(today(now))-Date.parse(u.first.date))/86400000);
   return age>limits[rec.group]?'Atrasado':u.invalid||u.missing?'Fecha incompleta':'Vigente';
 }
 function summary(list,now=new Date()){
-  const known=list.filter(r=>r.updated?.first);
-  const stamps=known.flatMap(r=>[r.updated.first,r.updated.last]).sort((a,b)=>a.key.localeCompare(b.key));
-  const unknown=list.filter(r=>!r.updated?.first||r.updated.missing||r.updated.invalid).length;
+  const refs=list.map(reference);
+  const known=refs.filter(r=>r.first);
+  const stamps=known.flatMap(r=>[r.first,r.last]).sort((a,b)=>a.key.localeCompare(b.key));
+  const unknown=refs.filter(r=>!r.first||r.missing||r.invalid).length;
   const statuses=list.map(r=>state(r,now));
-  const status=statuses.includes('Error de consulta')?'Fuentes con error':statuses.includes('Consultando')?'Consultando fuentes':statuses.includes('Atrasado')?'Hay fuentes atrasadas':unknown?'Fechas por confirmar':statuses.includes('Sin registros')?'Fuentes sin registros':list.length?'Vigente':'Pendiente de consulta';
+  const status=statuses.includes('Error de consulta')?'Fuentes con error':statuses.includes('Consultando')?'Consultando fuentes':statuses.includes('Atrasado')?'Hay fuentes atrasadas':unknown?(list.filter(r=>r.freshnessBasis==='activity'&&!r.reportedThrough).length===unknown?'Sin actividad registrada':'Fechas por confirmar'):statuses.includes('Sin registros')?'Fuentes sin registros':list.length?'Vigente':'Pendiente de consulta';
   const label=!stamps.length?'Actualización de la fuente no disponible':stamps[0].key===stamps.at(-1).key?stamps[0].label:stamps[0].label+' — '+stamps.at(-1).label;
   return {status,label,unknown,different:stamps.length>1&&stamps[0].key!==stamps.at(-1).key};
 }
@@ -136,19 +142,19 @@ function render(){
  box.replaceChildren();
  const details=el('details');details.open=expanded;
  const compact=el('summary',undefined,'pcc-fresh-summary');
- compact.append(el('span','Vigencia','pcc-fresh-title'),el('span',s.label==='Actualización de la fuente no disponible'?'Fecha de carga no informada':'Fechas de carga conocidas: '+s.label,'pcc-fresh-date'));
+ compact.append(el('span','Vigencia','pcc-fresh-title'),el('span',s.label==='Actualización de la fuente no disponible'?'Referencia de vigencia no disponible':'Fechas de referencia: '+s.label,'pcc-fresh-date'));
  const statuses={'Fuentes con error':'Fuentes incompletas','Hay fuentes atrasadas':'Con atraso','Fechas por confirmar':'Por confirmar','Consultando fuentes':'Consultando','Fuentes sin registros':'Sin registros','Pendiente de consulta':'Pendiente'};
  const failures=list.filter(r=>r.state==='error').length;
  compact.append(el('span',failures?failures+' fuente(s) con error':statuses[s.status]||s.status,'pcc-fresh-status'));
- if(s.unknown)compact.append(el('span',s.unknown+' sin fecha de carga completa','pcc-fresh-count'));
+ if(s.unknown)compact.append(el('span',s.unknown+' sin referencia completa','pcc-fresh-count'));
  const more=el('span',undefined,'pcc-fresh-more');more.append(el('span','Ver detalle','pcc-fresh-closed'),el('span','Ocultar detalle','pcc-fresh-open'));compact.append(more);
  details.append(compact);
  details.append(el('h2','Vigencia de los datos · '+names[active],'pcc-fresh-heading'));
  box.dataset.state=s.status==='Vigente'?'ok':s.status==='Hay fuentes atrasadas'||s.status==='Fuentes con error'?'error':'unknown';
  const info=el('div',undefined,'pcc-fresh-info');
- const update=el('div');update.append(el('span','Fechas de carga informadas','pcc-fresh-label'),el('strong',s.label));
- if(s.different)update.append(el('small','Estas fechas corresponden solo a las fuentes que informan su actualización.'));
- if(s.unknown)update.append(el('small',s.unknown+' de '+list.length+' fuentes sin fecha de carga completa; esto no significa que no tengan datos.'));
+ const update=el('div');update.append(el('span','Referencias de vigencia','pcc-fresh-label'),el('strong',s.label));
+ if(s.different)update.append(el('small','Módulos en línea: última actividad. Informes: fecha de actualización.'));
+ if(s.unknown)update.append(el('small',s.unknown+' de '+list.length+' fuentes sin referencia verificable. Consulta el criterio y estado de cada una.'));
  const data=el('div');data.append(el('span','Datos correspondientes a','pcc-fresh-label'));
  const context=contexts.get(active);
  if(context)data.append(el('strong',context));
@@ -161,28 +167,28 @@ function render(){
  }else data.append(el('strong',active==='ops'?'Período pendiente de configuración':'Período pendiente de carga'));
  info.append(update,data);details.append(info);
  const wrap=el('div',undefined,'pcc-fresh-scroll'),table=el('table');
- const header=el('tr');for(const t of ['Fuente','Fecha de carga / actualización','Corte / actividad registrada','Estado'])header.append(el('th',t));
+ const header=el('tr');for(const t of ['Fuente','Fecha de referencia','Criterio / período','Estado'])header.append(el('th',t));
  const thead=el('thead');thead.append(header);table.append(thead);
  const body=el('tbody');
  for(const r of list){
-   const tr=el('tr'),source=el('td',r.label||r.sheet),date=el('td',r.updated?.first?span(r.updated):'No informada por la fuente'),biz=el('td',r.business||'Sin fecha de datos disponible'),status=el('td',displayState(r));
-   if(r.updated?.first){date.append(el('small',r.updated.field+' · '+r.updated.last.zone));}
-   if(r.updated?.basis)date.append(el('small',r.updated.basis));
-   if(r.reportedThrough&&!r.updated?.first)date.append(el('small','Hay actividad registrada; la fuente no informa cuándo se cargó.'));
+   const tr=el('tr'),source=el('td',r.label||r.sheet),date=el('td',referenceLabel(r)),biz=el('td',r.business||'Sin fecha de datos disponible'),status=el('td',displayState(r));
+   if(r.freshnessBasis==='activity')date.append(el('small','Última actividad · módulo en línea'));
+   else if(r.updated?.first){date.append(el('small',r.updated.field+' · '+r.updated.last.zone));}
+   if(r.freshnessBasis!=='activity'&&r.updated?.basis)date.append(el('small',r.updated.basis));
    if(r.reportedThrough)biz.append(el('small','Último día con producción, minutos reales o ingresos. Excluye días con solo planificación; no certifica el cierre completo del período.'));
-   if(r.updated?.missing||r.updated?.invalid)date.append(el('small',(r.updated.missing||0)+' registros sin fecha; '+(r.updated.invalid||0)+' fechas inválidas o futuras.'));
+   if(r.freshnessBasis!=='activity'&&(r.updated?.missing||r.updated?.invalid))date.append(el('small',(r.updated.missing||0)+' registros sin fecha; '+(r.updated.invalid||0)+' fechas inválidas o futuras.'));
    if(r.state==='error'||r.state==='loading')date.append(el('small','Fechas de la última lectura correcta, si existen.'));
    if(r.queriedAt)source.append(el('small','Consultado: '+r.queriedAt.toLocaleString('es-CO',{timeZone:'America/Bogota'})+' · Colombia'));
    if(r.state==='error'&&r.message)status.append(el('small',r.message));
    tr.append(source,date,biz,status);body.append(tr);
  }
  table.append(body);wrap.append(table);details.append(wrap);
- details.append(el('p','Vigente: todas las fuentes con fecha verificable dentro de '+limits[active]+' día(s) calendario. Umbral configurable. Un último registro no certifica que el período esté completo.','pcc-fresh-foot'));
+ details.append(el('p','Módulos en línea: se evalúa la última actividad, sin exigir fecha de carga. Informes: se evalúa su actualización. Atraso al superar '+limits[active]+' día(s) calendario. Umbral configurable. Un error de consulta se informa por separado.','pcc-fresh-foot'));
  if(root.PCC_REVIEW)details.append(el('p','Vista de comparación: respuestas de fuentes capturadas localmente. Actualizar vuelve a leer esa captura.','pcc-fresh-foot'));
  if(quality)details.append(quality);
  box.append(details);
 }
-const api={parseDate,dates,inspect,state,displayState,operationalReport,summary,track,detail,setContext,configure,readConfig,show,records,refresh:render};
+const api={parseDate,dates,inspect,state,displayState,reference,referenceLabel,operationalReport,summary,track,detail,setContext,configure,readConfig,show,records,refresh:render};
 root.PccFresh=api;if(typeof module!=='undefined')module.exports=api;
 if(root.document)document.addEventListener('DOMContentLoaded',()=>{if(!document.getElementById('gerencia-bar')&&document.querySelector('.topbar')){active='inv';readConfig();}render();});
 })(typeof window!=='undefined'?window:globalThis);

@@ -23,7 +23,7 @@ Los umbrales iniciales son configurables en `config.json > vigencia > maxDiasSin
 | Costos (cos) | 7 |
 | Inventario (inv) | 1 |
 
-Son valores iniciales de la interfaz, no acuerdos de servicio validados. Un frente solo muestra Vigente cuando todas las fuentes consultadas tienen fechas completas y ninguna supera su umbral. Una fuente con error, sin registros, con fecha faltante, inválida o futura impide certificar el conjunto. Cuando hay varias fechas se considera la más antigua, no solo la más reciente.
+Son valores iniciales de la interfaz, no acuerdos de servicio validados. Un frente solo muestra Vigente cuando todas las fuentes consultadas tienen referencias completas y ninguna supera su umbral: última actividad para módulos en línea y actualización para informes. Una fuente con error, sin registros, con fecha faltante, inválida o futura impide certificar el conjunto. Cuando hay varias fechas se considera la más antigua, no solo la más reciente.
 
 ## Contrato para las fuentes
 
@@ -58,4 +58,6 @@ Un campo explícito de actualización tiene prioridad. La regla no se aplica a o
 
 La actividad y la fecha de carga se presentan por separado. La última actividad del módulo se obtiene de días con producción, minutos reales o ingresos mayores a cero, el mismo criterio de días activos de Seguimiento Diario. Se excluyen días que solo tienen planificación (metas o minutos teóricos), fechas futuras y días inexistentes en el mes configurado. No se modifica ninguna fórmula de indicadores.
 
-Un módulo consultado correctamente y con actividad pero sin timestamp de carga muestra “Datos registrados”. La columna de carga aclara “No informada por la fuente”; no significa que el módulo esté vacío o sin datos recientes. Este estado no certifica la fecha de carga ni el cierre completo del período. Los errores de consulta y los umbrales de vigencia mantienen su evaluación independiente. Las fechas del resumen corresponden solo a las fuentes que informan actualización; el contador aclara que las restantes carecen de fecha de carga, no necesariamente de datos.
+Los módulos son fuentes en línea: su vigencia depende exclusivamente de la última actividad registrada, sin requerir una fecha de carga. El estado es “Actividad al día” dentro del umbral y “Actividad atrasada” al superarlo. Actualmente se conservan 2 días calendario para Operaciones, configurables; no existe todavía un calendario de días laborables. Sin actividad se informa ese estado sin inventar fecha ni afirmar atraso. Un error de consulta se informa independientemente. No se certifica el cierre completo del período.
+
+Esta regla sustituye la interpretación inicial basada en fecha de carga para los módulos. Se aplica a todos los módulos consultados por loadMod y a su representación en Gerencia General. Los informes como TEX_Lotes y EU_Lotes mantienen su criterio de actualización. El resumen y su contador emplean la referencia correspondiente a cada fuente: actividad en módulos, actualización en informes. Un módulo con actividad reciente no se cuenta entre las fuentes sin referencia ni genera una alerta por ausencia de timestamp.

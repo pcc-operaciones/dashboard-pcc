@@ -16,7 +16,7 @@
       const status=!key&&area.id!=='inv'?'Período no configurado':source.status==='loading'||!source.status?'Consultando':source.status==='error'?'No disponible':source.status==='empty'?'Sin registros':fresh.status;
       const a={...area,status,fresh,records,ready};result.areas.push(a);
       if(source.status==='error')issue(area.id,area.id+'-error','No se pudo actualizar '+area.name,'Reintentar la consulta y revisar el acceso a las fuentes.',0);
-      else if(ready&&fresh.status!=='Vigente')issue(area.id,area.id+'-fresh',area.name+': '+fresh.status.toLowerCase(),'Confirmar actualización, cobertura y corte con el responsable de las fuentes.',1);
+      else if(ready&&fresh.status!=='Vigente'&&fresh.status!=='Sin actividad registrada')issue(area.id,area.id+'-fresh',area.name+': '+fresh.status.toLowerCase(),'Confirmar actualización, cobertura y corte con el responsable de las fuentes.',1);
       const metric=(id,title,value,unit,note,target)=>result.metrics.push({id,area:area.id,title,value:ready?value:null,unit,note,target,status,period:area.id==='inv'?'Último inventario disponible':label});
       if(area.id==='ops'){
         const mods=source.mods||[],ef=mods.length?deps.data.ops(mods,'ef'):null,compliance=mods.length?deps.data.ops(mods,'cumpl'):null;

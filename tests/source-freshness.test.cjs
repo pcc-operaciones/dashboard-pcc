@@ -118,14 +118,14 @@ test('actividad valida calendario, período y fechas futuras en Colombia',()=>{
  assert.equal(f.operationalReport([{dia:14,pro:1}],null,now).reportedThrough,null);
  assert.equal(f.operationalReport([{dia:14.5,pro:1}],{mes:'Septiembre',año:2026},now).reportedThrough,null);
 });
-test('datos registrados no inventa una fecha de carga ni oculta fallos',()=>{
+test('vigencia por actividad no inventa una fecha de carga ni oculta fallos',()=>{
  const r={group:'ops',state:'ok',...f.inspect([['Día'],[14]],{group:'ops'},now),...f.operationalReport([{dia:14,real:10}],{mes:'Septiembre',año:2026},now)};
- assert.equal(f.displayState(r,now),'Datos registrados');
+ assert.equal(f.displayState(r,now),'Actividad al día');
  assert.equal(r.updated.first,null);
- assert.equal(f.summary([r],now).status,'Fechas por confirmar');
+ assert.equal(f.summary([r],now).status,'Vigente');
  assert.equal(f.displayState({...r,state:'error'},now),'Error de consulta');
  assert.equal(f.displayState({...r,state:'loading'},now),'Consultando');
- assert.equal(f.displayState({...r,reportedThrough:null},now),'Fecha de carga no informada');
+ assert.equal(f.displayState({...r,reportedThrough:null},now),'Sin actividad registrada');
 });
 test('una carga exitosa sin actividad no conserva el día reportado anterior',()=>{
  const m={group:'ops',sheet:'EF MOD2'};
@@ -135,4 +135,37 @@ test('una carga exitosa sin actividad no conserva el día reportado anterior',()
  f.track('activity-test',[['Día'],[15]],'ok',m);
  assert.equal(f.records.get('activity-test').reportedThrough,null);
  f.records.delete('activity-test');
+});
+
+test('módulos en línea alertan al superar el umbral de actividad, no antes',()=>{
+ const current=new Date('2026-09-15T15:00:00Z');
+ const make=day=>({group:'ops',state:'ok',...f.operationalReport([{dia:day,pro:1}],{mes:'Septiembre',año:2026},current)});
+ assert.equal(f.displayState(make(14),current),'Actividad al día');
+ assert.equal(f.displayState(make(13),current),'Actividad al día');
+ assert.equal(f.displayState(make(12),current),'Actividad atrasada');
+ assert.equal(f.summary([make(14)],current).unknown,0);
+ assert.equal(f.summary([make(14)],current).status,'Vigente');
+ f.configure({maxDiasSinActualizar:{ops:1}});
+ assert.equal(f.displayState(make(13),current),'Actividad atrasada');
+ f.configure({maxDiasSinActualizar:{ops:2}});
+});
+test('timestamp de carga no altera vigencia de un módulo en línea',()=>{
+ const r={group:'ops',state:'ok',...f.inspect([['FECHA_ACTUALIZACION'],['2026-07-10']],{group:'ops'},now),...f.operationalReport([{dia:14,real:1}],{mes:'Septiembre',año:2026},now)};
+ assert.equal(f.state(r,now),'Vigente');assert.equal(f.referenceLabel(r),'14/09/2026');
+ assert.equal(r.updated.first.key,'2026-07-10');
+ assert.equal(f.summary([r],now).label,'14/09/2026');
+});
+test('informe atrasado no se oculta al convivir con módulos al día',()=>{
+ const module={group:'ops',state:'ok',...f.operationalReport([{dia:14,pro:1}],{mes:'Septiembre',año:2026},now)};
+ const report={group:'ops',state:'ok',...f.inspect([['F_Programacion'],['04/09/2026']],{sheet:'EU_Lotes',group:'ops'},now)};
+ const s=f.summary([module,report],now);
+ assert.equal(s.status,'Hay fuentes atrasadas');assert.equal(s.unknown,0);
+ assert.equal(s.label,'04/09/2026 — 14/09/2026');
+});
+test('sin actividad es informativo y no se sustituye por fecha de carga',()=>{
+ const r={group:'ops',state:'ok',...f.inspect([['FECHA_ACTUALIZACION'],['2026-09-14']],{group:'ops'},now),...f.operationalReport([{dia:14,teo:576}],{mes:'Septiembre',año:2026},now)};
+ assert.equal(f.state(r,now),'Sin actividad registrada');
+ assert.equal(f.reference(r).first,null);
+ assert.equal(f.summary([r],now).status,'Sin actividad registrada');
+ assert.equal(f.displayState({...r,state:'error'},now),'Error de consulta');
 });
