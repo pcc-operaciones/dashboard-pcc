@@ -27,12 +27,14 @@ function areaNode(a){
  const status=e('span',a.status,'gg-status');status.dataset.ok=String(a.status==='Vigente');header.append(e('h3',a.name),status);n.append(header);
  if(!a.active){n.append(e('p',a.scope,'gg-caption'),e('p','Se integrará a esta vista cuando su cuadro de mando esté disponible.','gg-caption'));return n;}
  n.append(e('p',a.owner,'gg-caption'),e('p','Referencia: '+a.fresh.label,'gg-caption'));
- const details=e('details'),summary=e('summary','Fechas y cobertura de las fuentes');
+ if(a.attentionRecords.length){
+ const details=e('details'),summary=e('summary','Fuentes que requieren atención ('+a.attentionRecords.length+')');
  details.append(summary);
  const list=e('ul',undefined,'gg-source-list');
- for(const r of a.records){const item=e('li');item.append(e('strong',r.label||r.sheet||r.key),e('span',PccFresh.displayState(r)+' · '+PccFresh.referenceLabel(r)),e('span',r.business||'Corte no disponible'));if(r.freshnessBasis==='activity')item.append(e('span','Vigencia según última actividad; módulo en línea.'));else if(r.updated?.basis)item.append(e('span',r.updated.basis));list.append(item);}
- if(!a.records.length)list.append(e('li','Esperando consulta de las fuentes.'));
- details.append(list,e('p','Módulos en línea: última actividad. Informes: actualización del origen.','gg-caption'));n.append(details,button('Abrir '+a.name,()=>PccExecutiveOpen(a.id)));return n;
+ for(const r of a.attentionRecords){const item=e('li');item.append(e('strong',r.label||r.sheet||r.key),e('span',PccFresh.displayState(r)+' · '+PccFresh.referenceLabel(r)),e('span',r.business||'Corte no disponible'));if(r.freshnessBasis==='activity')item.append(e('span','Vigencia según última actividad; módulo en línea.'));else if(r.updated?.basis)item.append(e('span',r.updated.basis));list.append(item);}
+ details.append(list);n.append(details);
+ }
+ n.append(button('Abrir '+a.name,()=>PccExecutiveOpen(a.id)));return n;
 }
 function issueNode(issue){
  const n=e('article',undefined,'gg-issue'),area=M.areas.find(a=>a.id===issue.area),copy=e('div'),actions=e('div',undefined,'gg-actions');
@@ -48,7 +50,7 @@ function render(){
  $('gg-period-label').textContent=current.label;
  $('gg-metrics').replaceChildren(...current.metrics.map(metricNode));
  const opened=new Set([...$('gg-areas').querySelectorAll('details[open]')].map(d=>d.closest('article').dataset.area));
- $('gg-areas').replaceChildren(...current.areas.map(a=>{const n=areaNode(a);n.dataset.area=a.id;if(opened.has(a.id))n.querySelector('details').open=true;return n;}));
+ $('gg-areas').replaceChildren(...current.areas.map(a=>{const n=areaNode(a);n.dataset.area=a.id;if(opened.has(a.id)&&n.querySelector('details'))n.querySelector('details').open=true;return n;}));
  const list=$('gg-issues'),issues=current.issues;
  list.replaceChildren(...issues.map(issueNode));
  if(!issues.length)list.append(e('p',current.areas.some(a=>a.status==='Consultando')?'Consultando las áreas. Los asuntos aparecerán al completar las cargas.':'Sin alertas para gestionar.','gg-empty'));

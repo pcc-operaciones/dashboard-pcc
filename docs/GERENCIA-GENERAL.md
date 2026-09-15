@@ -68,4 +68,7 @@ Abrir http://127.0.0.1:4173/after/#gg con el servidor local de revisión activo.
 
 La agenda incluye únicamente fallos de consulta, atrasos confirmados por la referencia de cada fuente y desviaciones medidas (producción/eficiencia bajo meta, costeos negativos, inventario de más de 90 días). Cada alerta de fuentes enumera exclusivamente las afectadas, en detalle desplegable. Un área puede tener fuentes al día y otras atrasadas: las primeras nunca se añaden a esa alerta.
 
-Se excluyen estados de carga, fuentes al día, fechas no informadas, ausencia de actividad y períodos sin costeos sin un fallo confirmado. Esos estados siguen siendo consultables en la ficha del área, pero no generan por sí mismos una tarea correctiva. Las alertas desaparecen al resolverse su condición. Los compromisos creados por el usuario conservan su seguimiento independiente. No se alteran los indicadores ni el umbral configurado.
+Se excluyen estados de carga, fuentes al día, fechas no informadas, ausencia de actividad y períodos sin costeos sin un fallo confirmado. Esos estados siguen siendo consultables dentro del cuadro de mando de cada área, pero no generan por sí mismos una tarea correctiva. Las alertas desaparecen al resolverse su condición. Los compromisos creados por el usuario conservan su seguimiento independiente. No se alteran los indicadores ni el umbral configurado.
+
+
+Las tarjetas de Estado de las áreas también filtran su desplegable: «Fuentes que requieren atención» muestra solo fallos y atrasos confirmados. Los módulos al día y los avisos informativos se omiten; sin incidencias no se muestra ese desplegable. El detalle completo de fuentes permanece en el cuadro de mando de cada área.

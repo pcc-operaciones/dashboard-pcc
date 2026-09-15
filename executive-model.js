@@ -14,11 +14,11 @@
       const source=input[area.id]||{},records=source.records||[],fresh=deps.fresh.summary(records,now);
       const ready=source.status==='ready'&&(area.id==='inv'||!!key);
       const status=!key&&area.id!=='inv'?'Período no configurado':source.status==='loading'||!source.status?'Consultando':source.status==='error'?'No disponible':source.status==='empty'?'Sin registros':fresh.status;
-      const a={...area,status,fresh,records,ready};result.areas.push(a);
+      const failures=ready?records.filter(r=>r.state==='error'):[];
+      const late=ready?records.filter(r=>deps.fresh.state(r,now)==='Atrasado'):[];
+      const a={...area,status,fresh,records,ready,attentionRecords:[...failures,...late]};result.areas.push(a);
       if(source.status==='error')issue(area.id,area.id+'-error','No se pudo actualizar '+area.name,'Reintentar la consulta y revisar el acceso a las fuentes.',0);
       else if(ready){
-        const failures=records.filter(r=>r.state==='error');
-        const late=records.filter(r=>deps.fresh.state(r,now)==='Atrasado');
         const evidence=rows=>rows.map(r=>({name:r.label||r.sheet||r.key,reference:deps.fresh.referenceLabel(r),basis:r.freshnessBasis==='activity'?'Última actividad':'Actualización del informe'}));
         if(failures.length)issue(area.id,area.id+'-source-errors',failures.length+' fuente(s) no disponibles','Restablecer el acceso o corregir la configuración de las fuentes afectadas.',0,evidence(failures));
         if(late.length)issue(area.id,area.id+'-source-delay',late.length+' fuente(s) con atraso confirmado','Actualizar los informes o registrar la actividad pendiente en las fuentes afectadas.',1,evidence(late));

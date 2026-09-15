@@ -49,3 +49,14 @@ test('se conservan desviaciones reales de operación, costos e inventario',()=>{
  const i=base();i.ops.mods=[{pk:'EU',daily:[{pro:50,um:100,real:50,teo:100}]}];
  assert.deepEqual(M.build(i,deps,reviewNow).issues.map(a=>a.id),['ops-plan','ops-efficiency','cos-negative','inv-aged']);
 });
+
+test('la tarjeta del área enumera solo fallos y atrasos y se limpia al corregirlos',()=>{
+ const i=healthy();i.ops.records=[activity(14,'TEXSION / MOD3'),activity(14,'TEXSION / MOD4'),activity(10,'MOD atrasado'),{group:'ops',state:'error',sheet:'MOD con error'},{group:'ops',state:'ok',sheet:'Sin fecha'}];
+ const card=M.build(i,deps,reviewNow).areas.find(a=>a.id==='ops');
+ assert.deepEqual(card.attentionRecords.map(r=>r.sheet),['MOD con error','MOD atrasado']);
+ assert.equal(card.records.length,5);
+ i.ops.records=[activity(14,'TEXSION / MOD3'),activity(14,'TEXSION / MOD4'),activity(14,'MOD atrasado'),activity(14,'MOD con error')];
+ assert.deepEqual(M.build(i,deps,reviewNow).areas.find(a=>a.id==='ops').attentionRecords,[]);
+ i.ops.status='loading';i.ops.records=[activity(10,'Dato anterior')];
+ assert.deepEqual(M.build(i,deps,reviewNow).areas.find(a=>a.id==='ops').attentionRecords,[]);
+});
