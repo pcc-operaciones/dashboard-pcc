@@ -62,7 +62,7 @@ Se aplicaron frontend-design y ui-ux-pro-max. La búsqueda de sistema visual dev
 
 ## Revisión
 
-Abrir http://127.0.0.1:4173/after/#gg con el servidor local de revisión activo. El sitio público se mantiene en la entrega anterior hasta publicar esta rama. El respaldo v2.0.0 conserva esa referencia.
+Abrir http://127.0.0.1:4173/after/#gg con el servidor local de revisión activo. Publicación aprobada como versión principal v2.1.0 el 15 de septiembre de 2026. El respaldo v2.0.0 conserva la entrega anterior. Ver VERSION-2.1.md para el alcance y la reversión.
 
 ## Alertas gestionables — 15 de septiembre de 2026
 

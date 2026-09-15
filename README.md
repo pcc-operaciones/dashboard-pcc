@@ -1,11 +1,14 @@
 # Dashboard PCC
 
-Dashboard estático de Operaciones, Costos e Inventario de Producto Terminado. Consulta Google Sheets desde el navegador.
+Dashboard estático con Gerencia General y las áreas de Operaciones, Costos e Inventario de Producto Terminado. Consulta Google Sheets desde el navegador.
 
-## Trabajo de la versión 2
+## Versión principal
 
 - Producción: rama `main`.
-- Desarrollo y revisión: `codex/dashboard-v2`.
+- Versión aprobada: `v2.1.0` (Gerencia General), 15 de septiembre de 2026.
+- Desarrollo y revisión: `codex/gerencia-general`.
+- Respaldo de la versión principal anterior: `v2.0.0`.
+- Cambios de esta entrega: [docs/VERSION-2.1.md](docs/VERSION-2.1.md).
 - Punto de partida: etiqueta `baseline/pre-v2-2026-09-14` (commit `205395e2b34a6f16e42449296f601fab279b1ffa`).
 - Plan, criterios de aceptación y pendientes: [docs/VERSION-2.md](docs/VERSION-2.md).
 - Definiciones de los cálculos modificados: [docs/INDICADORES.md](docs/INDICADORES.md).
@@ -51,6 +54,6 @@ Las credenciales de lectura presentes en el código original mantienen pendiente
 
 ## Gerencia General
 
-Nueva vista en `codex/gerencia-general`: [alcance, indicadores y administración](docs/GERENCIA-GENERAL.md). La navegación inicia en Gerencia General e integra Operaciones, Costos e Inventario PT; Logística y Ventas están previstas.
+Vista principal desde v2.1.0: [alcance, indicadores y administración](docs/GERENCIA-GENERAL.md). La navegación inicia en Gerencia General e integra Operaciones, Costos e Inventario PT; Logística y Ventas están previstas.
 
 Revisión local: http://127.0.0.1:4173/after/#gg. Los compromisos se guardan en este navegador y se pueden exportar/importar; aún no existe administración compartida por roles.
