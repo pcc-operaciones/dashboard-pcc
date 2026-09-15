@@ -105,3 +105,34 @@ test('regla de última OP es exclusiva y respeta metadatos explícitos',()=>{
  const explicitMissing=f.inspect([['F_Programacion','FECHA_ACTUALIZACION'],['14/09/2026','']],{sheet:'EU_Lotes'},now);
  assert.equal(explicitMissing.updated.first,null);
 });
+
+test('última actividad excluye filas que solo tienen metas o minutos teóricos',()=>{
+ const report=f.operationalReport([{dia:14,pro:186,real:2755,ing:1223202},{dia:15,pro:0,real:0,ing:0,teo:576,um:100}],{mes:'Septiembre',año:'2026'},new Date('2026-09-15T15:00:00Z'));
+ assert.equal(report.reportedThrough.key,'2026-09-14');
+ assert.equal(report.business,'Actividad registrada hasta: 14/09/2026');
+});
+test('actividad valida calendario, período y fechas futuras en Colombia',()=>{
+ const config={mes:'Febrero',año:2026};
+ assert.equal(f.operationalReport([{dia:29,pro:1},{dia:28,real:1}],config,now).reportedThrough.date,'2026-02-28');
+ assert.equal(f.operationalReport([{dia:15,pro:1}],{mes:'Septiembre',año:2026},now).reportedThrough,null);
+ assert.equal(f.operationalReport([{dia:14,pro:1}],null,now).reportedThrough,null);
+ assert.equal(f.operationalReport([{dia:14.5,pro:1}],{mes:'Septiembre',año:2026},now).reportedThrough,null);
+});
+test('datos registrados no inventa una fecha de carga ni oculta fallos',()=>{
+ const r={group:'ops',state:'ok',...f.inspect([['Día'],[14]],{group:'ops'},now),...f.operationalReport([{dia:14,real:10}],{mes:'Septiembre',año:2026},now)};
+ assert.equal(f.displayState(r,now),'Datos registrados');
+ assert.equal(r.updated.first,null);
+ assert.equal(f.summary([r],now).status,'Fechas por confirmar');
+ assert.equal(f.displayState({...r,state:'error'},now),'Error de consulta');
+ assert.equal(f.displayState({...r,state:'loading'},now),'Consultando');
+ assert.equal(f.displayState({...r,reportedThrough:null},now),'Fecha de carga no informada');
+});
+test('una carga exitosa sin actividad no conserva el día reportado anterior',()=>{
+ const m={group:'ops',sheet:'EF MOD2'};
+ f.track('activity-test',[['Día'],[14]],'ok',m);
+ f.detail('activity-test',f.operationalReport([{dia:14,pro:10}],{mes:'Septiembre',año:2026},now));
+ assert.equal(f.records.get('activity-test').reportedThrough.date,'2026-09-14');
+ f.track('activity-test',[['Día'],[15]],'ok',m);
+ assert.equal(f.records.get('activity-test').reportedThrough,null);
+ f.records.delete('activity-test');
+});
