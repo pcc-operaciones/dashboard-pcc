@@ -1,0 +1,11 @@
+{
+  "archiveFolderId": "ID_DE_CARPETA_PRIVADA_DE_RESPALDOS",
+  "files": {
+    "invEU": "ID_EXCEL_INVENTARIO_EU",
+    "invTEX": "ID_EXCEL_INVENTARIO_TEX",
+    "movEU": "ID_EXCEL_MOVIMIENTOS_EU",
+    "movTEX": "ID_EXCEL_MOVIMIENTOS_TEX"
+  },
+  "quietMinutes": 10,
+  "erpRowLimit": null
+}

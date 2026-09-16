@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><base target="_top"><style>
+body{font:14px system-ui,sans-serif;color:#18344f;margin:18px}h1{font-size:19px}p,li{line-height:1.5}ul{padding-left:18px;font-size:12px;overflow-wrap:anywhere}label{display:block;margin:16px 0 5px}input[type=date]{box-sizing:border-box;width:100%;padding:8px;border:1px solid #a9bbca;border-radius:5px;font:inherit}button{background:#18344f;color:white;padding:11px 14px;border:0;border-radius:5px;font:inherit;cursor:pointer}button:disabled{opacity:.5}#status{white-space:pre-wrap}small{display:block;color:#526575;line-height:1.5}
+</style></head><body>
+<h1>Registrar carga</h1><p>Indica las fechas que seleccionaste en el ERP. Se aplican a los cuatro archivos de EU y TEX.</p>
+<ul id="files"></ul>
+<form id="form">
+<label for="cutoff">Corte de los inventarios</label><input id="cutoff" type="date" required>
+<label for="from">Movimientos desde</label><input id="from" type="date" required>
+<label for="to">Movimientos hasta</label><input id="to" type="date" required>
+<label><input id="complete" type="checkbox"> Las cuatro exportaciones incluyen todos los registros solicitados.</label>
+<small>Si el ERP recortó la descarga por su límite, déjalo sin marcar. Se guardarán los archivos, pero no se certificará el cierre.</small>
+<p><button id="submit" disabled>Guardar fechas</button></p>
+</form><p id="status" role="status">Comprobando archivos…</p>
+<script>
+let fingerprint='';const $=id=>document.getElementById(id);
+function fail(error){$('status').textContent=error.message||String(error);$('submit').disabled=false;}
+google.script.run.withSuccessHandler(data=>{fingerprint=data.fingerprint;data.files.forEach(f=>{const li=document.createElement('li');li.textContent=f.role+': '+f.name;$('files').append(li);});$('status').textContent='';$('submit').disabled=false;}).withFailureHandler(error=>{$('status').textContent=error.message||String(error);}).datosFormularioHistoricoPT();
+$('form').addEventListener('submit',event=>{event.preventDefault();$('submit').disabled=true;$('status').textContent='Guardando…';google.script.run.withSuccessHandler(result=>{$('status').textContent=result.message;}).withFailureHandler(fail).registrarCargaHistoricaPT({fingerprint,cutoff:$('cutoff').value,from:$('from').value,to:$('to').value,complete:$('complete').checked});});
+</script></body></html>
