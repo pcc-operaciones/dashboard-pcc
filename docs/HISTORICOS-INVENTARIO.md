@@ -11,6 +11,21 @@ Estado: primer bloque implementado y probado localmente. Pendiente de instalar y
 - El formulario vincula las fechas al contenido de los cuatro archivos. Reemplazar cualquiera invalida la declaración anterior. No se usa la hora de carga, la fecha del computador ni el último movimiento para inventar el corte.
 - El operador confirma si la exportación incluye todos los registros solicitados. Si alcanzó el límite del ERP o no puede confirmarlo, el paquete se respalda sin sustituir el inventario aceptado. El límite numérico del ERP sigue pendiente de confirmar.
 
+## Frecuencia operativa confirmada
+
+La descarga y carga del paquete se realiza entre tres veces por semana y diariamente. No se exige una carga cada día ni se presupone un calendario fijo de lunes, miércoles y viernes.
+
+- Cada carga válida genera un corte con su fecha real. En los días sin carga se conserva el último corte aceptado y se muestra esa fecha; no se crean fotografías diarias copiadas ni valores cero.
+- El formulario se completa solo cuando se carga un paquete, nunca por cada ejecución automática ni por cada día transcurrido.
+- La revisión automática cada 15 minutos es una comprobación técnica. No representa la frecuencia de actualización del ERP ni modifica la fecha del dato.
+- La siguiente exportación de movimientos debe cubrir también los días transcurridos desde el período previamente aceptado. La ventana móvil permite hacerlo, siempre que esté completa y no haya sido truncada por el ERP. Días sin carga y días sin cobertura de movimientos son situaciones distintas.
+- Al integrar las alertas de vigencia, no se considerará atraso el simple hecho de no haber cargado ayer. El umbral será configurable según la cadencia acordada y los días de operación. Como aún no se conocen días fijos ni calendario laboral, esta frecuencia no se convierte automáticamente en una regla de 24 o 48 horas. Definir el margen operativo antes de activar esa alerta; no afecta los avisos por fallos de importación o cobertura incompleta.
+- Para el selector histórico se ofrecerán cortes efectivamente guardados. Las series de movimientos podrán incluir días entre cargas solo cuando exista cobertura completa; las existencias de esos días no se inventarán.
+- El resumen mensual distinguirá el último corte disponible del mes de un cierre exacto. No se suman las existencias de las sucesivas cargas: son fotografías del mismo inventario.
+- No es necesario subir los archivos justo el último día del mes: una carga posterior puede traer un inventario exportado con corte al último día, porque el ERP permite seleccionar un corte pasado. Ese corte y su cobertura se validan con las mismas reglas. Si no se dispone de ese corte, se conserva el último disponible con su fecha y sin presentarlo como cierre exacto. No se impone una descarga extraordinaria solo para completar la gráfica.
+
+Este ajuste queda incorporado al diseño de la siguiente etapa. El piloto actual conserva cargas y fechas sin generar alertas de atraso por falta de una carga diaria; las alertas y el selector del dashboard todavía no están conectados al histórico.
+
 ## Qué está implementado
 
 1. Respaldo de los cuatro Excel en una carpeta privada de Drive, con huellas SHA-256. Nunca se borran los archivos originales.
