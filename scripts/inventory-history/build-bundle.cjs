@@ -6,5 +6,5 @@ fs.mkdirSync(out,{recursive:true});
 const core=fs.readFileSync(path.join(root,'scripts/inventory-history/core.js'),'utf8');
 const adapter=fs.readFileSync(path.join(root,'apps-script/inventory-history/Code.gs'),'utf8');
 fs.writeFileSync(path.join(out,'InventarioHistorico.gs'),'// Piloto independiente: no modifica las hojas INV_* del dashboard.\n'+core+'\n'+adapter+'\n');
-for(const name of ['CargaHistorica.html','config.example.json'])fs.copyFileSync(path.join(root,'apps-script/inventory-history',name),path.join(out,name));
+for(const name of ['CargaHistorica.html','config.example.json','Integration.gs'])fs.copyFileSync(path.join(root,'apps-script/inventory-history',name),path.join(out,name));
 console.log('Archivos de instalación: '+out);

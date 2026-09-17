@@ -1,6 +1,6 @@
 # Históricos de Inventario PT — piloto de conservación
 
-Estado: primer bloque implementado y probado localmente. Pendiente de instalar y validar en Apps Script. No está conectado al dashboard publicado.
+Estado al 17 de septiembre de 2026: código del piloto guardado en BPT CMI, pendiente de autorización y configuración por la cuenta propietaria. No hay importación periódica del histórico ni conexión de ese histórico al dashboard publicado.
 
 ## Acuerdos del proceso
 
@@ -57,9 +57,30 @@ El activador solo conserva lo que alcanza a observar. No puede recuperar una ver
 - No se certifica valoración ni antigüedad con el cierre de existencias.
 - Si no se exporta un inventario al último día del mes, el último corte disponible no se cambia de fecha para aparentar un cierre. La automatización no puede generar una exportación del ERP.
 
+## Preparación realizada en el proyecto del cliente
+
+Se confirmó que BPT CMI está vinculado a la hoja de inventario y que su propietario sigue siendo el cliente. El servicio avanzado Drive ya está configurado en v3. Para conservar esa propiedad y reducir la configuración manual, se añadieron archivos separados al mismo proyecto:
+
+- InventarioHistorico.gs: núcleo y adaptador del piloto.
+- CargaHistorica.html: formulario de fechas.
+- InstalarHistorico.gs: contenido de Integration.gs, instalador que toma los cuatro ID de CFG.
+
+Se compararon los tres archivos pegados con el paquete local y se confirmó que Código.gs permanece íntegro. No se ejecutó ninguna función, no se crearon respaldos ni activadores y no se publicaron nuevas implementaciones.
+
+Al añadir el formulario y la comprobación de propietario, la detección automática de Google amplió los ámbitos de cuatro a seis. Para que el proceso original no quede pendiente de nuevos permisos, se fijaron explícitamente en appsscript.json los mismos cuatro ámbitos que tenía antes: Drive, Spreadsheets, ejecución de activadores y solicitudes externas. Se preservaron la zona horaria, V8, el registro de excepciones y Drive v3. La vista de información del proyecto confirmó nuevamente cuatro ámbitos.
+
+**El piloto aún no debe ejecutarse con este manifiesto de protección.** La siguiente etapa se coordina con la cuenta propietaria disponible:
+
+1. Habilitar de forma revisada los ámbitos script.container.ui (mostrar el formulario) y userinfo.email (verificar que configura la cuenta propietaria), preservando los demás campos del manifiesto. Los archivos manifest.*.example.json documentan ambos estados; no reemplazar manifiestos de otros proyectos sin comprobar sus campos.
+2. El cliente autoriza esos permisos desde su propia sesión y ejecuta configurarPilotoHistoricoPT. El instalador comprueba propietario y acceso a las cuatro fuentes, crea una carpeta privada y configura el menú. Repetirlo conserva la configuración existente. Solo crea el activador de apertura del menú; no el de importación periódica.
+3. En la hoja, registrar las fechas reales del primer paquete y procesarlo manualmente. Verificar conteos y recuperación antes de instalar la importación periódica.
+4. Si se pospone o falla la autorización, restablecer inmediatamente el manifiesto con los cuatro ámbitos originales. No dejar los activadores de producción esperando la autorización del piloto.
+
+Esta instalación complementaria sustituye, para este cliente, la necesidad de crear una hoja y un proyecto de prueba bajo la cuenta del desarrollador. El almacenamiento y estado del histórico están separados de las hojas INV_*.
+
 ## Instalación de prueba — una sola vez
 
-La prueba se realiza en un proyecto asociado a un Sheet de prueba. El script actual puede continuar atendiendo el tablero mientras se valida este proceso.
+Alternativa para instalaciones independientes: realizar la prueba en un proyecto asociado a un Sheet de prueba. Para BPT CMI seguir la preparación del apartado anterior.
 
 1. Crear un Google Sheet de prueba y abrir **Extensiones → Apps Script**.
 2. Ejecutar localmente `node scripts/inventory-history/build-bundle.cjs`. Los archivos listos para copiar quedan en `.review/inventory-history/`, excluidos de Git.
@@ -83,11 +104,11 @@ Para detener el piloto, eliminar únicamente el activador de `procesarHistoricoP
 - Confirmar que las cuatro fuentes son las correctas y que el mecanismo de reemplazo mantiene los ID configurados.
 - Verificar duración real, permisos y conversión con la cuenta del usuario. Las pruebas locales usan dobles de los servicios de Google y no sustituyen esta comprobación.
 
-Validación local realizada: 81 pruebas automatizadas aprobadas, incluidas 26 del nuevo histórico. Lectura del núcleo verificada con los cuatro archivos suministrados, sin modificarlos ni incorporarlos al repositorio. Las fechas usadas en esa comprobación son parámetros de prueba, no una certificación del corte de esos inventarios.
+Validación local realizada: 84 pruebas automatizadas aprobadas, incluidas 29 del histórico y su instalador. Lectura del núcleo verificada con los cuatro archivos suministrados, sin modificarlos ni incorporarlos al repositorio. Las fechas usadas en esa comprobación son parámetros de prueba, no una certificación del corte de esos inventarios.
 
 ## Siguientes bloques del plan
 
-1. Instalar el piloto y validar una primera carga con corte real declarado.
+1. Completar la autorización y configuración del piloto con el propietario y validar una primera carga con corte real declarado.
 2. Conectar la consolidación acumulada de movimientos, controles de cobertura y cálculos de indicadores. Resolver la base de costos y antigüedad antes de sustituir esos resultados del proceso actual.
 3. Publicar tablas de consulta compatibles con el tablero y probar recuperación ante fallos de publicación.
 4. Incorporar el selector de cortes disponibles, series mensuales y fechas visibles en Inventario PT y Gerencia General. Evitar presentar períodos incompletos como meses cerrados.
