@@ -1,6 +1,6 @@
 # Históricos de Inventario PT — piloto de conservación
 
-Estado al 17 de septiembre de 2026: piloto autorizado y configurado por el propietario; primera carga conservada con corte declarado 2026-09-17. Pendientes la prueba de repetición del paquete real y la activación periódica. El histórico aún no está conectado al dashboard publicado.
+Estado al 17 de septiembre de 2026: piloto autorizado y configurado por el propietario; primera carga conservada con corte declarado 2026-09-17. Repetición SIN_CAMBIOS confirmada y activador automático operativo (15:22:42, 16,669 s; 15:37:42, 5,319 s). La consulta histórica se integra en este segundo bloque.
 
 ## Resultado de la primera carga real
 
@@ -10,7 +10,7 @@ Estado al 17 de septiembre de 2026: piloto autorizado y configurado por el propi
 - Un intento desde la cuenta colaboradora falló al acceder a la carpeta privada de respaldos del cliente. Se mantuvo la carpeta privada y se procesó desde la cuenta propietaria.
 - procesarHistoricoPT finalizó a partir de las 15:03:04, en 84,08 segundos, con estado Completada. La consulta de estado mostró CARGA_CONSERVADA / 2026-09-17 / EN_CURSO.
 - EN_CURSO se refiere al mes abierto; la importación terminó. El resultado confirma que pasó la validación técnica del importador. La comparación independiente de los totales del corte real y la validación de los futuros indicadores siguen siendo pasos distintos.
-- Siguiente control: repetir el mismo paquete desde la cuenta propietaria y comprobar SIN_CAMBIOS antes de habilitar la importación periódica. La cuenta que ejecuta manualmente necesita acceso a la carpeta de respaldos; el futuro activador debe instalarlo el propietario.
+- El usuario confirmó SIN_CAMBIOS al repetir el paquete. El activador por tiempo ya funciona bajo la cuenta que tiene acceso a los respaldos. No se requiere reinstalarlo.
 
 ## Acuerdos del proceso
 
@@ -124,7 +124,7 @@ Validación local realizada: 84 pruebas automatizadas aprobadas, incluidas 29 de
 4. Incorporar el selector de cortes disponibles, series mensuales y fechas visibles en Inventario PT y Gerencia General. Evitar presentar períodos incompletos como meses cerrados.
 5. Comparar ambos procesos con una carga real, activar el nuevo flujo y documentar la operación rutinaria mínima.
 
-El nuevo selector y los indicadores históricos todavía no están implementados. Ningún archivo del dashboard publicado cambia en este primer bloque.
+El segundo bloque añade Histórico dentro de Inventario PT y un acceso desde Gerencia General. La situación de despliegue y las comprobaciones de este bloque se documentan abajo.
 
 ## Archivos técnicos
 
@@ -138,3 +138,33 @@ El nuevo selector y los indicadores históricos todavía no están implementados
 El estado aceptado se referencia con `PCC_HIST_STATE_FILE`. Cada lote conserva originales, tablas convertidas, metadatos y `corte.json`. El adaptador escribe un nuevo archivo de estado, verifica que pueda leerse y después cambia esa referencia. No actualiza las hojas `INV_*` existentes.
 
 Referencias de implementación: [LockService](https://developers.google.com/apps-script/reference/lock/lock-service), [conversión mediante Drive API](https://developers.google.com/workspace/drive/api/guides/manage-uploads), [límites de Apps Script](https://developers.google.com/apps-script/guides/services/quotas).
+
+## Consulta histórica — segundo bloque
+
+- Se añade Histórico: cortes disponibles, comparación con un corte anterior, empresa, bodega, existencias, comprometidas, disponibles, evolución, tabla mensual, búsqueda por referencia y CSV con fecha de corte.
+- El selector afecta solo a Histórico. Las otras vistas conservan la consulta actual y sus fórmulas; no se mezclan sus métricas con el corte elegido. Gerencia General incorpora un acceso a la consulta.
+- El acumulado sustituye los intervalos completos por empresa, conserva lo que queda fuera de la ventana y agrupa movimientos por día y bodega. Los originales y filas detalladas continúan en el archivo privado. Dos filas legítimas de la misma referencia/fecha se suman, no se deduplican.
+- Los movimientos se consultan con la última corrección conservada y se limitan a la fecha elegida. Las fotografías de existencias conservan su fecha; una corrección de la misma fecha publica su última versión válida. El primer mes comienza en la puesta en marcha, sin cargar historia anterior.
+- Entradas/salidas incluyen todos los documentos y traslados. No se etiquetan como ventas ni despachos. Un período sin cobertura muestra guion; un período completo sin movimientos muestra cero.
+- Solo cortes completos aparecen en el selector. No hay stock inventado entre cargas. Un corte de fin de mes no certifica por sí mismo costos, antigüedad ni cierre de movimientos.
+
+### Publicación y recuperación
+
+Publication.gs se incluye automáticamente en el paquete InventarioHistorico.gs junto con inventory-history-model.js. Usa CFG.OUTPUT_ID del proyecto del cliente; en instalaciones independientes requiere querySheetId en PCC_HIST_CONFIG. El mismo activador procesa y publica, incluso al encontrar SIN_CAMBIOS si existe una publicación pendiente. No crea otro activador ni necesita ámbitos adicionales.
+
+La hoja existente recibe INV_Hist_Datos (fragmentos JSON agregados por empresa/referencia/bodega y series diarias) e INV_Hist_Control (un puntero). No cambia los permisos de Drive ni comparte los respaldos privados. Los datos de consulta heredan el acceso existente de la hoja del dashboard; no incluyen IDs privados, documentos ERP ni datos personales.
+
+Los fragmentos se agregan, se releen y se verifican antes de actualizar el puntero de control. Las consultas verifican SHA-256 y el corte de cada detalle. Ante fallo, permanece disponible el puntero anterior; el archivo privado permite reanudar. No se borran filas de versiones anteriores. PCC_HIST_QUERY_FILE conserva el punto de reanudación, PCC_HIST_PUBLISHED_STATE evita reprocesar lo ya publicado y PCC_HIST_PUBLICATION_STATUS identifica incidencias en Ver estado.
+
+El archivo histórico privado permanece como respaldo independiente de Sheets. La tabla de consulta limita su crecimiento a 250.000 filas de fragmentos y requiere revisión de capacidad antes de alcanzarlo. No se ofrece almacenamiento ilimitado. El índice se consulta una vez y los detalles se descargan solo para los cortes seleccionados.
+
+### Validación del segundo bloque
+
+- 94 pruebas automatizadas aprobadas: conservación, solapamientos, correcciones, fechas, separación EU/TEX, filtros por bodega, ausencia de cobertura, publicación interrumpida y reintento.
+- Prueba visual con datos simulados, identificados como tales: selector, comparación, búsqueda sin coincidencias, filtros y primer corte sin comparación.
+- Fallo de integridad simulado: se ocultan los resultados en lugar de mostrar datos parciales.
+- Los datos simulados viven únicamente en .review y no se publican.
+- Primera publicación automática real observada en el ciclo de las 15:52:42 del 17/09/2026. El corte 2026-09-17 se leyó desde Sheets con huellas verificadas; sus resúmenes EU/TEX concilian con las 845 filas agregadas del detalle publicado. Los resultados numéricos de la verificación permanecen en .review, fuera de Git. Esta conciliación comprueba la publicación y no sustituye la comprobación del corte declarado contra el ERP.
+- Interfaz preparada para publicación en la misma dirección del dashboard; conserva el proceso actual.
+
+Referencias: [escritura de rangos en Apps Script](https://developers.google.com/apps-script/reference/spreadsheet/range) y [lectura de valores en Sheets API](https://developers.google.com/workspace/sheets/api/reference/rest/v4/spreadsheets.values/get).

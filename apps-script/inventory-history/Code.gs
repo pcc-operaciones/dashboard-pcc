@@ -56,7 +56,7 @@ function procesarHistoricoPT(){
   if(declaration&&!pccHistDeclarationMatches_(sources,declaration))declaration=null;
   var identity=sources.map(function(s){return {role:s.role,id:s.id,name:s.name,description:s.description,hash:s.hash};});
   var loadId=pccHistTextHash_(JSON.stringify({sources:identity,declaration:declaration})),state=pccHistState_();
-  if(state&&state.loads.some(function(l){return l.id===loadId;})){pccHistStatus_('SIN_CAMBIOS');return;}
+  if(state&&state.loads.some(function(l){return l.id===loadId;})){pccHistStatus_('SIN_CAMBIOS');if(typeof pccHistTryPublish_==='function')pccHistTryPublish_(t0+220000);return;}
   var folders=folder.getFoldersByName('PCC_LOTE_'+loadId),batchFolder=folders.hasNext()?folders.next():folder.createFolder('PCC_LOTE_'+loadId);
   // Preserve originals even if dates or completeness controls are still missing.
   sources.forEach(function(s){var name=s.role+'.xlsx',raw=pccHistNamed_(batchFolder,name);if(!raw)raw=batchFolder.createFile(s.blob.copyBlob().setName(name));if(pccHistHash_(raw.getBlob().getBytes())!==s.hash)throw new Error('El respaldo no coincide: '+s.role);});
@@ -79,10 +79,11 @@ function procesarHistoricoPT(){
   var check=pccHistRead_(stateFile);if(!check.loads.some(function(l){return l.id===loadId&&l.dataId===canonical.getId();}))throw new Error('No se pudo verificar el estado guardado.');
   props.setProperty('PCC_HIST_STATE_FILE',stateFile.getId());
   pccHistStatus_('CARGA_CONSERVADA',batch.cutoff+' · '+entry.status);
+  if(typeof pccHistTryPublish_==='function')pccHistTryPublish_(t0+220000);
  }catch(e){pccHistStatus_('REVISAR_CARGA',String(e.message||e).slice(0,500));throw e;}
  finally{lock.releaseLock();}
 }
-function estadoHistoricoPT(){var v=PropertiesService.getScriptProperties().getProperty('PCC_HIST_STATUS');Logger.log(v||'Sin ejecuciones.');return v?JSON.parse(v):null;}
+function estadoHistoricoPT(){var v=PropertiesService.getScriptProperties().getProperty('PCC_HIST_STATUS');Logger.log(v||'Sin ejecuciones.');if(!v)return null;var state=JSON.parse(v);state.publication=PropertiesService.getScriptProperties().getProperty('PCC_HIST_PUBLICATION_STATUS')||'Consulta histórica pendiente';return state;}
 function instalarTriggerHistoricoPT(){
  pccHistConfig_();
  if(!ScriptApp.getProjectTriggers().some(function(t){return t.getHandlerFunction()==='procesarHistoricoPT';}))ScriptApp.newTrigger('procesarHistoricoPT').timeBased().everyMinutes(15).create();
@@ -110,4 +111,4 @@ function registrarCargaHistoricaPT(form){
 }
 function abrirCargaHistoricaPT(){SpreadsheetApp.getUi().showSidebar(HtmlService.createHtmlOutputFromFile('CargaHistorica').setTitle('Registrar carga de inventario'));}
 function menuHistoricoPT(){SpreadsheetApp.getUi().createMenu('Histórico PT').addItem('Registrar fechas de la carga','abrirCargaHistoricaPT').addItem('Procesar paquete','procesarHistoricoPT').addItem('Ver estado','mostrarEstadoHistoricoPT').addToUi();}
-function mostrarEstadoHistoricoPT(){var s=estadoHistoricoPT();SpreadsheetApp.getUi().alert(s?s.status+'\n'+s.detail:'Sin ejecuciones.');}
+function mostrarEstadoHistoricoPT(){var s=estadoHistoricoPT();SpreadsheetApp.getUi().alert(s?s.status+'\n'+s.detail+'\n\nConsulta del dashboard: '+s.publication:'Sin ejecuciones.');}

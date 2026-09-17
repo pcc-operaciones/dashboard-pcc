@@ -13,6 +13,8 @@
 <script src="source-freshness.js"></script>
 <link rel="stylesheet" href="source-freshness.css">
 <script src="data-quality.js"></script>
+<script src="inventory-history-model.js"></script>
+<link rel="stylesheet" href="inventory-history.css">
 <link rel="stylesheet" href="data-quality.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -304,6 +306,7 @@ canvas{max-width:100%;}
 <!-- NAV -->
 <div class="nav">
   <button class="nav-btn active" onclick="showTab('resumen',this)">📊 Resumen general</button>
+  <button class="nav-btn" id="hist-nav" onclick="PccInventoryHistoryView.open()">Histórico</button>
   <button class="nav-btn" onclick="showTab('antiguedad',this)">⏳ Antigüedad</button>
   <button class="nav-btn" onclick="showTab('rotacion',this)">🔄 Rotación</button>
   <button class="nav-btn" onclick="showTab('referencias',this)">🏷️ Por referencia</button>
@@ -312,6 +315,8 @@ canvas{max-width:100%;}
   <button class="nav-btn" onclick="showTab('abastecimiento',this)">🔔 Abastecimiento Línea</button>
   <button class="nav-btn" onclick="showTab('opnorecibida',this)">📦 OP No Recibidas</button>
 </div>
+
+<div class="page" id="page-historico"></div>
 
 <!-- FILTRO GLOBAL -->
 <div class="filter-bar" id="filter-bar">
@@ -1263,11 +1268,12 @@ function miniBar(u0,u1,u2,u3){
 
 // ══ CARGA ══
 async function cargarTodo(){
+  if(document.body.dataset.inventoryView==='historico'&&window.PccInventoryHistoryView)return PccInventoryHistoryView.refresh();
   if(inventarioCargando)return;
   inventarioCargando=true;
   document.getElementById('inv-live-label').textContent='Consultando';
   document.getElementById('inv-load-error')?.remove();
-  document.querySelectorAll('.page').forEach(el=>el.classList.add('pcc-unavailable'));
+  document.querySelectorAll('.page:not(#page-historico)').forEach(el=>el.classList.add('pcc-unavailable'));
   RUTA_LINEA={}; DESC_MAP={};
   PccData.note('inventario',null);
   document.getElementById('loadingOv').classList.remove('hidden');
@@ -1604,7 +1610,7 @@ async function cargarTodo(){
     PccData.note('meses',PERIODO_MOV.missing.length?'Meses sin registros: '+PERIODO_MOV.missing.join(', ')+'. Validar integridad del período.':null);
     const sinCosto=INV_DATA.filter(r=>(r.u0+r.u1+r.u2+r.u3)>0&&(r.c0+r.c1+r.c2+r.c3)===0).length;
     PccData.note('costos',sinCosto?sinCosto+' registros con existencias y costo cero. Validar valorización con la fuente.':null);
-    PccData.note('historico','No hay cortes históricos de stock: obsolescencia y rupturas muestran solo el dato actual; la cobertura mensual es una estimación con stock actual.');
+    PccData.note('historico','Esta vista usa el inventario actual. Los cortes conservados se consultan en Histórico; la cobertura mensual de esta vista es una estimación con stock actual.');
     const movRM=MOV_DATA.filter(m=>m.tipo==='RM').length;
     const movDRM=MOV_DATA.filter(m=>m.tipo==='DRM').length;
     document.getElementById('loadSub').textContent=`Datos cargados ✓ · ${INV_DATA.length} refs · ${movRM} despachos · ${movDRM} devoluciones`;
@@ -2615,9 +2621,11 @@ function showTab(tab,btn){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+tab).classList.add('active');
   btn.classList.add('active');
+  document.body.dataset.inventoryView=tab;
+  document.querySelectorAll('.tb-right .btn-ref').forEach(b=>{b.hidden=tab==='historico';});
   // Ocultar filtro global en Abastecimiento
   const fb = document.getElementById('filter-bar');
-  if(fb) fb.classList.toggle('hidden', tab==='abastecimiento'||tab==='opnorecibida');
+  if(fb) fb.classList.toggle('hidden', tab==='abastecimiento'||tab==='opnorecibida'||tab==='historico');
 }
 function setTramoFilter(t,btn){
   tramoFilter=t;
@@ -3794,5 +3802,6 @@ cargarTodo();
 <script>
 window.PccExecutiveInventory=()=>({status:inventarioCargando?'loading':document.getElementById('inv-load-error')?'error':INV_DATA.length?'ready':'empty',rows:INV_DATA,records:[...PccFresh.records.values()]});
 </script>
+<script src="inventory-history-view.js"></script>
 </body>
 </html>

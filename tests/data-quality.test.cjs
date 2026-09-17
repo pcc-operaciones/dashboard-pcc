@@ -77,7 +77,7 @@ test('fallo de la fuente principal oculta indicadores y permite reintentar',asyn
   INV_DATA:[{ref:'vieja'}],MOV_DATA:[{}],LINEA_EU_ID:'linea',INV_SHEET_ID:'inventario',
   fetchSheet:async(id)=>{if(id==='inventario')throw Error('HTTP 503');return [['REF']];},
   mapCols:()=>()=>-1,normStr:String,console:{log(){},warn(){}},setTimeout(){},
-  PccData:{note:(k,v)=>notes.set(k,v)},document:{getElementById:id=>(elements[id]??=element()),querySelectorAll:()=>[page],querySelector:()=>element(),createElement:()=>element()}};
+  PccData:{note:(k,v)=>notes.set(k,v)},document:{body:{dataset:{}},getElementById:id=>(elements[id]??=element()),querySelectorAll:()=>[page],querySelector:()=>element(),createElement:()=>element()}};
  await vm.runInNewContext(fn+'\ncargarTodo();',context);
  assert.equal(context.inventarioCargando,false);
  assert.equal(page.classList.contains('pcc-unavailable'),true);

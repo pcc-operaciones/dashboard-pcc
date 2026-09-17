@@ -34,7 +34,8 @@ function areaNode(a){
  for(const r of a.attentionRecords){const item=e('li');item.append(e('strong',r.label||r.sheet||r.key),e('span',PccFresh.displayState(r)+' · '+PccFresh.referenceLabel(r)),e('span',r.business||'Corte no disponible'));if(r.freshnessBasis==='activity')item.append(e('span','Vigencia según última actividad; módulo en línea.'));else if(r.updated?.basis)item.append(e('span',r.updated.basis));list.append(item);}
  details.append(list);n.append(details);
  }
- n.append(button('Abrir '+a.name,()=>PccExecutiveOpen(a.id)));return n;
+ n.append(button('Abrir '+a.name,()=>PccExecutiveOpen(a.id)));
+ if(a.id==='inv')n.append(button('Consultar histórico',()=>{PccExecutiveOpen('inv');document.getElementById('iframe-inventario')?.contentWindow?.PccInventoryHistoryView?.open();}));return n;
 }
 function issueNode(issue){
  const n=e('article',undefined,'gg-issue'),area=M.areas.find(a=>a.id===issue.area),copy=e('div'),actions=e('div',undefined,'gg-actions');

@@ -1,0 +1,20 @@
+/* Historical query follows the approved navy/teal dashboard identity. */
+#page-historico{color:var(--text,#1c3a5c);max-width:1600px;margin:auto}
+#page-historico [hidden]{display:none!important}
+.hist-title,.hist-cut-title,.hist-pages{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.hist-title h2{font-size:22px;margin:0 0 6px}.hist-title p,.hist-panel p,#hist-start{color:#62758a;font-size:13px;line-height:1.6;margin:6px 0}
+#page-historico button,#page-historico select,#page-historico input{font:inherit;border:1px solid #cbd8e5;border-radius:6px;background:white;color:#1c3a5c;padding:9px 12px}
+#page-historico button{cursor:pointer}#page-historico button:disabled{opacity:.5;cursor:default}
+#page-historico :is(button,select,input,summary):focus-visible{outline:3px solid #0f8279;outline-offset:3px}
+#hist-refresh{background:#176f65!important;color:white!important}.hist-controls{border:0;border-bottom:1px solid #dbe5ee;padding:20px 0;display:flex;flex-wrap:wrap;gap:16px;margin:0 0 20px}
+.hist-controls label,.hist-search{display:flex;flex-direction:column;gap:6px;font-size:12px;color:#62758a}.hist-controls select{min-width:160px}
+.hist-cut-title h3{font-size:18px;margin:0}.hist-cut-title span{font-size:12px;color:#62758a}
+.hist-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:18px 0}
+.hist-metric{border-left:3px solid #176f65;padding:14px 18px;background:white;border-radius:0 8px 8px 0;display:flex;flex-direction:column;gap:9px}
+.hist-metric span{font-size:12px;color:#62758a}.hist-metric strong{font-size:27px;font-variant-numeric:tabular-nums}.hist-metric small{color:#62758a;line-height:1.5}
+.hist-panel{background:white;border:1px solid #dbe5ee;border-radius:10px;padding:20px;margin-bottom:18px}.hist-panel h3{font-size:15px;margin:0 0 8px}
+.hist-chart{height:250px;position:relative;margin-top:16px}.hist-scroll{overflow:auto;margin-top:15px}.hist-scroll table{border-collapse:collapse;width:100%;font-size:12px}.hist-scroll th{text-align:left;background:#edf3f8;color:#1c3a5c;font-size:11px;letter-spacing:.02em}.hist-scroll :is(td,th){padding:11px 12px;border-bottom:1px solid #e6edf3;white-space:nowrap}.hist-scroll td{font-variant-numeric:tabular-nums}.hist-search{max-width:340px;margin-top:14px}.hist-pages{font-size:12px;margin-top:14px}.hist-pages span{margin-right:auto}.hist-panel summary{cursor:pointer;font-size:13px}#hist-message:empty{display:none}#hist-message{font-size:13px;color:#805b1b;background:#fff9ed;padding:12px;border-radius:6px}.hist-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+@media(max-width:700px){.hist-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.hist-controls label{width:calc(50% - 8px)}.hist-controls select{min-width:0;width:100%}.hist-metric{padding:12px}.hist-metric strong{font-size:22px}.hist-panel{padding:14px}}
+@media print{.hist-controls,#hist-refresh,.hist-search,.hist-pages,#hist-export{display:none!important}.hist-scroll{overflow:visible}}
+
+body[data-inventory-view="historico"] :is(#pcc-freshness,#inv-load-error,.tb-right .live-pill,#fechaCorte,#loadingOv){display:none!important}
