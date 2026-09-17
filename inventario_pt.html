@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="source-freshness.css">
 <script src="data-quality.js"></script>
 <script src="inventory-history-model.js?v=2.2"></script>
-<link rel="stylesheet" href="inventory-history.css?v=2.2">
+<link rel="stylesheet" href="inventory-history.css?v=2.3">
 <link rel="stylesheet" href="data-quality.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -3238,6 +3238,7 @@ function abrirModalABC(clase){
 const XF_ICON = `<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M1 2h14l-5 6v5l-4-2V8L1 2z"/></svg>`;
 
 // Estado: Set vacío = sin filtro (muestra todo); Set con valores = filtrar por esos valores
+const XF_VALUE_PROVIDERS = {}; // Full datasets for paginated tables.
 const XF_STATE = {};  // xfId → Set
 const XF_SORT  = {};  // tableId_sort → {col, asc}
 
@@ -3300,6 +3301,7 @@ function xfOpen(xfId,btn,tableId,colIdx,renderFn,sortable,filtrable){
 }
 
 function xfGetVals(tableId,colIdx){
+  if(XF_VALUE_PROVIDERS[tableId])return new Set(XF_VALUE_PROVIDERS[tableId](colIdx));
   const tbody=document.getElementById('tb-'+tableId);
   const vals=new Set();
   if(tbody) tbody.querySelectorAll('tr').forEach(tr=>{
@@ -3318,17 +3320,17 @@ function xfPopulate(xfId,tableId,colIdx,renderFn,q){
   const itemsEl=document.getElementById('xf-panel-items');
   if(!itemsEl) return;
   const allVals=xfGetVals(tableId,colIdx);
-  applied.forEach(v=>allVals.add(v));
+  applied.forEach(v=>{if(v!=='\x00__NONE__\x00')allVals.add(v);});
   const sorted=[...allVals].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
   const show=q?sorted.filter(v=>v.toLowerCase().includes(q.toLowerCase())):sorted;
   itemsEl.innerHTML=show.map(v=>{
     const chk=applied.size===0||applied.has(v)?'checked':'';
-    const ve=v.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    const ve=v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     return `<label class="xf-item"><input type="checkbox" value="${ve}" ${chk}
-      onchange="xfToggleVal('${xfId}','${tableId}',${colIdx},'${renderFn}',this)"><span>${v}</span></label>`;
+      onchange="xfToggleVal('${xfId}','${tableId}',${colIdx},'${renderFn}',this)"><span>${ve}</span></label>`;
   }).join('')||'<div style="padding:8px 12px;font-size:11px;color:var(--muted)">Sin resultados</div>';
   const cnt=document.getElementById('xf-panel-count');
-  if(cnt) cnt.textContent=applied.size>0?`${applied.size} de ${allVals.size} activos`:`${allVals.size} valores`;
+  if(cnt) cnt.textContent=applied.size>0?`${applied.has('\x00__NONE__\x00')?0:applied.size} de ${allVals.size} activos`:`${allVals.size} valores`;
 }
 
 function xfLiveSearch(q,xfId,tableId,colIdx,renderFn){
@@ -3366,6 +3368,16 @@ function xfSearchKey(e,xfId,tableId,colIdx,renderFn){
 }
 
 function xfUpdateApplied(xfId, tableId, colIdx){
+  if(XF_VALUE_PROVIDERS[tableId]){
+    const applied=XF_STATE[xfId]||(XF_STATE[xfId]=new Set()),all=xfGetVals(tableId,colIdx);
+    const next=applied.size?new Set([...applied].filter(v=>v!=='\x00__NONE__\x00')):new Set(all);
+    document.querySelectorAll('#xf-panel-items .xf-item input').forEach(cb=>{if(cb.checked)next.add(cb.value);else next.delete(cb.value);});
+    applied.clear();
+    if(!next.size)applied.add('\x00__NONE__\x00');
+    else if(next.size!==all.size||[...next].some(v=>!all.has(v)))next.forEach(v=>applied.add(v));
+    return;
+  }
+
   // Lee el estado actual de TODOS los checkboxes visibles
   // y reconstruye el Set 'applied' desde cero
   const applied=XF_STATE[xfId]||(XF_STATE[xfId]=new Set());
@@ -3391,7 +3403,7 @@ function xfToggleVal(xfId,tableId,colIdx,renderFn,cb){
   document.getElementById('xf-btn-'+xfId)?.classList.toggle('active',applied.size>0);
   const allVals=xfGetVals(tableId,colIdx);
   const cnt=document.getElementById('xf-panel-count');
-  if(cnt) cnt.textContent=applied.size>0?`${applied.size} de ${allVals.size} activos`:`${allVals.size} valores`;
+  if(cnt) cnt.textContent=applied.size>0?`${applied.has('\x00__NONE__\x00')?0:applied.size} de ${allVals.size} activos`:`${allVals.size} valores`;
   if(renderFn&&window[renderFn]) window[renderFn]();
 }
 
@@ -3802,6 +3814,6 @@ cargarTodo();
 <script>
 window.PccExecutiveInventory=()=>({status:inventarioCargando?'loading':document.getElementById('inv-load-error')?'error':INV_DATA.length?'ready':'empty',rows:INV_DATA,records:[...PccFresh.records.values()]});
 </script>
-<script src="inventory-history-view.js?v=2.2"></script>
+<script src="inventory-history-view.js?v=2.3"></script>
 </body>
 </html>

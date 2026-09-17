@@ -18,3 +18,9 @@
 @media print{.hist-controls,#hist-refresh,.hist-search,.hist-pages,#hist-export{display:none!important}.hist-scroll{overflow:visible}}
 
 body[data-inventory-view="historico"] :is(#pcc-freshness,#inv-load-error,.tb-right .live-pill,#fechaCorte,#loadingOv){display:none!important}
+
+.hist-table-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#page-historico .xf-btn{width:22px;height:22px;padding:0;border:0;background:none}
+#page-historico .xf-btn.active{background:#e3f3ef}
+#page-historico .xf-th-inner{gap:4px}
+#page-historico .btn-clear-filters.has-filters{border-color:#176f65;color:#176f65;background:#edf7f4}

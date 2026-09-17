@@ -5,6 +5,9 @@ const M=PccHistoryModel,$=id=>document.getElementById(id);
 const e=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const fmt=n=>typeof n==='number'&&Number.isFinite(n)?n.toLocaleString('es-CO',{maximumFractionDigits:1}):'—';
 const date=d=>d?d.split('-').reverse().join('/'):'—';
+const columnKeys=['company','ref','description','warehouse','units','committed','available'];
+const columnLabels=['Empresa','Referencia','Descripción','Bodega','Existencias al corte','Comprometidas','Disponibles'];
+const columnValues=r=>columnKeys.map((key,i)=>i<4?String(r[key]).trim().replace(/\s+/g,' '):fmt(r[key]));
 let query=null,selected=null,comparison=null,request=0,page=0,tableRows=[],charts=[],detailCache=new Map();
 function option(value,label){const n=e('option',label);n.value=value;return n;}
 async function values(sheet,range){
@@ -34,7 +37,7 @@ function busy(value){$('hist-body').hidden=value;$('hist-loading').hidden=!value
 function clearVisuals(){selected=null;comparison=null;tableRows=[];$('hist-body').hidden=true;for(const ch of charts)ch.destroy();charts=[];}
 function error(message){clearVisuals();$('hist-loading').hidden=true;$('hist-controls').disabled=false;$('hist-refresh').disabled=false;$('hist-message').textContent=message+' Usa «Consultar cortes» para reintentar.';}
 async function load(){
- const token=++request;busy(true);$('hist-message').textContent='';clearVisuals();
+ const token=++request;xfPanelClose();busy(true);$('hist-message').textContent='';clearVisuals();
  try{
   const control=await values('INV_Hist_Control','A1'),d=JSON.parse(control[0]?.[0]||'null');
   if(!d||d.schema!==1)throw Error('La consulta histórica aún no está publicada.');
@@ -75,7 +78,7 @@ function render(){
  const rows=M.filterStock(selected.rows,company,warehouse),prev=comparison?M.filterStock(comparison.rows,company,warehouse):null;
  const totals=M.stockTotals(rows),delta=M.compare(rows,prev);
  $('hist-heading').textContent='Inventario al '+date(selected.cutoff);
- $('hist-metrics').replaceChildren(metric('Existencias',fmt(totals.units),'Unidades registradas'),metric('Comprometidas',fmt(totals.committed),'Unidades con compromiso'),metric('Disponibles',fmt(totals.available),'Existencias menos comprometidas'),metric('Variación de existencias',delta?(delta.units>0?'+':'')+fmt(delta.units)+' uds':'—',comparison?'Frente al '+date(comparison.cutoff)+(delta.percent===null?' · Base cero':` · ${fmt(delta.percent)}%`):'Se requieren dos cortes para comparar'));
+ $('hist-metrics').replaceChildren(metric('Existencias al corte',fmt(totals.units),'Unidades registradas'),metric('Comprometidas',fmt(totals.committed),'Unidades con compromiso'),metric('Disponibles',fmt(totals.available),'Existencias menos comprometidas'),metric('Variación de existencias',delta?(delta.units>0?'+':'')+fmt(delta.units)+' uds':'—',comparison?'Frente al '+date(comparison.cutoff)+(delta.percent===null?' · Base cero':` · ${fmt(delta.percent)}%`):'Se requieren dos cortes para comparar'));
  $('hist-scope').textContent=(company||'EU + TEX')+' · '+(warehouse||'Todas las bodegas')+' · Corte declarado del ERP';
  const monthly=M.monthly(query,selected.cutoff,company,warehouse);
  $('hist-months').replaceChildren(...monthly.map(m=>{const tr=e('tr');for(const v of [m.month,date(m.cutoff),fmt(m.units),date(m.from)+' – '+date(m.to),fmt(m.in),fmt(m.out),m.status+' · '+m.stockStatus])tr.append(e('td',v));return tr;}));
@@ -88,9 +91,17 @@ function render(){
  $('hist-chart-note').textContent=query.cuts.filter(c=>c.cutoff<=selected.cutoff).length===1?'Primer corte conservado. La evolución aparecerá con las próximas cargas.':'Cada punto corresponde a un corte conservado; las existencias no se suman entre fechas.';
  renderTable();
 }
+function baseTableRows(){return selected?M.filterStock(selected.rows,$('hist-company').value,$('hist-warehouse').value,$('hist-search').value):[];}
 function renderTable(){
  if(!selected)return;
- tableRows=M.filterStock(selected.rows,$('hist-company').value,$('hist-warehouse').value,$('hist-search').value).sort((a,b)=>b.units-a.units||a.company.localeCompare(b.company)||a.ref.localeCompare(b.ref));
+ tableRows=xfFilterRows('hist',baseTableRows(),columnValues);
+ const sort=XF_SORT.hist_sort;
+ tableRows.sort((a,b)=>{
+  if(!sort)return b.units-a.units||a.company.localeCompare(b.company)||a.ref.localeCompare(b.ref);
+  const key=columnKeys[sort.col],cmp=sort.col>=4?a[key]-b[key]:String(a[key]).localeCompare(String(b[key]),'es',{numeric:true,sensitivity:'base'});
+  return sort.asc?cmp:-cmp;
+ });
+ xfUpdateClearBtn('hist');
  const pages=Math.max(1,Math.ceil(tableRows.length/50));page=Math.min(page,pages-1);
  $('hist-rows').replaceChildren(...tableRows.slice(page*50,page*50+50).map(r=>{const tr=e('tr');for(const v of [r.company,r.ref,r.description,r.warehouse,fmt(r.units),fmt(r.committed),fmt(r.available)])tr.append(e('td',v));return tr;}));
  if(!tableRows.length){const tr=e('tr'),td=e('td','No hay referencias que coincidan con estos filtros.');td.colSpan=7;tr.append(td);$('hist-rows').append(tr);}
@@ -120,13 +131,19 @@ function mount(){
    <div id="hist-metrics" class="hist-metrics"></div>
    <section class="hist-panel"><h3>Evolución de existencias</h3><p id="hist-chart-note"></p><div class="hist-chart" id="hist-chart-wrap"><canvas id="hist-stock-chart" role="img" aria-label="Existencias en cada corte conservado"></canvas></div></section>
    <section class="hist-panel"><h3>Comportamiento mensual</h3><p>Entradas y salidas de todos los tipos de movimiento, incluidos traslados. No equivalen a ventas. Se presentan con la última información conservada, limitada a la fecha elegida.</p><div class="hist-scroll"><table><thead><tr><th>Mes</th><th>Corte de existencias</th><th>Existencias</th><th>Período de movimientos</th><th>Entradas (uds)</th><th>Salidas (uds)</th><th>Cobertura</th></tr></thead><tbody id="hist-months"></tbody></table></div></section>
-   <section class="hist-panel"><div class="hist-title"><div><h3>Existencias por referencia y bodega</h3><p>Incluye todas las tallas y colores de cada referencia.</p></div><button id="hist-export" type="button">Descargar CSV</button></div><label class="hist-search">Buscar en el detalle<input id="hist-search" type="search" placeholder="Referencia o descripción"></label><div class="hist-scroll"><table><thead><tr><th>Empresa</th><th>Referencia</th><th>Descripción</th><th>Bodega</th><th>Existencias</th><th>Comprometidas</th><th>Disponibles</th></tr></thead><tbody id="hist-rows"></tbody></table></div><div class="hist-pages"><span id="hist-pagination"></span><button id="hist-prev" type="button">Anterior</button><button id="hist-next" type="button">Siguiente</button></div></section>
+   <section class="hist-panel"><div class="hist-title"><div><h3>Existencias al corte por referencia y bodega</h3><p>Incluye todas las tallas y colores de cada referencia.</p></div><div class="hist-table-actions"><button id="xf-clear-hist" class="btn-clear-filters" type="button">✕ Limpiar filtros</button><button id="hist-export" type="button">Descargar CSV</button></div></div><label class="hist-search">Buscar en el detalle<input id="hist-search" type="search" placeholder="Referencia o descripción"></label><div class="hist-scroll"><table><thead id="thead-hist"></thead><tbody id="hist-rows"></tbody></table></div><div class="hist-pages"><span id="hist-pagination"></span><button id="hist-prev" type="button">Anterior</button><button id="hist-next" type="button">Siguiente</button></div></section>
    <details class="hist-panel"><summary>Cómo leer estos datos</summary><p>Solo se ofrecen cortes completos conservados. La fecha de consulta y la ejecución automática no cambian la fecha del inventario. Un corte de fin de mes requiere una exportación de ese día; el último corte disponible puede ser de otra fecha.</p><p>Un guion en movimientos indica cobertura incompleta, no cero. El primer mes empieza en la fecha de puesta en marcha. Una corrección del mismo corte reemplaza su versión de consulta; las versiones originales permanecen en el archivo privado.</p><p>Valoración, antigüedad y obsolescencia históricas no están disponibles porque los Excel de existencias no incluyen su base. Las otras secciones de Inventario PT conservan su consulta actual.</p></details>
   </div>`;
+ XF_COLS.hist=columnLabels.map((label,i)=>({label,sortable:true,filtrable:true,align:i>=4?'right':'left'}));
+ XF_VALUE_PROVIDERS.hist=col=>baseTableRows().map(r=>columnValues(r)[col]);
+ window.renderHistoricoTable=()=>{page=0;renderTable();};
+ xfInitThead('hist','renderHistoricoTable');
+ columnLabels.forEach((label,i)=>$('xf-btn-hist_'+i).setAttribute('aria-label','Filtrar '+label));
+ $('xf-clear-hist').addEventListener('click',()=>xfClearAll('hist','renderHistoricoTable'));
  $('hist-refresh').addEventListener('click',load);
  $('hist-cut').addEventListener('change',()=>choose(true));$('hist-compare').addEventListener('change',()=>choose());
- for(const id of ['hist-company','hist-warehouse'])$(id).addEventListener('change',()=>{page=0;render();});
- $('hist-search').addEventListener('input',()=>{page=0;renderTable();});
+ for(const id of ['hist-company','hist-warehouse'])$(id).addEventListener('change',()=>{xfPanelClose();page=0;render();});
+ $('hist-search').addEventListener('input',()=>{xfPanelClose();page=0;renderTable();});
  $('hist-prev').addEventListener('click',()=>{page--;renderTable();});$('hist-next').addEventListener('click',()=>{page++;renderTable();});$('hist-export').addEventListener('click',download);
 }
 mount();

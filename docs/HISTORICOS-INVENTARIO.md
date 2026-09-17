@@ -168,3 +168,7 @@ El archivo histórico privado permanece como respaldo independiente de Sheets. L
 - Interfaz publicada en main y comprobada en GitHub Pages: acceso desde Gerencia General, selector Histórico dentro de Inventario PT y corte real 2026-09-17. Código funcional 2b80cae; renovación de caché d9182de. La etiqueta baseline/pre-historico-2026-09-17 conserva la versión anterior. El Código.gs original del cliente se comparó con la copia previa y permanece íntegro.
 
 Referencias: [escritura de rangos en Apps Script](https://developers.google.com/apps-script/reference/spreadsheet/range) y [lectura de valores en Sheets API](https://developers.google.com/workspace/sheets/api/reference/rest/v4/spreadsheets.values/get).
+
+### Filtros de la tabla histórica
+
+La tabla de existencias al corte utiliza el mismo componente de filtros de Por referencia: embudo por columna, búsqueda en lista, selección múltiple, Todos/Ninguno, orden ascendente/descendente y limpieza de filtros. Las opciones provienen de todo el conjunto del corte, antes de paginar; el CSV respeta la selección y orden. Los filtros de columna afectan al detalle, no a los indicadores generales. Verificación: 100 pruebas aprobadas y comprobación visual con el corte real, incluyendo 845 registros, filtro por referencia, orden numérico y recuperación desde selección vacía.
