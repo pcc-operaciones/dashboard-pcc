@@ -1,6 +1,16 @@
 # Históricos de Inventario PT — piloto de conservación
 
-Estado al 17 de septiembre de 2026: código del piloto guardado en BPT CMI, pendiente de autorización y configuración por la cuenta propietaria. No hay importación periódica del histórico ni conexión de ese histórico al dashboard publicado.
+Estado al 17 de septiembre de 2026: piloto autorizado y configurado por el propietario; primera carga conservada con corte declarado 2026-09-17. Pendientes la prueba de repetición del paquete real y la activación periódica. El histórico aún no está conectado al dashboard publicado.
+
+## Resultado de la primera carga real
+
+- La configuración del propietario se completó a las 14:40 del 17/09/2026. El menú Histórico PT ya aparece mediante el activador de apertura.
+- Se autorizaron los dos ámbitos adicionales del piloto. El manifiesto activo tiene los seis ámbitos documentados en manifest.pilot.example.json; la protección con cuatro ámbitos describe la etapa previa a esa autorización.
+- El formulario guardó un corte declarado de 17/09/2026 y un período de movimientos de 17/05/2026 a 17/09/2026, con integridad confirmada por el usuario. Son fechas declaradas, no inferidas del contenido del ERP.
+- Un intento desde la cuenta colaboradora falló al acceder a la carpeta privada de respaldos del cliente. Se mantuvo la carpeta privada y se procesó desde la cuenta propietaria.
+- procesarHistoricoPT finalizó a partir de las 15:03:04, en 84,08 segundos, con estado Completada. La consulta de estado mostró CARGA_CONSERVADA / 2026-09-17 / EN_CURSO.
+- EN_CURSO se refiere al mes abierto; la importación terminó. El resultado confirma que pasó la validación técnica del importador. La comparación independiente de los totales del corte real y la validación de los futuros indicadores siguen siendo pasos distintos.
+- Siguiente control: repetir el mismo paquete desde la cuenta propietaria y comprobar SIN_CAMBIOS antes de habilitar la importación periódica. La cuenta que ejecuta manualmente necesita acceso a la carpeta de respaldos; el futuro activador debe instalarlo el propietario.
 
 ## Acuerdos del proceso
 
@@ -69,7 +79,7 @@ Se compararon los tres archivos pegados con el paquete local y se confirmó que 
 
 Al añadir el formulario y la comprobación de propietario, la detección automática de Google amplió los ámbitos de cuatro a seis. Para que el proceso original no quede pendiente de nuevos permisos, se fijaron explícitamente en appsscript.json los mismos cuatro ámbitos que tenía antes: Drive, Spreadsheets, ejecución de activadores y solicitudes externas. Se preservaron la zona horaria, V8, el registro de excepciones y Drive v3. La vista de información del proyecto confirmó nuevamente cuatro ámbitos.
 
-**El piloto aún no debe ejecutarse con este manifiesto de protección.** La siguiente etapa se coordina con la cuenta propietaria disponible:
+**Durante la preparación, el piloto no debía ejecutarse con el manifiesto de protección.** El paso a los seis ámbitos se coordinó con el propietario siguiendo esta secuencia:
 
 1. Habilitar de forma revisada los ámbitos script.container.ui (mostrar el formulario) y userinfo.email (verificar que configura la cuenta propietaria), preservando los demás campos del manifiesto. Los archivos manifest.*.example.json documentan ambos estados; no reemplazar manifiestos de otros proyectos sin comprobar sus campos.
 2. El cliente autoriza esos permisos desde su propia sesión y ejecuta configurarPilotoHistoricoPT. El instalador comprueba propietario y acceso a las cuatro fuentes, crea una carpeta privada y configura el menú. Repetirlo conserva la configuración existente. Solo crea el activador de apertura del menú; no el de importación periódica.
@@ -108,7 +118,7 @@ Validación local realizada: 84 pruebas automatizadas aprobadas, incluidas 29 de
 
 ## Siguientes bloques del plan
 
-1. Completar la autorización y configuración del piloto con el propietario y validar una primera carga con corte real declarado.
+1. Completar la prueba de repetición de la primera carga real y activar la importación periódica desde la cuenta propietaria.
 2. Conectar la consolidación acumulada de movimientos, controles de cobertura y cálculos de indicadores. Resolver la base de costos y antigüedad antes de sustituir esos resultados del proceso actual.
 3. Publicar tablas de consulta compatibles con el tablero y probar recuperación ante fallos de publicación.
 4. Incorporar el selector de cortes disponibles, series mensuales y fechas visibles en Inventario PT y Gerencia General. Evitar presentar períodos incompletos como meses cerrados.
