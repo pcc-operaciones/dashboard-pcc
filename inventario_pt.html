@@ -13,8 +13,8 @@
 <script src="source-freshness.js"></script>
 <link rel="stylesheet" href="source-freshness.css">
 <script src="data-quality.js"></script>
-<script src="inventory-history-model.js"></script>
-<link rel="stylesheet" href="inventory-history.css">
+<script src="inventory-history-model.js?v=2.2"></script>
+<link rel="stylesheet" href="inventory-history.css?v=2.2">
 <link rel="stylesheet" href="data-quality.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -3802,6 +3802,6 @@ cargarTodo();
 <script>
 window.PccExecutiveInventory=()=>({status:inventarioCargando?'loading':document.getElementById('inv-load-error')?'error':INV_DATA.length?'ready':'empty',rows:INV_DATA,records:[...PccFresh.records.values()]});
 </script>
-<script src="inventory-history-view.js"></script>
+<script src="inventory-history-view.js?v=2.2"></script>
 </body>
 </html>
