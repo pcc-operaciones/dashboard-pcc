@@ -14,6 +14,8 @@ El activador existente de `procesarHistoricoPT` también revisa el informe indep
 
 Verificación local: 108 pruebas aprobadas, incluidas 8 de integración de OP (cambios de archivo, repetición, estabilidad, errores aislados y ejecución aun sin fechas nuevas de inventario). Los cortes de inventario del 17 y 18/09 ya se habían publicado antes de este ajuste.
 
+Instalación y verificación real: módulo InventarioHistorico.gs actualizado y releído tras recargar el editor; coincidencia exacta con el paquete probado. Código.gs se comparó antes y después y permanece idéntico. Configurada la referencia privada al mismo origen de la función original, conservando las propiedades históricas. El activador del cliente ejecutó procesarHistoricoPT el 18/09/2026 a las 16:22:42 y completó en 29,061 segundos; sus registros confirman la llamada a copiarOpNoRecibida y la escritura de OP_NO_RECIBIDA_BPT. La nota de la hoja confirma la copia de las 16:22; la fecha del informe sigue siendo la de su origen.
+
 Estado al 17 de septiembre de 2026: piloto autorizado y configurado por el propietario; primera carga conservada con corte declarado 2026-09-17. Repetición SIN_CAMBIOS confirmada y activador automático operativo (15:22:42, 16,669 s; 15:37:42, 5,319 s). La consulta histórica se integra en este segundo bloque.
 
 ## Resultado de la primera carga real
