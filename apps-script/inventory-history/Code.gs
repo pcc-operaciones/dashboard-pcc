@@ -1,5 +1,5 @@
 /* Apps Script adapter. Add core.js to this project as a separate .gs file.
- * Requires Advanced Drive service v3. Historical inventory leaves legacy INV_* sheets intact.
+ * Requires Advanced Drive service v3. CurrentInventory updates INV_* from accepted cuts.
  * Optional OP sync delegates to the client's existing copier.
  * Configuration is kept in Script Properties, never in the public repository.
  */
@@ -60,7 +60,7 @@ function procesarHistoricoPT(){
   if(declaration&&!pccHistDeclarationMatches_(sources,declaration))declaration=null;
   var identity=sources.map(function(s){return {role:s.role,id:s.id,name:s.name,description:s.description,hash:s.hash};});
   var loadId=pccHistTextHash_(JSON.stringify({sources:identity,declaration:declaration})),state=pccHistState_();
-  if(state&&state.loads.some(function(l){return l.id===loadId;})){pccHistStatus_('SIN_CAMBIOS');if(typeof pccHistTryPublish_==='function')pccHistTryPublish_(t0+220000);return;}
+  if(state&&state.loads.some(function(l){return l.id===loadId;})){pccHistStatus_('SIN_CAMBIOS');if(typeof pccHistTryPublish_==='function')pccHistTryPublish_(t0+220000);if(typeof pccHistTrySyncCurrent_==='function')pccHistTrySyncCurrent_(t0+310000);return;}
   var folders=folder.getFoldersByName('PCC_LOTE_'+loadId),batchFolder=folders.hasNext()?folders.next():folder.createFolder('PCC_LOTE_'+loadId);
   // Preserve originals even if dates or completeness controls are still missing.
   sources.forEach(function(s){var name=s.role+'.xlsx',raw=pccHistNamed_(batchFolder,name);if(!raw)raw=batchFolder.createFile(s.blob.copyBlob().setName(name));if(pccHistHash_(raw.getBlob().getBytes())!==s.hash)throw new Error('El respaldo no coincide: '+s.role);});
@@ -78,16 +78,17 @@ function procesarHistoricoPT(){
   var next=PccInventoryHistory.accept(state,batch,loadId,new Date().toISOString());
   var entry=next.loads.find(function(l){return l.id===loadId;});entry.folderId=batchFolder.getId();entry.dataId=canonical.getId();
   // A new state file is complete and read back before a single pointer is changed.
-  // Never overwrite the previous accepted state or legacy dashboard sheets.
+  // Never overwrite the previous accepted state. Current views publish separately.
   var stateFile=pccHistJson_(folder,'PCC_ESTADO_'+Utilities.getUuid()+'.json',next);
   var check=pccHistRead_(stateFile);if(!check.loads.some(function(l){return l.id===loadId&&l.dataId===canonical.getId();}))throw new Error('No se pudo verificar el estado guardado.');
   props.setProperty('PCC_HIST_STATE_FILE',stateFile.getId());
   pccHistStatus_('CARGA_CONSERVADA',batch.cutoff+' · '+entry.status);
   if(typeof pccHistTryPublish_==='function')pccHistTryPublish_(t0+220000);
+  if(typeof pccHistTrySyncCurrent_==='function')pccHistTrySyncCurrent_(t0+310000);
  }catch(e){pccHistStatus_('REVISAR_CARGA',String(e.message||e).slice(0,500));throw e;}
  finally{lock.releaseLock();}
 }
-function estadoHistoricoPT(){var props=PropertiesService.getScriptProperties(),v=props.getProperty('PCC_HIST_STATUS');Logger.log(v||'Sin ejecuciones.');if(!v)return null;var state=JSON.parse(v);state.publication=props.getProperty('PCC_HIST_PUBLICATION_STATUS')||'Consulta histórica pendiente';state.pendingOps=JSON.parse(props.getProperty('PCC_OP_NR_STATUS')||'null');return state;}
+function estadoHistoricoPT(){var props=PropertiesService.getScriptProperties(),v=props.getProperty('PCC_HIST_STATUS');Logger.log(v||'Sin ejecuciones.');if(!v)return null;var state=JSON.parse(v);state.publication=props.getProperty('PCC_HIST_PUBLICATION_STATUS')||'Consulta histórica pendiente';state.currentInventory=props.getProperty('PCC_INV_CURRENT_STATUS')||'Pendiente';state.pendingOps=JSON.parse(props.getProperty('PCC_OP_NR_STATUS')||'null');return state;}
 function instalarTriggerHistoricoPT(){
  pccHistConfig_();
  if(!ScriptApp.getProjectTriggers().some(function(t){return t.getHandlerFunction()==='procesarHistoricoPT';}))ScriptApp.newTrigger('procesarHistoricoPT').timeBased().everyMinutes(15).create();
@@ -115,4 +116,4 @@ function registrarCargaHistoricaPT(form){
 }
 function abrirCargaHistoricaPT(){SpreadsheetApp.getUi().showSidebar(HtmlService.createHtmlOutputFromFile('CargaHistorica').setTitle('Registrar carga de inventario'));}
 function menuHistoricoPT(){SpreadsheetApp.getUi().createMenu('Histórico PT').addItem('Registrar fechas de la carga','abrirCargaHistoricaPT').addItem('Procesar paquete','procesarHistoricoPT').addItem('Ver estado','mostrarEstadoHistoricoPT').addToUi();}
-function mostrarEstadoHistoricoPT(){var s=estadoHistoricoPT();SpreadsheetApp.getUi().alert(s?s.status+'\n'+s.detail+'\n\nConsulta del dashboard: '+s.publication+(s.pendingOps?'\n\nOP no recibidas: '+s.pendingOps.status+'\n'+s.pendingOps.detail:''):'Sin ejecuciones.');}
+function mostrarEstadoHistoricoPT(){var s=estadoHistoricoPT();SpreadsheetApp.getUi().alert(s?s.status+'\n'+s.detail+'\n\nConsulta del dashboard: '+s.publication+'\n\nInventario actual: '+s.currentInventory+(s.pendingOps?'\n\nOP no recibidas: '+s.pendingOps.status+'\n'+s.pendingOps.detail:''):'Sin ejecuciones.');}

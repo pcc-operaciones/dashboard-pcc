@@ -420,6 +420,8 @@ canvas{max-width:100%;}
       <div class="hero-body">
         <div class="hero-lbl">Total unidades</div>
         <div class="hero-val" id="k-total-uds">—</div>
+        <div class="hero-meta-txt" id="k-total-corte">Corte ERP pendiente</div>
+        <details style="font-size:11px;margin-top:5px"><summary style="cursor:pointer">Ver desglose</summary><div id="k-total-desglose" style="margin-top:4px;line-height:1.5"></div></details>
         <div class="hero-meta">
           <span class="hero-meta-txt" id="k-total-costo">en costo</span>
           <span style="margin-left:8px;background:#DBEAFE;color:#1E40AF;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700" id="k-comprometidos-badge" title="Unidades comprometidas en pedidos preparados">🔒 <span id="k-comprometidos">—</span> comp.</span>
@@ -1058,7 +1060,7 @@ window.addEventListener('error', function(e){
 });
 
 // ══ ESTADO GLOBAL ══
-let INV_DATA=[], MOV_DATA=[], REF_MAP={}, COMPROMETIDOS={};
+let INV_DATA=[], MOV_DATA=[], REF_MAP={}, COMPROMETIDOS={}, INV_COMPROMISOS=[];
 let OP_NO_RECIBIDA={}, OP_NO_RECIBIDA_LIST=[]; // ref → {ops, totalUds, maxDias}; lista plana para la pestaña
 // STOCK_MIN_LINEA: Map ref→stockMínimo para EU Línea (fuente: REFERENCIAS LINEA EU)
 let STOCK_MIN_LINEA = new Map([['105539',200],['7697',200],['105542',200],['7699',200],['7698',200],['101970',200],['105538',200],['101971',200],['103621',200],['103710',200],['104372',200],['103612',200],['104121',200],['105572',200],['105114',200],['103135',200],['101275',200],['102141',200],['105604',200],['105212',200],['105196',200],['105137',200],['101433',200],['105416',200],['105155',200],['105272',200],['102755',200],['101285',200],['101097',200],['102943',200],['104184',200],['103463',200],['102223',200],['105216',200],['3557',200],['106134',200],['106135',200],['105392',200],['105600',200],['105624',200],['105383',200],['3556',200],['102952',200],['104164',200],['104778',200],['101713',200],['104777',200],['100984',200],['104997',200],['104289',200],['104586',200],['100729',200],['104551',200],['101553',200],['101863',200],['7148',200],['106391',200],['103848',200],['103842',200],['104066',200],['101300',200],['101300-1',200],['7700',200],['7700-1',200],['105245',200],['105103',200],['105197',200],['105246',200],['101948',200],['104065',200],['104415',200],['104161',200],['105566',200],['105565',200],['105478',200],['105854',200],['102786',200],['105901',200],['106376',200],['105519',200],['105845',200],['105846',200],['1138',200],['105855',200],['104324',200],['104346',200],['105226',200],['105185',200],['105224',200],['105259',200],['103760',200],['104699',200],['7385',200],['7119',200],['7384',200],['103186',200],['105253',200],['105254',200],['105654',200],['105265',200],['105163',200],['104056',200],['104529',200],['105569',200],['104797',200],['103857',200],['104552',200],['101538',200],['101539',200],['101152',200],['104390',200],['106392',200],['106365',200],['103042',200],['104531',200],['104533',200],['4003',200],['100651',200],['100652',200],['101961',200],['100782',200],['101550',200],['104532',200],['103899',200],['101502-3',200],['105851',200],['105423',200],['106151',200],['106123',200],['106124',200],['105826',200],['104475',200],['105133',200],['105892',200],['365',200],['366',200],['363',200],['105127',200],['105808',200],['105279',200],['106126',200],['105295',200],['106119',200],['103856',200],['105632',200],['104327',200],['105243',200],['103754',200],['101480',200],['103161',200],['104234',200],['102896',200],['104190',200],['4004',200],['106136',200]]);
@@ -1210,14 +1212,13 @@ function pN(v){
 }
 
 async function fetchSheet(sid,sheet,range='A:AZ'){
-  const keepCols=sheet==='INV_Resumen'?18:sheet==='INV_Bodegas'?17:null;
-  const sourceRange=keepCols?'A:AZ':range;
+  const sourceRange=['INV_Resumen','INV_Bodegas','INV_Movimientos'].includes(sheet)?'A:AZ':range;
   const url=`${BASE}/${sid}/values/${encodeURIComponent(sheet+'!'+sourceRange)}?key=${API_KEY}&_=${Date.now()}`;
   return PccData.load(sheet+' · '+sid.slice(-6),async()=>{
   const r=await fetch(url,{signal:AbortSignal.timeout(20000),cache:'no-store'});
   if(!r.ok) throw new Error(`Error ${r.status} · ${sheet}`);
   return (await r.json()).values||[];
-  },{group:'inv',sheet}).then(rows=>keepCols?rows.map(r=>r.slice(0,keepCols)):rows);
+  },{group:'inv',sheet});
 }
 function normStr(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();}
 function mapCols(hdr){
@@ -1379,6 +1380,9 @@ async function cargarTodo(){
       new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000))
     ]);
 
+    const cortesLeidos=[rowsResumen,rowsBodegas,rowsMov].flatMap(rows=>{const i=rows[0]?.indexOf('FECHA_CORTE_DATOS')??-1;return i<0?[]:rows.slice(1).map(r=>r[i]);});
+    if(new Set(cortesLeidos).size>1)throw new Error('El inventario cambió durante la consulta. Pulse Actualizar para leer el mismo corte');
+
     // ── 3b. Cargar OP_NO_RECIBIDA_BPT (OPs entregadas por Producción, pendientes en BPT) ──
     document.getElementById('loadSub').textContent='Cargando OP No Recibidas...';
     OP_NO_RECIBIDA={};
@@ -1500,7 +1504,8 @@ async function cargarTodo(){
         // Total_Uds es la fuente de verdad de esta bodega
         // Los tramos pueden estar inflados (copian el total global por el Apps Script)
         // Usamos Total_Uds como límite y distribuimos proporcionalmente si la suma supera
-        const totalUdsReal=Math.round(pN(r[c('Total_Uds')]||r[c('TOTAL_UDS')]||u0+u1+u2+u3));
+        const totalCol=c('Total_Uds');
+        const totalUdsReal=Math.round(totalCol>=0?pN(r[totalCol]):u0+u1+u2+u3);
         let fu0=u0,fu1=u1,fu2=u2,fu3=u3;
         const sumaTramos=u0+u1+u2+u3;
         if(sumaTramos>0 && sumaTramos!==totalUdsReal && totalUdsReal>0){
@@ -1531,10 +1536,10 @@ async function cargarTodo(){
         const temporada=traz.temporada||'—';
         // Descripción final: priorizar DESC_MAP (puede venir de hoja Línea EU con nombre comercial)
         const descFinal = DESC_MAP[ref] || desc || '—';
-        INV_DATA.push({ref,desc:descFinal,talla,color:colorDesc,bodega,descBodega,linea,lineaReal,temporada,u0:fu0,c0,u1:fu1,c1,u2:fu2,c2,u3:fu3,c3,esSeg,esCobros});
+        INV_DATA.push({empresa,totalUds:totalUdsReal,cutoff:String(r[c('FECHA_CORTE_DATOS')]||''),ref,desc:descFinal,talla,color:colorDesc,bodega,descBodega,linea,lineaReal,temporada,u0:fu0,c0,u1:fu1,c1,u2:fu2,c2,u3:fu3,c3,esSeg,esCobros});
       });
     }
-    COMPROMETIDOS={};
+    COMPROMETIDOS={}; INV_COMPROMISOS=[];
     if(rowsResumen.length>1){
       const c=mapCols(rowsResumen[0]);
       rowsResumen.slice(1).forEach(r=>{
@@ -1542,6 +1547,7 @@ async function cargarTodo(){
         const comp=pN(r[c('Uds_Comprometidas')]||0);
         const disp=pN(r[c('Uds_Disponibles')]||0);
         const temp=String(r[c('Temporada')]||'').trim();
+        INV_COMPROMISOS.push({empresa:String(r[c('Empresa')]||'').trim(),ref,bodega:String(r[c('Bodega')]||'').trim(),comprometidas:comp});
         if(!COMPROMETIDOS[ref]) COMPROMETIDOS[ref]={comprometidas:0,disponibles:0,temporada:''};
         COMPROMETIDOS[ref].comprometidas+=comp;
         COMPROMETIDOS[ref].disponibles+=disp;
@@ -1662,8 +1668,23 @@ function renderTodo(){renderResumen();renderAntiguedad();renderRotacion();render
 
 function destroyChart(k){if(window[k]){window[k].destroy();window[k]=null;}}
 
+// All warehouses count toward total stock, even when aging is unavailable.
+function resumenExistencias(rows){
+  const result={total:0,principal:0,segundas:0,cobros:0,costo:0,cutoff:''};
+  const cuts=new Set();
+  rows.forEach(r=>{
+    const units=Number.isFinite(r.totalUds)?r.totalUds:r.u0+r.u1+r.u2+r.u3;
+    result.total+=units;
+    result[r.esCobros?'cobros':r.esSeg?'segundas':'principal']+=units;
+    result.costo+=r.c0+r.c1+r.c2+r.c3;
+    if(r.cutoff)cuts.add(r.cutoff);
+  });
+  if(cuts.size===1&&rows.every(r=>r.cutoff))result.cutoff=[...cuts][0];
+  return result;
+}
 // ─── RESUMEN ───
 function renderResumen(){
+  const stockTotal=resumenExistencias(INV_DATA.filter(glFilterReal));
   const inv=INV_DATA.filter(r=>!r.esSeg && !r.esCobros && glFilter(r));
   const movFilt=MOV_DATA.filter(glFilterMov);
   const totalUds=inv.reduce((a,r)=>a+r.u0+r.u1+r.u2+r.u3,0);
@@ -1726,13 +1747,15 @@ function renderResumen(){
   // Subtexto desglose
   const kRupSub=document.getElementById('k-rupturas-sub');
   if(kRupSub) kRupSub.textContent=rupTotalN+' sin stock · '+rupParcialN+' bajo mínimo';
-  document.getElementById('k-total-uds').textContent=fmt(totalUds);
-  // Comprometidos: suma de todos los refs en COMPROMETIDOS
-  const refsVisibles=new Set(inv.map(r=>r.ref));
-  const totalComp=Object.entries(COMPROMETIDOS).filter(([ref])=>refsVisibles.has(ref)).reduce((a,[,v])=>a+v.comprometidas,0);
+  document.getElementById('k-total-uds').textContent=fmt(stockTotal.total);
+  document.getElementById('k-total-desglose').textContent='Principal: '+fmt(stockTotal.principal)+' · Segundas: '+fmt(stockTotal.segundas)+' · Cobros: '+fmt(stockTotal.cobros);
+  document.getElementById('k-total-corte').textContent=stockTotal.cutoff?'Corte ERP: '+stockTotal.cutoff.split('-').reverse().join('/'):'Corte ERP pendiente de sincronización';
+  // Match the same companies, references and warehouses as total stock.
+  const clavesVisibles=new Set(INV_DATA.filter(glFilterReal).map(r=>JSON.stringify([r.empresa,r.ref,r.bodega])));
+  const totalComp=INV_COMPROMISOS.filter(r=>clavesVisibles.has(JSON.stringify([r.empresa,r.ref,r.bodega]))).reduce((a,r)=>a+r.comprometidas,0);
   const elComp=document.getElementById('k-comprometidos');
   if(elComp){ elComp.textContent=fmt(totalComp); }
-  document.getElementById('k-total-costo').textContent=fmtM(totalCosto)+' en costo';
+  document.getElementById('k-total-costo').textContent=fmtM(stockTotal.costo)+' en costo';
   document.getElementById('k-dev').textContent=tasaDev+'%';
   document.getElementById('k-dev-sub').textContent=fmt(devTotal)+' uds devueltas';
 

@@ -4,7 +4,7 @@
   const finite=n=>typeof n==='number'&&Number.isFinite(n);
   function period(config){const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];const m=months.indexOf(String(config?.mes||'').toLowerCase());return m<0||!/^20\d{2}$/.test(String(config?.año))?null:config.año+'-'+String(m+1).padStart(2,'0');}
   function costSummary(rows,key){const selected=key?rows.filter(r=>r.fecha===key):[],valid=selected.filter(r=>finite(r.rent));return {count:selected.length,rent:valid.length?valid.reduce((s,r)=>s+r.rent,0)/valid.length:null,negative:valid.length?valid.filter(r=>r.rent<0).length:null,missing:selected.length-valid.length};}
-  function inventorySummary(rows){const selected=rows.filter(r=>!r.esSeg&&!r.esCobros);if(!selected.length)return {units:null,aged:null,agedShare:null};const units=selected.reduce((s,r)=>s+['u0','u1','u2','u3'].reduce((n,k)=>n+(finite(r[k])?r[k]:0),0),0),aged=selected.reduce((s,r)=>s+(finite(r.u3)?r.u3:0),0);return {units,aged,agedShare:units>0?aged/units:null};}
+  function inventorySummary(rows){const selected=rows.filter(r=>!r.esSeg&&!r.esCobros);if(!rows.length)return {units:null,aged:null,agedShare:null};const stock=r=>finite(r.totalUds)?r.totalUds:['u0','u1','u2','u3'].reduce((n,k)=>n+(finite(r[k])?r[k]:0),0);const units=rows.reduce((s,r)=>s+stock(r),0),principal=selected.reduce((s,r)=>s+stock(r),0),aged=selected.length?selected.reduce((s,r)=>s+(finite(r.u3)?r.u3:0),0):null;return {units,aged,agedShare:principal>0?aged/principal:null};}
   function build(input,deps,now=new Date()){
     const key=period(input.config),label=key?input.config.mes+' '+input.config.año:'Período no configurado';
     const result={key,label,areas:[],metrics:[],issues:[]};
@@ -39,8 +39,8 @@
       }
       if(area.id==='inv'){
         const inv=inventorySummary(source.rows||[]);a.inventory=inv;
-        metric('inventory-units','Existencias de producto terminado',inv.units,'number','Unidades · excluye Segundas y Cobros');
-        metric('inventory-aged','Unidades con más de 90 días',inv.aged,'number',finite(inv.agedShare)?(inv.agedShare*100).toFixed(1)+'% de las existencias · edad según fuente':'Edad según fuente');
+        metric('inventory-units','Existencias de producto terminado',inv.units,'number','Unidades · todas las bodegas');
+        metric('inventory-aged','Unidades con más de 90 días',inv.aged,'number',finite(inv.agedShare)?(inv.agedShare*100).toFixed(1)+'% del inventario principal · edad según fuente':'Edad según fuente');
         if(ready&&inv.aged>0)issue('inv','inv-aged','Inventario con más de 90 días','Revisar referencias y definir prioridades de salida con el área comercial.');
       }
     }

@@ -1,5 +1,21 @@
 # Históricos de Inventario PT — piloto de conservación
 
+## Sincronización de inventario actual — 18/09/2026
+
+Corrección aprobada: el Resumen consultaba una publicación del 16/09 y además excluía Segundas/Cobros. El Histórico consultaba el corte del 18/09 con todas las bodegas. La conciliación previa fue 137.659 + 11.426 (bodegas excluidas) + 9.494 (cambio entre fuentes) = 158.579.
+
+- El mismo activador de 15 minutos publica ahora INV_Resumen, INV_Bodegas e INV_Movimientos desde los JSON archivados del último corte aceptado y publicado. Reutiliza cargarTrazabilidad, calcularEdadFIFO, buildResumen, buildBodegas y buildMovimientos del cliente; no vuelve a convertir los Excel ni llama al procesamiento manual completo. OP continúa con su revisión independiente.
+- Exige inventarios y períodos de movimientos completos. Un paquete sin fechas no llega a esta etapa. Se selecciona state.current: una carga de un corte anterior no hace retroceder la vista actual.
+- Compara INV_Resumen e INV_Bodegas con el corte canónico por empresa, referencia y bodega. Una discrepancia bloquea la escritura; no ajusta cantidades para forzar coincidencias. Los estados de error se consultan en Histórico PT > Ver estado > Inventario actual.
+- Publica las tres tablas en una solicitud Sheets batchUpdate, con tipos explícitos y limpieza de filas anteriores; conserva los IDs y formatos de las hojas. Las solicitudes se aplican juntas según la [garantía de atomicidad de Google](https://developers.google.com/workspace/sheets/api/reference/rest/v4/spreadsheets/batchUpdate). Antes de escribir conserva vistas-anteriores.json en la carpeta privada del lote. Luego relee y concilia las dos tablas de existencias.
+- PCC_INV_CURRENT_LOAD evita repetir transformaciones y escrituras del mismo corte; los errores no certifican la versión y se reintentan. Si falta tiempo en la ejecución, continúa en el próximo ciclo. Un SIN_CAMBIOS del archivo puede acompañarse de una sincronización pendiente del Resumen.
+- Fecha_Actualizacion y FECHA_CORTE_DATOS contienen el corte declarado del ERP. La nota A1 distingue el corte de la hora de publicación. MOVIMIENTOS_DESDE/HASTA conserva la ventana declarada por empresa.
+- Código.gs necesita únicamente ampliar calcularEdadFIFO con el quinto argumento opcional fechaCorte y usarlo en su reloj. scripts/inventory-history/patch-legacy-cutoff.cjs aplica exactamente esas dos sustituciones a un archivo privado exportado y rechaza versiones inesperadas. La llamada manual de cuatro argumentos mantiene su conducta. El resto de las reglas originales de costos, FIFO y clasificación se conserva; esta corrección no certifica esas estimaciones como valorización o antigüedad ERP.
+- Total unidades suma Total_Uds de todas las bodegas seleccionadas, sin depender de la distribución por edades. Ver desglose muestra Principal, Segundas y Cobros. El corte se ve en la tarjeta. Los compromisos respetan empresa/referencia/bodega. Gerencia General usa también el total completo; su porcentaje de antigüedad sigue referido al inventario principal, indicado en el texto.
+- Si una consulta del navegador cruza publicaciones con fechas distintas, se rechaza para pedir Actualizar. Los indicadores de rotación, cobertura y obsolescencia mantienen su alcance de inventario principal.
+
+Pruebas locales: 123 aprobadas, con casos de conciliación por bodega, diferencias compensadas, paquetes incompletos, reintentos, límite de tiempo, fechas declaradas, valores literales, total sin edades y reloj FIFO. Validación real y publicación web: pendiente de registrar al terminar la ejecución del propietario.
+
 ## Integración de OP pendientes de recepción — 18/09/2026
 
 El activador existente de `procesarHistoricoPT` también revisa el informe independiente de OP mediante `pccHistSyncPendingOps_`. Reutiliza `copiarOpNoRecibida` del Código.gs del cliente sin modificar sus filtros, conversión, escritura ni tratamiento del informe vacío. No incorpora una segunda clasificación de órdenes ni un nuevo activador.
