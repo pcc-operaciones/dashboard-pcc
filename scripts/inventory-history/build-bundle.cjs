@@ -5,6 +5,6 @@ const out=path.join(root,'.review','inventory-history');
 fs.mkdirSync(out,{recursive:true});
 const core=fs.readFileSync(path.join(root,'scripts/inventory-history/core.js'),'utf8');
 const adapter=fs.readFileSync(path.join(root,'apps-script/inventory-history/Code.gs'),'utf8');
-fs.writeFileSync(path.join(out,'InventarioHistorico.gs'),'// Conserva el archivo privado y publica INV_Hist_*; no modifica las hojas del proceso anterior.\n'+core+'\n'+adapter+'\n'+fs.readFileSync(path.join(root,'inventory-history-model.js'),'utf8')+'\n'+fs.readFileSync(path.join(root,'apps-script/inventory-history/Publication.gs'),'utf8')+'\n');
+fs.writeFileSync(path.join(out,'InventarioHistorico.gs'),'// Histórico INV_Hist_* y revisión independiente de OP mediante la función original del cliente.\n'+core+'\n'+adapter+'\n'+fs.readFileSync(path.join(root,'inventory-history-model.js'),'utf8')+'\n'+fs.readFileSync(path.join(root,'apps-script/inventory-history/Publication.gs'),'utf8')+'\n'+fs.readFileSync(path.join(root,'apps-script/inventory-history/PendingOps.gs'),'utf8')+'\n');
 for(const name of ['CargaHistorica.html','config.example.json','Integration.gs'])fs.copyFileSync(path.join(root,'apps-script/inventory-history',name),path.join(out,name));
 console.log('Archivos de instalación: '+out);

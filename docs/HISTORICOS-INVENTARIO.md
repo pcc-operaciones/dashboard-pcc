@@ -1,5 +1,19 @@
 # Históricos de Inventario PT — piloto de conservación
 
+## Integración de OP pendientes de recepción — 18/09/2026
+
+El activador existente de `procesarHistoricoPT` también revisa el informe independiente de OP mediante `pccHistSyncPendingOps_`. Reutiliza `copiarOpNoRecibida` del Código.gs del cliente sin modificar sus filtros, conversión, escritura ni tratamiento del informe vacío. No incorpora una segunda clasificación de órdenes ni un nuevo activador.
+
+- Configuración privada: propiedad `PCC_OP_NR_SOURCE_ID`, igual al ORIGEN_ID de la función original. Si se cambia ese origen, mantener ambas referencias alineadas. Sin esta propiedad, la integración queda desactivada.
+- Cada ciclo revisa la fecha de modificación de ese archivo. Espera 10 minutos de estabilidad y llama al copiador solo ante una versión pendiente, o si desapareció la hoja de destino. La primera ejecución sincroniza el archivo existente.
+- Esta revisión ocurre antes de las salidas por inventario SIN_CAMBIOS o fechas faltantes. No exige registrar fechas de inventario para actualizar OP.
+- Una copia que termina con error no se confirma como procesada y se reintenta. Su diagnóstico se guarda separado del inventario y se muestra en Histórico PT > Ver estado.
+- El copiador original conserva la hoja anterior cuando no escribe filas. Se mantiene esa conducta por solicitud del usuario y se registra SIN_ESCRITURA, sin anunciar una publicación nueva. La integración no cambia las garantías de escritura del copiador original: este todavía elimina y recrea su hoja al escribir.
+- Si la revisión de OP consume más de 90 segundos, el histórico continúa en el siguiente ciclo, conservando sus puntos de reanudación.
+- La nota Actualizado de la hoja sigue indicando cuándo se realizó la copia. La fecha de modificación del archivo se conserva en el diagnóstico; ninguna de ellas sustituye la fecha del informe de origen.
+
+Verificación local: 108 pruebas aprobadas, incluidas 8 de integración de OP (cambios de archivo, repetición, estabilidad, errores aislados y ejecución aun sin fechas nuevas de inventario). Los cortes de inventario del 17 y 18/09 ya se habían publicado antes de este ajuste.
+
 Estado al 17 de septiembre de 2026: piloto autorizado y configurado por el propietario; primera carga conservada con corte declarado 2026-09-17. Repetición SIN_CAMBIOS confirmada y activador automático operativo (15:22:42, 16,669 s; 15:37:42, 5,319 s). La consulta histórica se integra en este segundo bloque.
 
 ## Resultado de la primera carga real
