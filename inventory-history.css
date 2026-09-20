@@ -24,3 +24,5 @@ body[data-inventory-view="historico"] :is(#pcc-freshness,#inv-load-error,.tb-rig
 #page-historico .xf-btn.active{background:#e3f3ef}
 #page-historico .xf-th-inner{gap:4px}
 #page-historico .btn-clear-filters.has-filters{border-color:#176f65;color:#176f65;background:#edf7f4}
+
+.hist-metric:last-child{grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap}.hist-metric:last-child strong{font-size:24px;overflow-wrap:anywhere}

@@ -13,8 +13,8 @@
 <script src="source-freshness.js"></script>
 <link rel="stylesheet" href="source-freshness.css">
 <script src="data-quality.js"></script>
-<script src="inventory-history-model.js?v=2.5"></script>
-<link rel="stylesheet" href="inventory-history.css?v=2.3">
+<script src="inventory-history-model.js?v=2.6"></script>
+<link rel="stylesheet" href="inventory-history.css?v=2.6">
 <link rel="stylesheet" href="data-quality.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -361,6 +361,7 @@ canvas{max-width:100%;}
   <button class="gl-clear-btn" onclick="glClear()">✕ Limpiar</button>
 </div>
 
+<details id="cost-scope" class="coverage-scope" style="margin:8px 20px"><summary>Valoración con costo del ERP · ver criterio</summary><p></p><ul></ul></details>
 <!-- ═══════════ TAB 1: RESUMEN ═══════════ -->
 <div class="page active" id="page-resumen">
 <details class="coverage-scope"><summary>Rotación y días: solo primeras · excluye Segundas y Cobros</summary><p>Alcance de rotación y días de inventario: existencias y despachos RM de primeras, según los filtros seleccionados. Excluye PT002, TI005 y TI006 (Segundas) y PT003 (Cobros).</p><p>Días de inventario = existencias al corte ÷ (despachos RM del período ÷ días calendario del período).</p><p class="coverage-period"></p><p>Cada barra usa las existencias y el período exportado de su propio corte. Se muestra el último corte guardado de cada mes; solo es cierre mensual si corresponde al último día del mes. Sin corte o sin despachos, no se dibuja una barra. Los filtros de línea y categoría usan la clasificación disponible actualmente.</p></details>
@@ -1192,7 +1193,7 @@ let abasSortAsc = false;
 
 // ══ UTILS ══
 const fmt  = n => Math.round(n).toLocaleString('es-CO');
-const fmtM = n => { const a=Math.abs(n); return a>=1e6?'$'+(n/1e6).toFixed(1)+'M':a>=1e3?'$'+(n/1e3).toFixed(0)+'K':'$'+fmt(n); };
+const fmtM = n => { if(!Number.isFinite(n)||n===0)return '—'; const a=Math.abs(n); return a>=1e6?'$'+(n/1e6).toFixed(1)+'M':a>=1e3?'$'+(n/1e3).toFixed(0)+'K':'$'+fmt(n); };
 const pct  = (a,b) => b ? (a/b*100).toFixed(1)+'%' : '—';
 
 // pN: parsear número en formato colombiano (coma decimal o punto decimal)
@@ -1524,13 +1525,16 @@ async function cargarTodo(){
           fu3=totalUdsReal-fu0-fu1-fu2; // el resto al último tramo para cuadrar exacto
           if(fu3<0){fu3=0;} // seguridad
         }
-        const costo=pN(r[c('Valor_Costo')]||r[c('VALOR_COSTO')]||0);
+        const verifiedCost=Number(r[c('Valoracion_Version')])===1;
+        const missingCostUnits=verifiedCost?pN(r[c('Uds_Sin_Costo')]):Math.abs(totalUdsReal);
+        const costSource=verifiedCost?String(r[c('Origen_Costo')]||'SIN_COSTO'):'SIN_COSTO';
+        const costo=verifiedCost?pN(r[c('Valor_Conocido')]):0;
         const total=totalUdsReal||1;
         // Distribuir costo proporcional a tramos corregidos
-        const c0=Math.round(costo*fu0/total);
-        const c1=Math.round(costo*fu1/total);
-        const c2=Math.round(costo*fu2/total);
-        const c3=Math.round(costo*fu3/total);
+        const c0=Math.round(costo*fu0/total*100)/100;
+        const c1=Math.round(costo*(fu0+fu1)/total*100)/100-c0;
+        const c2=Math.round(costo*(fu0+fu1+fu2)/total*100)/100-c0-c1;
+        const c3=Math.round((costo-c0-c1-c2)*100)/100;
         // Corrección de descripciones de fuente
         let descBodega=String(r[c('Desc_Bodega')]||r[c('DESC_BODEGA')]||bodega).trim();
         if(bodega==='TI005') descBodega='SEGUNDAS TWO&TWO';
@@ -1543,7 +1547,7 @@ async function cargarTodo(){
         const temporada=traz.temporada||'—';
         // Descripción final: priorizar DESC_MAP (puede venir de hoja Línea EU con nombre comercial)
         const descFinal = DESC_MAP[ref] || desc || '—';
-        INV_DATA.push({empresa,totalUds:totalUdsReal,cutoff:String(r[c('FECHA_CORTE_DATOS')]||''),ref,desc:descFinal,talla,color:colorDesc,bodega,descBodega,linea,lineaReal,temporada,u0:fu0,c0,u1:fu1,c1,u2:fu2,c2,u3:fu3,c3,esSeg,esCobros});
+        INV_DATA.push({empresa,missingCostUnits,costSource,knownValue:costo,totalUds:totalUdsReal,cutoff:String(r[c('FECHA_CORTE_DATOS')]||''),ref,desc:descFinal,talla,color:colorDesc,bodega,descBodega,linea,lineaReal,temporada,u0:fu0,c0,u1:fu1,c1,u2:fu2,c2,u3:fu3,c3,esSeg,esCobros});
       });
     }
     COMPROMETIDOS={}; INV_COMPROMISOS=[];
@@ -1623,8 +1627,8 @@ async function cargarTodo(){
     PccData.note('fechas',invalidDates?invalidDates+' filas excluidas por período inválido o futuro.':null);
     PccData.note('vigencia',PERIODO_MOV.days?null:'No hay un período declarado uniforme y válido. Rotación y días de inventario no se calculan hasta verificarlo.');
     PccData.note('meses',PERIODO_MOV.missing.length?'Meses sin registros: '+PERIODO_MOV.missing.join(', ')+'. Validar integridad del período.':null);
-    const sinCosto=INV_DATA.filter(r=>(r.u0+r.u1+r.u2+r.u3)>0&&(r.c0+r.c1+r.c2+r.c3)===0).length;
-    PccData.note('costos',sinCosto?sinCosto+' registros con existencias y costo cero. Validar valorización con la fuente.':null);
+    const sinCosto=INV_DATA.reduce((n,r)=>n+r.missingCostUnits,0);
+    PccData.note('costos',sinCosto?fmt(sinCosto)+' unidades sin costo informado. Los valores monetarios incluyen solo existencias con costo conocido.':null);
     PccData.note('historico',null);
     window.PccInventoryHistoryView?.resetCoverage();
     const movRM=MOV_DATA.filter(m=>m.tipo==='RM').length;
@@ -1674,19 +1678,27 @@ async function cargarTodo(){
 
 }
 
-function renderTodo(){renderResumen();renderAntiguedad();renderRotacion();renderReferencias();renderSegundas();renderCobros();renderAbastecimiento();renderOpNoRecibida();}
+function renderTodo(){renderCostNotice();renderResumen();renderAntiguedad();renderRotacion();renderReferencias();renderSegundas();renderCobros();renderAbastecimiento();renderOpNoRecibida();}
 
+function renderCostNotice(){
+ const rows=INV_DATA.filter(glFilterReal),stock=resumenExistencias(rows),node=document.getElementById('cost-scope');
+ node.querySelector('summary').textContent=stock.missingCostUnits?fmt(stock.missingCostUnits)+' unidades sin costo informado · ver detalle':'Valoración con costo del ERP · ver criterio';
+ node.querySelector('p').textContent='Precio unitario mayor que cero; si no, Costo prom. unit. (ins). Ambos son costo de la prenda. Valor = existencias × costo unitario. '+(stock.missingCostUnits?'Los importes y porcentajes monetarios muestran solo el costo conocido; un guion no significa inventario sin valor. ':'')+'Obsolescencia y ABC se calculan sobre primeras. Cada corte conserva sus propios costos.';
+ const list=node.querySelector('ul');list.replaceChildren();
+ rows.filter(r=>r.missingCostUnits>0).slice(0,50).forEach(r=>{const li=document.createElement('li');li.textContent=r.empresa+' · '+r.ref+' · '+r.bodega+' · Talla '+r.talla+': '+fmt(r.missingCostUnits)+' uds sin costo';list.append(li);});
+ if(stock.costo){const li=document.createElement('li');li.textContent='Valor conocido exacto: '+stock.costo.toLocaleString('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:2,maximumFractionDigits:2});list.prepend(li);}
+}
 function destroyChart(k){if(window[k]){window[k].destroy();window[k]=null;}}
 
 // All warehouses count toward total stock, even when aging is unavailable.
 function resumenExistencias(rows){
-  const result={total:0,principal:0,segundas:0,cobros:0,costo:0,cutoff:''};
+  const result={total:0,principal:0,segundas:0,cobros:0,costo:0,missingCostUnits:0,cutoff:''};
   const cuts=new Set();
   rows.forEach(r=>{
     const units=Number.isFinite(r.totalUds)?r.totalUds:r.u0+r.u1+r.u2+r.u3;
     result.total+=units;
     result[r.esCobros?'cobros':r.esSeg?'segundas':'principal']+=units;
-    result.costo+=r.c0+r.c1+r.c2+r.c3;
+    result.costo+=r.c0+r.c1+r.c2+r.c3;result.missingCostUnits+=r.missingCostUnits||0;
     if(r.cutoff)cuts.add(r.cutoff);
   });
   if(cuts.size===1&&rows.every(r=>r.cutoff))result.cutoff=[...cuts][0];
@@ -1736,7 +1748,7 @@ function renderResumen(){
   const cobertura=PccData.coverage(totalUds,despPrimeras,PERIODO_MOV.days);
   const rotacion=PccData.rotation(totalUds,despPrimeras,PERIODO_MOV.days)?.toFixed(1)??'—';
   const tasaDev=despTotal?(devTotal/despTotal*100).toFixed(1):'0.0';
-  const obsolPct=(totalCosto?(rC/totalCosto*100).toFixed(1):'0.0')+'%';
+  const obsolPct=totalCosto?(rC/totalCosto*100).toFixed(1)+'%':'—';
 
   // ── Rupturas: solo EU Línea, comparado contra stock mínimo en Uds_Disponibles ──
   // Consolidar Uds_Disponibles por referencia (suma de todas las bodegas)
@@ -1779,7 +1791,7 @@ function renderResumen(){
   document.getElementById('k-dias-trend').textContent=(cobertura===null?(PERIODO_MOV.days?'Sin despachos':'Período sin verificar'):cobertura>90?'▲ Exceso':'▼ OK');
   document.getElementById('k-dias-trend').className='hero-trend '+(cobertura>90?'dn':'up');
   document.getElementById('k-obsol').textContent=obsolPct;
-  document.getElementById('k-obsol-val').textContent=fmtM(rC)+' en riesgo';
+  document.getElementById('k-obsol-val').textContent=fmtM(rC)+' en riesgo'+(inv.some(r=>r.missingCostUnits)?' · costo conocido':'');
   document.getElementById('k-obsol-meta').textContent='Meta ≤5%';
   document.getElementById('k-rupturas').textContent=rupturaPct;
   document.getElementById('k-rupturas-meta').textContent='Meta ≤5% · EU Línea';
@@ -1794,7 +1806,7 @@ function renderResumen(){
   const totalComp=INV_COMPROMISOS.filter(r=>clavesVisibles.has(JSON.stringify([r.empresa,r.ref,r.bodega]))).reduce((a,r)=>a+r.comprometidas,0);
   const elComp=document.getElementById('k-comprometidos');
   if(elComp){ elComp.textContent=fmt(totalComp); }
-  document.getElementById('k-total-costo').textContent=fmtM(stockTotal.costo)+' en costo';
+  document.getElementById('k-total-costo').textContent=fmtM(stockTotal.costo)+(stockTotal.missingCostUnits?' en costo conocido · parcial':' en costo ERP');
   document.getElementById('k-dev').textContent=tasaDev+'%';
   document.getElementById('k-dev-sub').textContent=fmt(devTotal)+' uds devueltas';
 
@@ -1924,7 +1936,7 @@ function renderResumen(){
     if(!agR[r.ref]) agR[r.ref]={c:0,desc:r.desc,linea:r.linea};
     agR[r.ref].c+=r.c0+r.c1+r.c2+r.c3;
   });
-  const refsArr=Object.entries(agR).sort((a,b)=>b[1].c-a[1].c);
+  const refsArr=Object.entries(agR).filter(([,r])=>r.c>0).sort((a,b)=>b[1].c-a[1].c);
   const totalC=refsArr.reduce((a,[,r])=>a+r.c,0)||1;
   let acum=0;const clases={A:{refs:0,val:0},B:{refs:0,val:0},C:{refs:0,val:0}};
   // Guardar clasificación por ref para el modal
@@ -1959,7 +1971,9 @@ function renderResumen(){
     <tr style="cursor:pointer" onclick="abrirModalABC('A')"><td class="abc-a">A</td><td>${pA}%</td><td>${(clases.A.refs/refsArr.length*100).toFixed(0)}%</td><td style="color:#1E7A40;font-size:10px">🔍 Ver</td></tr>
     <tr style="cursor:pointer" onclick="abrirModalABC('B')"><td class="abc-b">B</td><td>${pB}%</td><td>${(clases.B.refs/refsArr.length*100).toFixed(0)}%</td><td style="color:#C07A00;font-size:10px">🔍 Ver</td></tr>
     <tr style="cursor:pointer" onclick="abrirModalABC('C')"><td class="abc-c">C</td><td>${pC}%</td><td>${(clases.C.refs/refsArr.length*100).toFixed(0)}%</td><td style="color:#6B7A8D;font-size:10px">🔍 Ver</td></tr>`;
-  document.getElementById('abc-nota').textContent='Clic en cada clase para ver las referencias.';
+  document.getElementById('abc-nota').textContent=refsArr.length?'Costo conocido de primeras · clic para ver referencias.':'Sin costos informados para clasificar.';
+  if(!refsArr.length)document.getElementById('abc-tbody').innerHTML='<tr><td colspan="4">Sin valoración disponible</td></tr>';
+  document.getElementById('chart5').hidden=!refsArr.length;
 
   // CHART 6 — Por bodega (excluir Cobros y Segundas; filtrar T&T/YETRO si se filtra EU)
   destroyChart('_ch6');
@@ -2428,7 +2442,8 @@ function renderReferencias(){
   const busq=document.getElementById('busq-ref').value.toLowerCase();
   const agR={};
   INV_DATA.filter(r=>!r.esSeg && glFilter(r)).forEach(r=>{
-    if(!agR[r.ref])agR[r.ref]={ref:r.ref,desc:r.desc,linea:r.linea,temporada:r.temporada,u0:0,u1:0,u2:0,u3:0,c:0};
+    if(!agR[r.ref])agR[r.ref]={ref:r.ref,desc:r.desc,linea:r.linea,temporada:r.temporada,u0:0,u1:0,u2:0,u3:0,c:0,missingCostUnits:0};
+    agR[r.ref].missingCostUnits+=r.missingCostUnits||0;
     agR[r.ref].u0+=r.u0;agR[r.ref].u1+=r.u1;agR[r.ref].u2+=r.u2;agR[r.ref].u3+=r.u3;agR[r.ref].c+=r.c0+r.c1+r.c2+r.c3;
   });
   const todosRef=Object.values(agR);
@@ -2471,7 +2486,7 @@ function renderReferencias(){
     return `<tr style="cursor:pointer" onclick="abrirModal('${r.ref}')">
       <td class="navy">${r.ref}</td><td>${r.desc}</td><td>${lt(r.linea)}</td>
       <td style="color:var(--muted);font-size:11px">${r.temporada}</td>
-      <td>${fmt(tot)}</td><td>${fmtM(r.c)}</td>
+      <td>${fmt(tot)}</td><td>${fmtM(r.c)}${r.missingCostUnits?' · parcial':''}</td>
       <td class="tramo-0">${r.u0||'—'}</td><td class="tramo-1">${r.u1||'—'}</td>
       <td class="tramo-2">${r.u2||'—'}</td><td class="${r.u3>0?'tramo-3':''}">${r.u3||'—'}</td>
       <td class="${p>=.5?'bad':p>=.25?'warn':''}">${(p*100).toFixed(0)}%</td>
@@ -2675,6 +2690,7 @@ function cerrarModal(e){if(e.target===document.getElementById('modalRef'))docume
 
 // ─── HELPERS ───
 function showTab(tab,btn){
+  document.getElementById('cost-scope').hidden=tab==='historico'||tab==='opnorecibida';
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+tab).classList.add('active');
@@ -3597,7 +3613,11 @@ function exBuildWb(nombre, sheets){
   const wb = XLSX.utils.book_new();
   sheets.forEach(s=>{
     const meta = exMeta(nombre);
-    const data = [s.hdr, ...s.rows];
+    meta.push(['Valoración: costo ERP del corte; Precio unitario > 0, si no Costo prom. unit. (ins).']);
+    const missing=INV_DATA.filter(glFilterReal).reduce((n,r)=>n+(r.missingCostUnits||0),0);
+    if(missing)meta.push([missing+' unidades sin costo informado. Importes monetarios: subtotales conocidos; un cero exportado puede significar costo no informado. Consulte el detalle de valoración.']);
+    const headers=s.hdr.map(h=>h==='Costo'?'Costo conocido':h);
+    const data = [headers, ...s.rows.map(row=>row.map((v,i)=>s.hdr[i]==='Costo'&&v===0?null:v))];
     const ws = XLSX.utils.aoa_to_sheet([...meta, ...data]);
     // Estilos básicos de ancho
     if(s.cols) ws['!cols'] = s.cols;
@@ -3873,6 +3893,6 @@ cargarTodo();
 <script>
 window.PccExecutiveInventory=()=>({status:inventarioCargando?'loading':document.getElementById('inv-load-error')?'error':INV_DATA.length?'ready':'empty',rows:INV_DATA,records:[...PccFresh.records.values()]});
 </script>
-<script src="inventory-history-view.js?v=2.5"></script>
+<script src="inventory-history-view.js?v=2.6"></script>
 </body>
 </html>

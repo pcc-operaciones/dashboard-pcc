@@ -40,7 +40,7 @@ test('migración republica cortes existentes sin nueva carga y mantiene el archi
  const control=r.book.getSheetByName('INV_Hist_Control'),old=control.getRange(1,1).getValue();
  r.ctx.procesarHistoricoPT();
  assert.equal(r.props.get('PCC_HIST_STATE_FILE'),state);assert.equal(r.state().loads.length,1);
- assert.notEqual(control.getRange(1,1).getValue(),old);assert.equal(r.props.get('PCC_HIST_PUBLICATION_VERSION'),'2');
+ assert.notEqual(control.getRange(1,1).getValue(),old);assert.equal(r.props.get('PCC_HIST_PUBLICATION_VERSION'),'3');
  const index=JSON.parse(control.getRange(1,1).getValue()),s=r.book.getSheetByName('INV_Hist_Datos');
  const read=d=>JSON.parse(s.getRange(d.row,1,d.count,1).getValues().map(r=>r[0].slice(1)).join(''));
  const result=read(index),d=read(result.cuts[0].detail);assert.equal(d.rotation.period.days,16);assert.equal(d.rows.length,2);

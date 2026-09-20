@@ -32,13 +32,19 @@ function sku(t,row,company,index){
 }
 function inventory(rows,company,cutoff){
  cutoff=date(cutoff);const t=table(rows,STOCK_FIELDS),seen=new Set(),warnings=[];
+ for(const name of ['Precio unitario','Costo prom. unit. (ins)'])requireValue(rows[0].map(norm).filter(h=>h===norm(name)).length<=1,'Columna repetida: '+name);
  const records=t.data.map(({row,index})=>{
   const r=sku(t,row,company,index);r.cutoff=cutoff;r.description=text(t.get(row,'Desc. item'));
   r.units=number(t.get(row,'Existencia'),'existencia fila '+index);r.committed=number(t.get(row,'Cant. comprometida'),'comprometida fila '+index);r.available=number(t.get(row,'Cant. disponible'),'disponible fila '+index);
   requireValue(Math.abs(r.units-r.committed-r.available)<0.00001,'Existencia no concilia, fila '+index);
   requireValue(!seen.has(key(r)),'SKU duplicado en inventario, fila '+index);seen.add(key(r));
   if(r.units<0)warnings.push('Existencia negativa en fila '+index);
-  r.value=t.has('Valor inventario')?number(t.optional(row,'Valor inventario'),'valor inventario fila '+index):null;
+  const cost=name=>{const v=t.optional(row,name);if(v===null||v===undefined||text(v)==='')return null;const n=number(v,name+' fila '+index);requireValue(n>=0,'Costo negativo en fila '+index);return n;};
+  r.erpPrice=cost('Precio unitario');r.erpAverageCost=cost('Costo prom. unit. (ins)');
+  r.unitCost=r.erpPrice>0?r.erpPrice:r.erpAverageCost>0?r.erpAverageCost:null;
+  r.costSource=r.erpPrice>0?'PRECIO_UNITARIO':r.erpAverageCost>0?'COSTO_PROMEDIO':'SIN_COSTO';
+  r.valuationVersion=1;
+  r.value=r.unitCost===null?null:Math.round((r.units*r.unitCost+Number.EPSILON)*100)/100;
   // No cost from movements is substituted for a missing stock valuation.
   r.age=null;return r;
  });return {records,warnings};
@@ -89,7 +95,7 @@ function prepare(files,options){
   coverage.push({company,from,to,complete:mov.meta.complete===true});
   if(mov.meta.complete!==true)warnings.push(company+': cobertura exportada pendiente de verificar');
  }
- return {version:VERSION,cutoff:cutEU,inventoryComplete:files.invEU.meta.complete===true&&files.invTEX.meta.complete===true,inventory:stocks,movements:moves,coverage,warnings:[...new Set(warnings)],totals:totals(stocks),sources:roles.map(role=>({role,hash:files[role].hash,meta:files[role].meta}))};
+ return {version:VERSION,valuationVersion:1,cutoff:cutEU,inventoryComplete:files.invEU.meta.complete===true&&files.invTEX.meta.complete===true,inventory:stocks,movements:moves,coverage,warnings:[...new Set(warnings)],totals:totals(stocks),sources:roles.map(role=>({role,hash:files[role].hash,meta:files[role].meta}))};
 }
 function totals(rows){
  const result={EU:{units:0,committed:0,available:0,value:0,missingValue:0},TEX:{units:0,committed:0,available:0,value:0,missingValue:0}};for(const r of rows){const t=result[r.company]||(result[r.company]={units:0,committed:0,available:0,value:0,missingValue:0});t.units+=r.units;t.committed+=r.committed;t.available+=r.available;if(r.value===null)t.missingValue++;else t.value+=r.value;}

@@ -59,12 +59,12 @@ function pccHistSyncCurrent_(deadline){
  var props=PropertiesService.getScriptProperties(),state=pccHistState_();
  if(!state||!state.current)return;
  var load=state.loads.find(function(l){return l.id===state.current.id;});
- if(!load||props.getProperty('PCC_INV_CURRENT_LOAD')===load.id)return;
- if(props.getProperty('PCC_HIST_PUBLISHED_STATE')!==props.getProperty('PCC_HIST_STATE_FILE')){
+ if(!load||(props.getProperty('PCC_INV_CURRENT_LOAD')===load.id&&props.getProperty('PCC_INV_COST_VERSION')==='1'))return;
+ if(props.getProperty('PCC_HIST_PUBLISHED_STATE')!==props.getProperty('PCC_HIST_STATE_FILE')||props.getProperty('PCC_HIST_PUBLICATION_VERSION')!=='3'){
   props.setProperty('PCC_INV_CURRENT_STATUS','ESPERANDO_PUBLICACION_HISTORICA');return;
  }
  if(Date.now()+90000>deadline){props.setProperty('PCC_INV_CURRENT_STATUS','CONTINUAR_SIGUIENTE_EJECUCION');return;}
- var batch=pccHistRead_(DriveApp.getFileById(load.dataId));
+ var batch=pccHistValuedBatch_(load,pccHistRead_(DriveApp.getFileById(load.dataId)));
  if(!batch.inventoryComplete||!['EU','TEX'].every(function(co){return batch.coverage.some(function(c){return c.company===co&&c.complete;});})){
   props.setProperty('PCC_INV_CURRENT_STATUS','PENDIENTE_PAQUETE_COMPLETO');return;
  }
@@ -83,6 +83,7 @@ function pccHistSyncCurrent_(deadline){
  });
  var traz=cargarTrazabilidad(),edad=calcularEdadFIFO(files.movTEX,files.movEU,files.invTEX,files.invEU,batch.cutoff);
  var resumen=buildResumen(files.invTEX,files.invEU,edad,traz),bodegas=buildBodegas(edad,traz),mov=buildMovimientos(files.movTEX,files.movEU,traz);
+ pccHistValueTables_(bodegas,resumen,batch.inventory);
  pccHistReconcileCurrent_(resumen,batch.inventory,'INV_Resumen');
  pccHistReconcileCurrent_(bodegas,batch.inventory,'INV_Bodegas');
  var tables=[{name:CFG.HOJA_RESUMEN,rows:resumen},{name:CFG.HOJA_BODEGAS,rows:bodegas},{name:CFG.HOJA_MOVIMIENTOS,rows:mov}];
@@ -99,6 +100,9 @@ function pccHistSyncCurrent_(deadline){
  SpreadsheetApp.flush();
  pccHistReconcileCurrent_(book.getSheetByName(CFG.HOJA_BODEGAS).getDataRange().getValues(),batch.inventory,'INV_Bodegas publicada');
  pccHistReconcileCurrent_(book.getSheetByName(CFG.HOJA_RESUMEN).getDataRange().getValues(),batch.inventory,'INV_Resumen publicado');
+ pccHistReconcileValue_(book.getSheetByName(CFG.HOJA_BODEGAS).getDataRange().getValues(),batch.inventory);
+ pccHistReconcileValue_(book.getSheetByName(CFG.HOJA_RESUMEN).getDataRange().getValues(),batch.inventory);
+ props.setProperty('PCC_INV_COST_VERSION','1');
  props.setProperty('PCC_INV_CURRENT_LOAD',load.id);
  props.setProperty('PCC_INV_CURRENT_STATUS','ACTUALIZADO · Corte '+batch.cutoff+' · '+batch.inventory.reduce(function(n,r){return n+r.units;},0)+' unidades');
  console.log('Inventario actual: '+props.getProperty('PCC_INV_CURRENT_STATUS'));

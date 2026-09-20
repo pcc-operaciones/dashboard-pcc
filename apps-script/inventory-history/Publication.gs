@@ -17,18 +17,18 @@ function pccHistPublish_(deadline){
  var c=pccHistConfig_(),output=c.querySheetId||(typeof CFG!=='undefined'&&CFG.OUTPUT_ID);
  if(!output)return; // Standalone pilot remains archive-only until configured.
  var props=PropertiesService.getScriptProperties(),stateId=props.getProperty('PCC_HIST_STATE_FILE');
- if(!stateId||(props.getProperty('PCC_HIST_PUBLISHED_STATE')===stateId&&props.getProperty('PCC_HIST_PUBLICATION_VERSION')==='2'))return;
+ if(!stateId||(props.getProperty('PCC_HIST_PUBLISHED_STATE')===stateId&&props.getProperty('PCC_HIST_PUBLICATION_VERSION')==='3'))return;
  var state=pccHistState_(),folder=DriveApp.getFolderById(c.archiveFolderId),cacheId=props.getProperty('PCC_HIST_QUERY_FILE');
  var q=cacheId?pccHistRead_(DriveApp.getFileById(cacheId)):null;
  // Rebuild from preserved batches once; never mutate or delete the original archive.
- if(q&&q.publicationVersion!==2)q=null;
+ if(q&&q.publicationVersion!==3)q=null;
  var book=SpreadsheetApp.openById(output),sheet=book.getSheetByName('INV_Hist_Datos')||book.insertSheet('INV_Hist_Datos');
  for(var i=0;i<state.loads.length;i++){
   var load=state.loads[i];if(q&&q.processed.indexOf(load.id)>=0)continue;
   if(Date.now()>deadline){props.setProperty('PCC_HIST_PUBLICATION_STATUS','CONTINUAR_PUBLICACION');return;}
-  var batch=pccHistRead_(DriveApp.getFileById(load.dataId));
+  var batch=pccHistValuedBatch_(load,pccHistRead_(DriveApp.getFileById(load.dataId)));
   var next=PccHistoryModel.apply(q,batch,load.id,state.startCutoff);
-  next.publicationVersion=2;
+  next.publicationVersion=3;
   if(batch.inventoryComplete){
    var detail={schema:1,cutoff:batch.cutoff,rows:PccHistoryModel.groupStock(batch.inventory),rotation:PccHistoryModel.rotationSnapshot(batch)};
    next.cuts.find(function(x){return x.id===load.id;}).detail=pccHistAppendQuery_(sheet,detail);
@@ -46,7 +46,7 @@ function pccHistPublish_(deadline){
  manifest.getRange(1,1).setValue(JSON.stringify({schema:1,...descriptor}));SpreadsheetApp.flush();
  if(manifest.getRange(1,1).getValue()!==JSON.stringify({schema:1,...descriptor}))throw new Error('No se pudo verificar el índice público.');
  props.setProperty('PCC_HIST_PUBLISHED_STATE',stateId);
- props.setProperty('PCC_HIST_PUBLICATION_VERSION','2');
+ props.setProperty('PCC_HIST_PUBLICATION_VERSION','3');
  props.setProperty('PCC_HIST_PUBLICATION_STATUS','PUBLICADO · '+q.cuts.length+' cortes · '+q.cuts[q.cuts.length-1].cutoff);
 }
 function pccHistTryPublish_(deadline){

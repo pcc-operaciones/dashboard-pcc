@@ -60,15 +60,25 @@ function coalesce(ranges){
   }
  }return out;
 }
+function valuationTotals(rows){
+ let knownValue=0,missingCostUnits=0,knownCostUnits=0;const sources=new Set();
+ for(const r of rows){
+  if(Number.isFinite(r.knownValue)){knownValue+=r.knownValue;missingCostUnits+=r.missingCostUnits;knownCostUnits+=r.knownCostUnits;(r.costSources||[]).forEach(s=>sources.add(s));}
+  else if(Number.isFinite(r.value)){knownValue+=r.value;knownCostUnits+=Math.abs(r.units);if(r.costSource)sources.add(r.costSource);}
+  else missingCostUnits+=Math.abs(r.units);
+ }
+ knownValue=Math.round(knownValue*100)/100;
+ return {knownValue,missingCostUnits,knownCostUnits,value:missingCostUnits?null:knownValue,costSources:[...sources].sort()};
+}
 function groupStock(rows){
  const grouped=new Map();
  for(const r of rows){
   const key=JSON.stringify([r.company,r.ref,r.warehouse]);
-  if(!grouped.has(key))grouped.set(key,{company:r.company,ref:r.ref,description:r.description,warehouse:r.warehouse,units:0,committed:0,available:0});
-  const g=grouped.get(key);for(const k of ['units','committed','available'])g[k]+=r[k];
- }return [...grouped.values()];
+  if(!grouped.has(key))grouped.set(key,{company:r.company,ref:r.ref,description:r.description,warehouse:r.warehouse,units:0,committed:0,available:0,_records:[]});
+  const g=grouped.get(key);g._records.push(r);for(const k of ['units','committed','available'])g[k]+=r[k];
+ }return [...grouped.values()].map(g=>{const v=valuationTotals(g._records);delete g._records;return {...g,...v,unitCost:!v.missingCostUnits&&g.units? v.knownValue/g.units:null};});
 }
-function stockTotals(rows){return {units:sum(rows,'units'),committed:sum(rows,'committed'),available:sum(rows,'available')};}
+function stockTotals(rows){return {units:sum(rows,'units'),committed:sum(rows,'committed'),available:sum(rows,'available'),...valuationTotals(rows)};}
 function daily(rows,start){
  const map=new Map();
  for(const r of rows){if(r.date<start)continue;
@@ -116,6 +126,6 @@ function compare(current,previous){
  if(!previous)return null;const a=stockTotals(current).units,b=stockTotals(previous).units;
  return {units:a-b,percent:b===0?null:(a-b)/Math.abs(b)*100};
 }
-const api={groupStock,stockTotals,apply,monthly,filterStock,compare,covers,exactPeriod,declaredPeriod,isFirst,rotationSnapshot,coverageAtCut,monthlyCuts};
+const api={valuationTotals,groupStock,stockTotals,apply,monthly,filterStock,compare,covers,exactPeriod,declaredPeriod,isFirst,rotationSnapshot,coverageAtCut,monthlyCuts};
 root.PccHistoryModel=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
