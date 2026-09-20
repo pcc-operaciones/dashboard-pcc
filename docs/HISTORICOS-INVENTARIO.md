@@ -204,3 +204,12 @@ Referencias: [escritura de rangos en Apps Script](https://developers.google.com/
 ### Filtros de la tabla histórica
 
 La tabla de existencias al corte utiliza el mismo componente de filtros de Por referencia: embudo por columna, búsqueda en lista, selección múltiple, Todos/Ninguno, orden ascendente/descendente y limpieza de filtros. Las opciones provienen de todo el conjunto del corte, antes de paginar; el CSV respeta la selección y orden. Los filtros de columna afectan al detalle, no a los indicadores generales. Verificación: 100 pruebas aprobadas y comprobación visual con el corte real, incluyendo 845 registros, filtro por referencia, orden numérico y recuperación desde selección vacía.
+
+## Cobertura y rotación: período exacto y cortes reales (v2.5)
+
+- La cobertura actual usa MOVIMIENTOS_DESDE y MOVIMIENTOS_HASTA del paquete aceptado, con ambos extremos incluidos. La fecha de consulta no amplía el período. Si las fechas faltan, se contradicen o exceden el corte, no se calcula el indicador.
+- El alcance es primeras: excluye PT002, TI005 y TI006 (Segundas) y PT003 (Cobros), tanto en las existencias como en los despachos RM usados para cobertura y rotación. El total de unidades continúa mostrando todas las bodegas. Los indicadores de devoluciones conservan su alcance anterior.
+- Cada corte publicado conserva sus existencias y un resumen de despachos RM de su propio período exportado. Cobertura = existencias al corte / (despachos RM / días calendario exportados). No se usa el inventario actual para estimar meses pasados.
+- La gráfica muestra el último corte conservado de cada mes. No equivale a un cierre mensual salvo que el corte sea del último día del mes. Sin corte, período completo verificable o despachos, la barra queda vacía. El detalle emergente muestra corte y período exactos.
+- Los filtros de línea y categoría usan la clasificación disponible actualmente; los cortes mantienen referencia, empresa y bodega. La etiqueta desplegable explica alcance, exclusiones, fórmula y período.
+- La publicación versión 2 reconstruye una sola vez los resúmenes desde los lotes privados ya conservados. No requiere volver a descargar Excel ni registrar fechas. Conserva archivos y publicaciones anteriores; solo cambia el índice público después de verificar el nuevo contenido. Si se interrumpe, reanuda desde el último lote verificado.

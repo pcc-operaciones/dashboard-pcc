@@ -8,6 +8,7 @@ const date=d=>d?d.split('-').reverse().join('/'):'—';
 const columnKeys=['company','ref','description','warehouse','units','committed','available'];
 const columnLabels=['Empresa','Referencia','Descripción','Bodega','Existencias al corte','Comprometidas','Disponibles'];
 const columnValues=r=>columnKeys.map((key,i)=>i<4?String(r[key]).trim().replace(/\s+/g,' '):fmt(r[key]));
+let coverageQueryPromise=null;
 let query=null,selected=null,comparison=null,request=0,page=0,tableRows=[],charts=[],detailCache=new Map();
 function option(value,label){const n=e('option',label);n.value=value;return n;}
 async function values(sheet,range){
@@ -147,6 +148,19 @@ function mount(){
  $('hist-prev').addEventListener('click',()=>{page--;renderTable();});$('hist-next').addEventListener('click',()=>{page++;renderTable();});$('hist-export').addEventListener('click',download);
 }
 mount();
-window.PccInventoryHistoryView={open(){showTab('historico',$('hist-nav'));if(!query)load();},refresh:load};
+window.PccInventoryHistoryView={
+ resetCoverage(){coverageQueryPromise=null;},
+ async coverageSeries(cutoff){
+  if(!coverageQueryPromise)coverageQueryPromise=(async()=>{
+   const control=await values('INV_Hist_Control','A1'),descriptor=JSON.parse(control[0]?.[0]||'null');
+   if(!descriptor||descriptor.schema!==1)throw Error('Histórico no publicado.');
+   const q=await payload(descriptor);
+   if(!Array.isArray(q.cuts))throw Error('Índice histórico no válido.');
+   return q;
+  })().catch(err=>{coverageQueryPromise=null;throw err;});
+  const q=await coverageQueryPromise;
+  return Promise.all(M.monthlyCuts(q.cuts,cutoff).map(detail));
+ },
+ open(){showTab('historico',$('hist-nav'));if(!query)load();},refresh:load};
 if(location.hash==='#historico')window.PccInventoryHistoryView.open();
 })();

@@ -5,6 +5,45 @@ const companies=['EU','TEX'];
 const sum=(rows,key)=>rows.reduce((n,r)=>n+r[key],0);
 const endOfMonth=m=>new Date(Date.UTC(+m.slice(0,4),+m.slice(5,7),0)).toISOString().slice(0,10);
 const nextDay=d=>new Date(Date.parse(d+'T00:00:00Z')+86400000).toISOString().slice(0,10);
+function exactPeriod(from,to,cutoff=to){
+ const valid=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d+'T00:00:00Z'))&&new Date(d+'T00:00:00Z').toISOString().slice(0,10)===d;
+ if(!valid(from)||!valid(to)||!valid(cutoff)||from>to||to>cutoff)return {days:0,from:null,to:null,label:'Período no verificado',missing:[]};
+ return {from,to,days:(Date.parse(to)-Date.parse(from))/86400000+1,label:from.split('-').reverse().join('/')+' – '+to.split('-').reverse().join('/'),missing:[]};
+}
+function declaredPeriod(table){
+ const headers=table[0]||[],keys=['MOVIMIENTOS_DESDE','MOVIMIENTOS_HASTA','FECHA_CORTE_DATOS'],indices=keys.map(k=>headers.indexOf(k));
+ const invalid=()=>exactPeriod(null,null);
+ if(indices.some(i=>i<0)||table.length<2)return invalid();
+ const unique=indices.map(i=>[...new Set(table.slice(1).map(r=>r[i]))]);
+ return unique.some(v=>v.length!==1)?invalid():exactPeriod(...unique.map(v=>v[0]));
+}
+const isFirst=warehouse=>!['PT002','PT003','TI005','TI006'].includes(String(warehouse).trim().toUpperCase());
+// Preserve the dispatch window that belonged to this stock cut, not a later export.
+function rotationSnapshot(batch){
+ const ranges=companies.map(company=>batch.coverage.find(c=>c.company===company&&c.complete));
+ const periods=ranges.map(r=>r?exactPeriod(r.from,r.to,batch.cutoff):exactPeriod(null,null));
+ if(periods.some(p=>!p.days)||periods.some(p=>p.from!==periods[0].from||p.to!==periods[0].to))return null;
+ const period=periods[0],map=new Map();
+ for(const r of batch.movements){
+  if(String(r.type).trim().toUpperCase()!=='RM'||r.out<=0||r.date<period.from||r.date>period.to)continue;
+  const key=JSON.stringify([r.company,r.ref,r.warehouse]);
+  if(!map.has(key))map.set(key,{company:r.company,ref:r.ref,warehouse:r.warehouse,description:r.description||'',units:0});
+  map.get(key).units+=r.out;
+ }
+ return {period,dispatch:[...map.values()]};
+}
+function coverageAtCut(detail,predicate=()=>true){
+ const rotation=detail?.rotation,period=rotation&&exactPeriod(rotation.period.from,rotation.period.to,detail.cutoff);
+ if(!period?.days||!Array.isArray(rotation.dispatch))return null;
+ const stock=detail.rows.filter(r=>isFirst(r.warehouse)&&predicate(r)).reduce((n,r)=>n+r.units,0);
+ const dispatch=rotation.dispatch.filter(r=>isFirst(r.warehouse)&&predicate(r)).reduce((n,r)=>n+r.units,0);
+ return {cutoff:detail.cutoff,period,stock,dispatch,days:dispatch>0?stock/(dispatch/period.days):null};
+}
+function monthlyCuts(cuts,cutoff,count=6){
+ const latest=new Map();
+ for(const cut of cuts.filter(c=>c.cutoff<=cutoff).sort((a,b)=>a.cutoff.localeCompare(b.cutoff)))latest.set(cut.cutoff.slice(0,7),cut);
+ return [...latest.values()].slice(-count);
+}
 function covers(ranges,company,from,to){
  let cursor=from;
  for(const r of ranges.filter(r=>r.company===company&&r.complete).sort((a,b)=>a.from.localeCompare(b.from))){
@@ -77,6 +116,6 @@ function compare(current,previous){
  if(!previous)return null;const a=stockTotals(current).units,b=stockTotals(previous).units;
  return {units:a-b,percent:b===0?null:(a-b)/Math.abs(b)*100};
 }
-const api={groupStock,stockTotals,apply,monthly,filterStock,compare,covers};
+const api={groupStock,stockTotals,apply,monthly,filterStock,compare,covers,exactPeriod,declaredPeriod,isFirst,rotationSnapshot,coverageAtCut,monthlyCuts};
 root.PccHistoryModel=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

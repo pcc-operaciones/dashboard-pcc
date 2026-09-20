@@ -13,7 +13,7 @@
 <script src="source-freshness.js"></script>
 <link rel="stylesheet" href="source-freshness.css">
 <script src="data-quality.js"></script>
-<script src="inventory-history-model.js?v=2.2"></script>
+<script src="inventory-history-model.js?v=2.5"></script>
 <link rel="stylesheet" href="inventory-history.css?v=2.3">
 <link rel="stylesheet" href="data-quality.css">
 <style>
@@ -275,6 +275,7 @@ canvas{max-width:100%;}
 
 @media(max-width:1100px){.hero-grid{grid-template-columns:repeat(3,1fr)!important;}.chart-grid-3{grid-template-columns:1fr 1fr!important;}}
 @media(max-width:700px){.hero-grid,.chart-grid-3,.chart-grid-2,.chart-grid-32{grid-template-columns:1fr!important;}}
+.coverage-scope{font-size:11px;color:var(--muted);margin:8px 0 12px}.coverage-scope summary{cursor:pointer;width:fit-content}.coverage-scope p{margin:6px 0;max-width:850px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -362,6 +363,7 @@ canvas{max-width:100%;}
 
 <!-- ═══════════ TAB 1: RESUMEN ═══════════ -->
 <div class="page active" id="page-resumen">
+<details class="coverage-scope"><summary>Rotación y días: solo primeras · excluye Segundas y Cobros</summary><p>Alcance de rotación y días de inventario: existencias y despachos RM de primeras, según los filtros seleccionados. Excluye PT002, TI005 y TI006 (Segundas) y PT003 (Cobros).</p><p>Días de inventario = existencias al corte ÷ (despachos RM del período ÷ días calendario del período).</p><p class="coverage-period"></p><p>Cada barra usa las existencias y el período exportado de su propio corte. Se muestra el último corte guardado de cada mes; solo es cierre mensual si corresponde al último día del mes. Sin corte o sin despachos, no se dibuja una barra. Los filtros de línea y categoría usan la clasificación disponible actualmente.</p></details>
 
   <!-- HERO KPIs -->
   <div style="margin-bottom:4px"><span class="sec-header">Resumen general</span></div>
@@ -466,7 +468,7 @@ canvas{max-width:100%;}
         <div>
           <div class="cc-num">2</div>
           <div class="cc-title">Días de inventario</div>
-          <div class="cc-sub">Cobertura promedio en días</div>
+          <div class="cc-sub">Último corte guardado de cada mes</div>
         </div>
         <div class="cc-actual">
           <div class="cc-actual-val warn" id="ch2-val">—</div>
@@ -475,6 +477,7 @@ canvas{max-width:100%;}
         </div>
       </div>
       <canvas id="chart2" height="130"></canvas>
+      <p id="coverage-history-note" class="cc-sub" role="status">Consultando cortes conservados…</p>
     </div>
 
     <div class="chart-card">
@@ -670,6 +673,7 @@ canvas{max-width:100%;}
 
 <!-- ═══════════ TAB 3: ROTACIÓN ═══════════ -->
 <div class="page" id="page-rotacion">
+<details class="coverage-scope"><summary>Rotación y días: solo primeras · excluye Segundas y Cobros</summary><p>Alcance de rotación y días de inventario: existencias y despachos RM de primeras, según los filtros seleccionados. Excluye PT002, TI005 y TI006 (Segundas) y PT003 (Cobros).</p><p>Días de inventario = existencias al corte ÷ (despachos RM del período ÷ días calendario del período).</p><p class="coverage-period"></p><p>Cada barra usa las existencias y el período exportado de su propio corte. Se muestra el último corte guardado de cada mes; solo es cierre mensual si corresponde al último día del mes. Sin corte o sin despachos, no se dibuja una barra. Los filtros de línea y categoría usan la clasificación disponible actualmente.</p></details>
 
   <div class="frow" style="margin-bottom:10px">
     <!-- filtros globales en filter-bar -->
@@ -1041,7 +1045,8 @@ const API_KEY = 'AIzaSyC7dyZtgc9p8RIDEvkXdXxKQCbuFo8vF8k';
 const BASE    = 'https://sheets.googleapis.com/v4/spreadsheets';
 const KPI_ID  = '1JfM0ntS8wgkPHuntHGyjSyVxCMizPoB14ClcF5ai8Qs';
 const INV_SHEET_ID = '1l02ZJephP3FCROVdpkPF9soZu-lduSguX9hu_kbIFdQ';
-let DIAS_PERIODO = 1;
+let DIAS_PERIODO = 0;
+let coverageChartRequest=0;
 let PERIODO_MOV={days:0,label:"Sin movimientos",missing:[]};
 let inventarioCargando=false;
 const LINEA_EU_ID  = '12rQuY0UcZdVMwbHr4mtny1ANeSR0WyfLsKPSiq4ISfA'; // Listado oficial EU Línea
@@ -1156,6 +1161,7 @@ function glFilter(r){
 
 // Filtro global para registros de MOV_DATA
 function glFilterMov(m){
+  if(GL_BODEGAS.size>0&&!GL_BODEGAS.has(m.bodega))return false;
   if(GL_LINEAS.size===0 && GL_CATS.size===0) return true;
   // MOV_DATA tiene campo linea; para categoría usar DESC_MAP
   const linea = m.linea || '';
@@ -1165,6 +1171,7 @@ function glFilterMov(m){
   if(GL_BODEGAS.size > 0 && !GL_BODEGAS.has(m.bodega||'')) return false;
   return true;
 }
+function glFilterFirstMov(m){return PccHistoryModel.isFirst(m.bodega)&&glFilterMov(m);}
 // Filtro para Segundas/Cobros — usa lineaReal porque linea='Segundas'/'Cobros'
 function glFilterReal(r){
   if(GL_LINEAS.size===0 && GL_CATS.size===0 && GL_BODEGAS.size===0) return true;
@@ -1592,13 +1599,15 @@ async function cargarTodo(){
         const tipo=cTipo>=0?String(r[cTipo]||'').trim().toUpperCase():'';
         const fecha=anio+'-'+mes+'-01'; // Agrupación mensual; no representa una fecha de transacción.
         const linea=cLinea>=0?String(r[cLinea]||'').trim():'';
+        const bodega=String(r[c('Bodega')]||'').trim();
+        const empresa=String(r[c('Empresa')]||'').trim();
         const entradas=cEnt>=0?pN(r[cEnt]||0):0;
         const salidas=cSal>=0?pN(r[cSal]||0):0;
         // Clasificar por tipo de documento
-        if(tipo==='RM'  && salidas>0){MOV_DATA.push({ref,tipo:'RM', fecha,linea,entradas:0,salidas});filasOk++;}
-        if(tipo==='DRM' && entradas>0){MOV_DATA.push({ref,tipo:'DRM',fecha,linea,entradas,salidas:0});filasOk++;}
-        if(tipo==='EOP' && entradas>0){MOV_DATA.push({ref,tipo:'EOP',fecha,linea,entradas,salidas:0});filasOk++;}
-        if(tipo==='EAC'||tipo==='AIC'){MOV_DATA.push({ref,tipo,fecha,linea,entradas,salidas});filasOk++;}
+        if(tipo==='RM'  && salidas>0){MOV_DATA.push({ref,bodega,empresa,tipo:'RM', fecha,linea,entradas:0,salidas});filasOk++;}
+        if(tipo==='DRM' && entradas>0){MOV_DATA.push({ref,bodega,empresa,tipo:'DRM',fecha,linea,entradas,salidas:0});filasOk++;}
+        if(tipo==='EOP' && entradas>0){MOV_DATA.push({ref,bodega,empresa,tipo:'EOP',fecha,linea,entradas,salidas:0});filasOk++;}
+        if(tipo==='EAC'||tipo==='AIC'){MOV_DATA.push({ref,bodega,empresa,tipo,fecha,linea,entradas,salidas});filasOk++;}
         // Los demás documentos no participan en estos indicadores.
       });
       console.log('[INV_Mov] Filas procesadas OK:',filasOk,'de',rowsMov.length-1,
@@ -1607,16 +1616,17 @@ async function cargarTodo(){
         '| EOP:'+MOV_DATA.filter(m=>m.tipo==='EOP').length);
     }
 
-    PERIODO_MOV=PccData.period(periodRows);
-    DIAS_PERIODO=PERIODO_MOV.days||1;
+    PERIODO_MOV=PccHistoryModel.declaredPeriod(rowsMov);
+    DIAS_PERIODO=PERIODO_MOV.days;
     document.getElementById('rot-periodo').textContent=PERIODO_MOV.label+' · '+PERIODO_MOV.days+' días calendario';
     PccData.note('periodo','Rotación anualizada sobre stock actual. Período: '+PERIODO_MOV.label+' ('+PERIODO_MOV.days+' días). No equivale a rotación sobre inventario promedio histórico.');
     PccData.note('fechas',invalidDates?invalidDates+' filas excluidas por período inválido o futuro.':null);
-    PccData.note('vigencia',PERIODO_MOV.label.slice(-7)<new Date().toISOString().slice(0,7)?'Movimientos disponibles hasta '+PERIODO_MOV.label.slice(-7)+'. La consulta actual no implica que la fuente esté al día.':null);
+    PccData.note('vigencia',PERIODO_MOV.days?null:'No hay un período declarado uniforme y válido. Rotación y días de inventario no se calculan hasta verificarlo.');
     PccData.note('meses',PERIODO_MOV.missing.length?'Meses sin registros: '+PERIODO_MOV.missing.join(', ')+'. Validar integridad del período.':null);
     const sinCosto=INV_DATA.filter(r=>(r.u0+r.u1+r.u2+r.u3)>0&&(r.c0+r.c1+r.c2+r.c3)===0).length;
     PccData.note('costos',sinCosto?sinCosto+' registros con existencias y costo cero. Validar valorización con la fuente.':null);
-    PccData.note('historico','Esta vista usa el inventario actual. Los cortes conservados se consultan en Histórico; la cobertura mensual de esta vista es una estimación con stock actual.');
+    PccData.note('historico',null);
+    window.PccInventoryHistoryView?.resetCoverage();
     const movRM=MOV_DATA.filter(m=>m.tipo==='RM').length;
     const movDRM=MOV_DATA.filter(m=>m.tipo==='DRM').length;
     document.getElementById('loadSub').textContent=`Datos cargados ✓ · ${INV_DATA.length} refs · ${movRM} despachos · ${movDRM} devoluciones`;
@@ -1682,6 +1692,35 @@ function resumenExistencias(rows){
   if(cuts.size===1&&rows.every(r=>r.cutoff))result.cutoff=[...cuts][0];
   return result;
 }
+
+async function loadCoverageChart(token,months){
+ const note=document.getElementById('coverage-history-note');
+ note.textContent='Consultando cortes conservados…';
+ const cutoff=INV_DATA.find(r=>r.cutoff)?.cutoff;
+ try{
+  if(!cutoff||!window.PccInventoryHistoryView)throw Error('No hay un corte verificado para consultar.');
+  const series=await PccInventoryHistoryView.coverageSeries(cutoff);
+  if(token!==coverageChartRequest)return;
+  // A newer render takes ownership after every filter change.
+  const taxonomy=new Map(INV_DATA.map(r=>[JSON.stringify([r.empresa,r.ref]),r.lineaReal]));
+  MOV_DATA.forEach(r=>{const key=JSON.stringify([r.empresa,r.ref]);if(!taxonomy.has(key)&&r.linea)taxonomy.set(key,r.linea);});
+  const predicate=r=>glFilter({bodega:r.warehouse,linea:taxonomy.get(JSON.stringify([r.company,r.ref]))||REF_MAP[r.ref]?.linea||clasificarRef(r.ref,r.company,''),desc:DESC_MAP[r.ref]||r.description||''});
+  const values=months.map(month=>{
+   const detail=series.find(d=>d.cutoff.slice(0,7)===month.key);
+   return detail?PccHistoryModel.coverageAtCut(detail,predicate):null;
+  });
+  const chart=window._ch2,days=values.map(v=>v?.days??null);
+  chart.data.datasets[0].data=days;
+  chart.data.datasets[0].backgroundColor=days.map(v=>v>90?'rgba(176,48,48,.7)':v>60?'rgba(192,122,0,.7)':'rgba(13,107,94,.7)');
+  chart.options.scales.y.max=Math.max(90,...days.filter(Number.isFinite))*1.3;
+  chart.options.plugins.datalabels.color=ctx=>days[ctx.dataIndex]>90?'#B03030':'#6B7A8D';
+  chart.options.plugins.tooltip.callbacks.afterLabel=ctx=>{const v=values[ctx.dataIndex];return ctx.datasetIndex===0&&v?['Corte: '+v.cutoff.split('-').reverse().join('/'),'Despachos: '+v.period.label+' ('+v.period.days+' días)','Existencias: '+fmt(v.stock)+' · RM: '+fmt(v.dispatch)]:[];};
+  chart.update();
+  const count=days.filter(Number.isFinite).length;
+  note.textContent=count?'Solo cortes reales · meses sin barra: sin corte o sin despachos verificables.':'Aún no hay cortes con cobertura calculable. No se estiman meses con el stock actual.';
+ }catch(err){if(token===coverageChartRequest)note.textContent='Cobertura histórica no disponible. Pulse Actualizar para reintentar.';}
+}
+
 // ─── RESUMEN ───
 function renderResumen(){
   const stockTotal=resumenExistencias(INV_DATA.filter(glFilterReal));
@@ -1693,9 +1732,9 @@ function renderResumen(){
   const rC=inv.reduce((a,r)=>a+r.c3,0);
   const despTotal=movFilt.filter(m=>m.tipo==='RM').reduce((a,m)=>a+m.salidas,0);
   const devTotal=movFilt.filter(m=>m.tipo==='DRM').reduce((a,m)=>a+m.entradas,0);
-  const despDiario=despTotal/DIAS_PERIODO;
-  const cobertura=PccData.coverage(totalUds,despTotal,PERIODO_MOV.days);
-  const rotacion=PccData.rotation(totalUds,despTotal,PERIODO_MOV.days)?.toFixed(1)??'—';
+  const despPrimeras=movFilt.filter(m=>m.tipo==='RM'&&PccHistoryModel.isFirst(m.bodega)).reduce((n,m)=>n+m.salidas,0);
+  const cobertura=PccData.coverage(totalUds,despPrimeras,PERIODO_MOV.days);
+  const rotacion=PccData.rotation(totalUds,despPrimeras,PERIODO_MOV.days)?.toFixed(1)??'—';
   const tasaDev=despTotal?(devTotal/despTotal*100).toFixed(1):'0.0';
   const obsolPct=(totalCosto?(rC/totalCosto*100).toFixed(1):'0.0')+'%';
 
@@ -1736,8 +1775,8 @@ function renderResumen(){
   document.getElementById('k-rotacion').textContent=rotacion;
   document.getElementById('k-rotacion-meta').textContent='Meta ≥ 4';
   document.getElementById('k-dias').textContent=cobertura===null?'—':Math.round(cobertura);
-  document.getElementById('k-dias').className='hero-val '+(cobertura>90?'bad':cobertura>60?'warn':'good');
-  document.getElementById('k-dias-trend').textContent=(cobertura===null?'Sin despachos':cobertura>90?'▲ Exceso':'▼ OK');
+  document.getElementById('k-dias').className='hero-val '+(cobertura===null?'warn':cobertura>90?'bad':cobertura>60?'warn':'good');
+  document.getElementById('k-dias-trend').textContent=(cobertura===null?(PERIODO_MOV.days?'Sin despachos':'Período sin verificar'):cobertura>90?'▲ Exceso':'▼ OK');
   document.getElementById('k-dias-trend').className='hero-trend '+(cobertura>90?'dn':'up');
   document.getElementById('k-obsol').textContent=obsolPct;
   document.getElementById('k-obsol-val').textContent=fmtM(rC)+' en riesgo';
@@ -1762,7 +1801,8 @@ function renderResumen(){
   // ── Historial mensual real desde MOV_DATA ──
   // Construir serie de los últimos 6 meses con datos reales
   function buildHistMeses(n){
-    const hoy=new Date();
+    const cut=INV_DATA.find(r=>r.cutoff)?.cutoff;
+    const hoy=cut?new Date(cut+'T12:00:00'):new Date();
     const meses=[];
     for(let i=n-1;i>=0;i--){
       const d=new Date(hoy.getFullYear(),hoy.getMonth()-i,1);
@@ -1776,23 +1816,15 @@ function renderResumen(){
 
   // Despachos reales por mes
   const despPorMes={};
-  movFilt.filter(m=>m.tipo==='RM').forEach(m=>{const k=m.fecha.substring(0,7);despPorMes[k]=(despPorMes[k]||0)+m.salidas;});
+  movFilt.filter(m=>m.tipo==='RM'&&PccHistoryModel.isFirst(m.bodega)).forEach(m=>{const k=m.fecha.substring(0,7);despPorMes[k]=(despPorMes[k]||0)+m.salidas;});
 
   // Devoluciones reales por mes
   const devPorMes={};
   movFilt.filter(m=>m.tipo==='DRM').forEach(m=>{const k=m.fecha.substring(0,7);devPorMes[k]=(devPorMes[k]||0)+m.entradas;});
 
-  // Días de inventario por mes: stock actual / promedio despacho diario de ese mes
-  // Como no tenemos stock histórico, usamos stock actual con despachos del mes
-  const diasHist=mesesHist.map(m=>{
-    const d=despPorMes[m.key]||0;
-    const diasMes=new Date(parseInt(m.key.split('-')[0]),parseInt(m.key.split('-')[1]),0).getDate();
-    const dD=d/diasMes;
-    return dD>0?Math.round(totalUds/dD):null;
-  });
-  // Reemplazar el último con el valor actual calculado
-  diasHist[diasHist.length-1]=cobertura;
-
+  // Historical coverage is loaded from verified stock cuts, never reconstructed from current stock.
+  const diasHist=mesesHist.map(()=>null);
+  const coverageToken=++coverageChartRequest;
   // Solo el corte actual; no hay inventario histórico para reconstruir rupturas.
   const rupHist=mesesHist.map((_,i)=>i===mesesHist.length-1?parseFloat(rupturaPct):null);
 
@@ -1834,6 +1866,8 @@ function renderResumen(){
       layout:{padding:{top:20}}}
   });
   document.getElementById('ch2-val').textContent=cobertura===null?'—':Math.round(cobertura)+'d';
+  document.querySelectorAll('.coverage-period').forEach(el=>el.textContent=PERIODO_MOV.days?PERIODO_MOV.label+' · '+PERIODO_MOV.days+' días calendario.':'Período sin verificar.');
+  loadCoverageChart(coverageToken,mesesHist);
 
   // CHART 3 — Rupturas: donut 3 estados EU Línea (sin stock / bajo mínimo / OK)
   destroyChart('_ch3');
@@ -1973,7 +2007,7 @@ function renderResumen(){
     const clr=p>=0.5?'#B03030':p>=0.25?'#C07A00':'#1E7A40';
     const lbl=p>=0.5?'🔴 Alto':p>=0.25?'🟡 Medio':'🟢 OK';
     const refsLinea=new Set(rows.map(r=>r.ref));
-    const despLinea=movFilt.filter(m=>m.tipo==='RM'&&refsLinea.has(m.ref)).reduce((a,m)=>a+m.salidas,0);
+    const despLinea=movFilt.filter(m=>m.tipo==='RM'&&PccHistoryModel.isFirst(m.bodega)&&refsLinea.has(m.ref)).reduce((a,m)=>a+m.salidas,0);
     const coberturaLinea=PccData.coverage(t,despLinea,PERIODO_MOV.days);
     const cob=coberturaLinea===null?'—':Math.round(coberturaLinea);
     return `<div class="hero-card" style="border-bottom:3px solid ${clr};cursor:default">
@@ -2251,7 +2285,7 @@ const XF_COLS = {
 // ─── ROTACIÓN ───
 function renderRotacion(){
   const inv=INV_DATA.filter(r=>!r.esSeg && !r.esCobros && glFilter(r));
-  const movFilt=MOV_DATA.filter(glFilterMov);
+  const movFilt=MOV_DATA.filter(glFilterFirstMov);
   const agR={};
   inv.forEach(r=>{
     if(!agR[r.ref])agR[r.ref]={ref:r.ref,desc:r.desc,linea:r.linea,stock:0};
@@ -2259,7 +2293,7 @@ function renderRotacion(){
   });
   const despTotal=movFilt.filter(m=>m.tipo==='RM').reduce((a,m)=>a+m.salidas,0);
   const stockTotal=Object.values(agR).reduce((a,r)=>a+r.stock,0);
-  const diario=despTotal/DIAS_PERIODO;
+  const diario=DIAS_PERIODO?despTotal/DIAS_PERIODO:null;
   const indiceRot=PccData.rotation(stockTotal,despTotal,PERIODO_MOV.days)?.toFixed(1)??'—';
   document.getElementById('rot-despachos').textContent=fmt(despTotal);
   document.getElementById('rot-diario').textContent=PERIODO_MOV.days?diario.toFixed(1):'—';
@@ -2362,19 +2396,19 @@ function renderRotacion(){
   let rowsRot = Object.values(agR).map(r=>{
     const desp=movFilt.filter(m=>m.tipo==='RM'&&m.ref===r.ref).reduce((a,m)=>a+m.salidas,0);
     const dD=DIAS_PERIODO>0?desp/DIAS_PERIODO:0;
-    const cob=dD>0?Math.round(r.stock/dD):9999;
+    const cob=DIAS_PERIODO===0?null:dD>0?Math.round(r.stock/dD):9999;
     return {...r, desp, dD, cob};
   });
   // Filtro por columnas XF
   rowsRot = xfFilterRows('rot', rowsRot, r=>[r.ref,r.desc,r.linea,r.stock,r.desp,r.dD.toFixed(1),r.cob===9999?'∞':r.cob,r.cob>90?'Exceso':r.cob>60?'Atención':'Normal']);
   rowsRot = xfSortRows('rot', rowsRot, r=>[r.ref,r.desc,r.linea,r.stock,r.desp,r.dD,r.cob]);
   document.getElementById('tb-rot').innerHTML=rowsRot.map(r=>{
-    const cobStr=r.cob===9999?'∞':r.cob;
+    const cobStr=r.cob===null?'—':r.cob===9999?'∞':r.cob;
     const cls=r.cob>90?'bad':r.cob>60?'warn':'good';
-    const estado=r.cob>90?'<span class="bdg r">Exceso</span>':r.cob>60?'<span class="bdg y">Atención</span>':'<span class="bdg g">Normal</span>';
+    const estado=r.cob===null?'<span class="bdg">Período sin verificar</span>':r.cob>90?'<span class="bdg r">Exceso</span>':r.cob>60?'<span class="bdg y">Atención</span>':'<span class="bdg g">Normal</span>';
     return `<tr><td class="navy">${r.ref}</td><td>${r.desc}</td><td>${lt(r.linea)}</td>
       <td style="text-align:right">${fmt(r.stock)}</td><td style="text-align:right">${fmt(r.desp)}</td>
-      <td style="text-align:right">${r.dD.toFixed(1)}</td>
+      <td style="text-align:right">${DIAS_PERIODO?r.dD.toFixed(1):'—'}</td>
       <td style="text-align:right" class="${cls}">${cobStr}</td><td>${estado}</td></tr>`;
   }).join('');
   const tf=document.getElementById('tf-rot');
@@ -3582,13 +3616,14 @@ function exWrite(wb, nombre){
 function exportarExcelRot(){
   if(!window.XLSX){alert('Librería no disponible.');return;}
   const data = INV_DATA.filter(r=>!r.esSeg && !r.esCobros && glFilter(r));
-  const movF  = MOV_DATA.filter(glFilterMov);
+  const movF  = MOV_DATA.filter(glFilterFirstMov);
   const agR={};
   data.forEach(r=>{if(!agR[r.ref])agR[r.ref]={ref:r.ref,desc:r.desc,linea:r.linea,stock:0};agR[r.ref].stock+=r.u0+r.u1+r.u2+r.u3;});
   const rows = Object.values(agR).map(r=>{
     const desp=movF.filter(m=>m.tipo==='RM'&&m.ref===r.ref).reduce((a,m)=>a+m.salidas,0);
-    const dD=(desp/DIAS_PERIODO).toFixed(1);
-    const cob=parseFloat(dD)>0?Math.round(r.stock/parseFloat(dD)):0;
+    const average=DIAS_PERIODO>0?desp/DIAS_PERIODO:null;
+    const dD=average===null?'—':average.toFixed(1);
+    const cob=average>0?Math.round(r.stock/average):'—';
     return [r.ref,r.desc,r.linea,r.stock,desp,dD,cob];
   });
   const wb = exBuildWb('Rotación',[{name:'Rotación',hdr:['Ref.','Descripción','Línea','Stock','Despachos','Prom/día','Cobertura(d)'],rows,
@@ -3838,6 +3873,6 @@ cargarTodo();
 <script>
 window.PccExecutiveInventory=()=>({status:inventarioCargando?'loading':document.getElementById('inv-load-error')?'error':INV_DATA.length?'ready':'empty',rows:INV_DATA,records:[...PccFresh.records.values()]});
 </script>
-<script src="inventory-history-view.js?v=2.3.1"></script>
+<script src="inventory-history-view.js?v=2.5"></script>
 </body>
 </html>
