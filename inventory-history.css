@@ -26,3 +26,22 @@ body[data-inventory-view="historico"] :is(#pcc-freshness,#inv-load-error,.tb-rig
 #page-historico .btn-clear-filters.has-filters{border-color:#176f65;color:#176f65;background:#edf7f4}
 
 .hist-metric:last-child{grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap}.hist-metric:last-child strong{font-size:24px;overflow-wrap:anywhere}
+
+/* Full amounts need wrapping in cards and scroll only inside data tables. */
+.hero-body{min-width:0}.hero-meta-txt{overflow-wrap:anywhere}.ki-val{overflow-wrap:anywhere}
+.inventory-monthly{margin:16px 0 22px;padding:20px;border:1px solid var(--border,#dbe5ee);border-radius:12px;background:#fff}
+.inventory-monthly h2{font-size:18px;margin:0 0 8px;color:#1B3A5C}.inventory-monthly p{font-size:12px;line-height:1.6;color:#62758a;margin:6px 0 12px}
+.inventory-monthly-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}.inventory-monthly h3{font-size:14px;margin:10px 0;color:#1B3A5C}
+.inventory-monthly-chart{height:175px;position:relative;min-width:0}.inventory-monthly details{margin-top:14px}.inventory-monthly summary{cursor:pointer;font-size:12px;padding:10px 0;color:#1B3A5C}.inventory-monthly table{width:100%;font-size:12px;border-collapse:collapse}.inventory-monthly :is(th,td){text-align:left;padding:10px;border-bottom:1px solid #e6edf3;white-space:nowrap}
+@media(max-width:1000px){.inventory-monthly-grid{grid-template-columns:1fr}.inventory-monthly{padding:14px}}
+/* Full amounts need room; keep the number together instead of breaking digits. */
+.hero-meta{flex-wrap:wrap}
+.hero-meta-txt{overflow-wrap:normal}
+#k-total-costo,#k-obsol-val{flex-basis:100%}
+.inventory-monthly-grid article{min-width:0;overflow-x:auto}
+.inventory-monthly-chart{min-width:490px}
+.stock-warehouse-chart{grid-column:1/-1}
+.stock-warehouse-scroll{overflow-x:auto}
+.stock-warehouse-canvas{min-width:650px;height:250px;position:relative}
+@media(max-width:1800px){.page .hero-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+@media(max-width:700px){.page .hero-grid{grid-template-columns:1fr!important}}

@@ -44,6 +44,22 @@ function monthlyCuts(cuts,cutoff,count=6){
  for(const cut of cuts.filter(c=>c.cutoff<=cutoff).sort((a,b)=>a.cutoff.localeCompare(b.cutoff)))latest.set(cut.cutoff.slice(0,7),cut);
  return [...latest.values()].slice(-count);
 }
+// Monthly inventory requires an actual month-end snapshot, never an arbitrary last load.
+function inventoryMonthlyCuts(cuts,cutoff,count=12){
+ const available=cuts.filter(c=>c.cutoff<=cutoff).sort((a,b)=>a.cutoff.localeCompare(b.cutoff));
+ const currentMonth=cutoff.slice(0,7),first=available[0]?.cutoff.slice(0,7)||currentMonth;
+ const months=[];for(let month=first;month<=currentMonth;month=nextDay(endOfMonth(month)).slice(0,7))months.push(month);
+ return months.slice(-count).map(month=>{
+  const current=month===currentMonth,end=endOfMonth(month),date=current?cutoff:end;
+  const cut=available.find(c=>c.cutoff===date)||null;
+  return {month,cutoff:cut?.cutoff||(current?cutoff:null),current,closed:date===end&&!!cut,cut};
+ });
+}
+function inventoryMonthlyValues(points,predicate=()=>true){
+ return points.map(p=>{const totals=p.rows?stockTotals(p.rows.filter(predicate)):null;
+  return {...p,totals,units:totals?.units??null,amount:totals&&(totals.knownCostUnits>0||totals.units===0)?totals.knownValue:null};
+ });
+}
 function covers(ranges,company,from,to){
  let cursor=from;
  for(const r of ranges.filter(r=>r.company===company&&r.complete).sort((a,b)=>a.from.localeCompare(b.from))){
@@ -126,6 +142,6 @@ function compare(current,previous){
  if(!previous)return null;const a=stockTotals(current).units,b=stockTotals(previous).units;
  return {units:a-b,percent:b===0?null:(a-b)/Math.abs(b)*100};
 }
-const api={valuationTotals,groupStock,stockTotals,apply,monthly,filterStock,compare,covers,exactPeriod,declaredPeriod,isFirst,rotationSnapshot,coverageAtCut,monthlyCuts};
+const api={inventoryMonthlyCuts,inventoryMonthlyValues,valuationTotals,groupStock,stockTotals,apply,monthly,filterStock,compare,covers,exactPeriod,declaredPeriod,isFirst,rotationSnapshot,coverageAtCut,monthlyCuts};
 root.PccHistoryModel=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

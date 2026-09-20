@@ -224,3 +224,13 @@ La tabla de existencias al corte utiliza el mismo componente de filtros de Por r
 - Se reutiliza el FIFO del cliente para las cantidades por edad. Los costos de cada tramo se recalculan con el costo unitario del SKU de inventario, sin multiplicar importes totales de movimientos otra vez. INV_Resumen consolida tramos por empresa/referencia/bodega, sin replicar el total de otras bodegas.
 - El dashboard muestra un aviso desplegable de unidades sin costo, valor conocido exacto y referencias por corregir. Histórico agrega valoración, costo unitario ponderado y origen, con los mismos filtros por columna y CSV. ABC excluye referencias sin importe conocido; sus participaciones y la obsolescencia monetaria usan costo conocido de primeras. Las restricciones de antigüedad histórica continúan vigentes.
 - Operación habitual sin pasos nuevos: reemplazar archivos y registrar las fechas reales del paquete. La carga nueva pendiente de fechas permanece respaldada; no se publica con una fecha inferida.
+
+## Importes completos y evolución mensual (v2.7)
+
+- Los importes en pesos se presentan completos, con separadores colombianos y hasta dos decimales; se eliminan las abreviaciones K/M en Inventario, Operaciones y los rangos/gráficos monetarios de Costos. Se amplía el espacio de tarjetas y del gráfico por bodega para mantenerlos legibles.
+- Resumen general agrega dos gráficos y una tabla desplegable: unidades y valor conocido en COP, con el corte actual y hasta 12 meses de cierres conservados. El corte actual coincide con las existencias de las tarjetas.
+- Un cierre requiere un inventario completo publicado con fecha del último día calendario del mes. Una carga intermedia nunca sustituye un cierre; los meses sin ese corte se identifican y quedan sin barra. El mes actual tiene un solo punto, incluso si ya corresponde a cierre.
+- Cada cierre utiliza sus propias unidades y costos archivados, verificados por hash. Un corte sin costos no aparece como valor cero; la valoración parcial se identifica y muestra las unidades sin costo en el detalle.
+- Ambos gráficos incluyen todas las bodegas, incluidas Segundas y Cobros, y respetan los filtros globales. Para línea/categoría se utiliza la clasificación actual disponible, indicándolo en el detalle. Esto no cambia las exclusiones de primeras usadas para rotación y días de inventario.
+- No requiere cambios en Apps Script ni pasos adicionales del operador. Si no se puede leer el histórico, permanece visible el corte actual y se informa la falta de cierres consultables.
+- Validación: pruebas de cierres exactos, años bisiestos, meses faltantes, límites de período, filtros, valoración parcial y formato COP; revisión visual con datos reales y escenarios locales de varios meses (no publicados).

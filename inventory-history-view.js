@@ -152,10 +152,7 @@ function mount(){
  $('hist-search').addEventListener('input',()=>{xfPanelClose();page=0;renderTable();});
  $('hist-prev').addEventListener('click',()=>{page--;renderTable();});$('hist-next').addEventListener('click',()=>{page++;renderTable();});$('hist-export').addEventListener('click',download);
 }
-mount();
-window.PccInventoryHistoryView={
- resetCoverage(){coverageQueryPromise=null;},
- async coverageSeries(cutoff){
+async function monthlyQuery(){
   if(!coverageQueryPromise)coverageQueryPromise=(async()=>{
    const control=await values('INV_Hist_Control','A1'),descriptor=JSON.parse(control[0]?.[0]||'null');
    if(!descriptor||descriptor.schema!==1)throw Error('Histórico no publicado.');
@@ -163,8 +160,17 @@ window.PccInventoryHistoryView={
    if(!Array.isArray(q.cuts))throw Error('Índice histórico no válido.');
    return q;
   })().catch(err=>{coverageQueryPromise=null;throw err;});
-  const q=await coverageQueryPromise;
-  return Promise.all(M.monthlyCuts(q.cuts,cutoff).map(detail));
+  return coverageQueryPromise;
+}
+mount();
+window.PccInventoryHistoryView={
+ resetCoverage(){coverageQueryPromise=null;},
+ async coverageSeries(cutoff){
+  const q=await monthlyQuery();return Promise.all(M.monthlyCuts(q.cuts,cutoff).map(detail));
+ },
+ async inventorySeries(cutoff){
+  const q=await monthlyQuery();
+  return Promise.all(M.inventoryMonthlyCuts(q.cuts,cutoff).map(async p=>({...p,rows:!p.current&&p.cut?(await detail(p.cut)).rows:null})));
  },
  open(){showTab('historico',$('hist-nav'));if(!query)load();},refresh:load};
 if(location.hash==='#historico')window.PccInventoryHistoryView.open();

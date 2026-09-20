@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<script src="money-format.js?v=2.7"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -2472,7 +2473,7 @@ async function loadAll() {
 const g  = id => document.getElementById(id);
 const fP = v => v==null?'—':(v*100).toFixed(1)+'%';
 const fN = v => v==null?'—':Math.round(v).toLocaleString('es-CO');
-const fK = v => v==null?'—':'$'+Math.round(v/1000).toLocaleString('es-CO')+'K';
+const fK = v => PccMoney.format(v);
 const cls = (v,g2,w) => v==null?'':v>=g2?'good':v>=w?'warn':'bad';
 const col = (v,g2,w) => v>=g2?'var(--green)':v>=w?'var(--amber)':'var(--red)';
 const bdg = (v,g2,w) => v==null?'<span class="bdg b">—</span>':v>=g2?'<span class="bdg g">OK</span>':v>=w?'<span class="bdg y">Alerta</span>':'<span class="bdg r">Bajo</span>';
@@ -7776,7 +7777,7 @@ function renderTabResp() {
       responsive:true, maintainAspectRatio:false, animation:false,
       plugins:{ legend:{display:false}, tooltip:{callbacks:{label:i=>'$'+Math.round(i.raw).toLocaleString('es-CO')}} },
       scales:{
-        y:{ticks:{callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'K':v, font:{size:10}}, grid:{color:'rgba(0,0,0,.04)'}},
+        y:{ticks:{callback:v=>PccMoney.format(v), font:{size:10}}, grid:{color:'rgba(0,0,0,.04)'}},
         x:{grid:{display:false}, ticks:{font:{size:9}, maxRotation:30}},
       },
     },
@@ -8206,15 +8207,15 @@ const PV_CONOCIDOS = [
 
 // Rangos de agrupación (modo alternativo)
 const PV_RANGOS = [
-  { label: 'Hasta $20K',      min: 0,       max: 20000   },
-  { label: '$20K – $30K',     min: 20001,   max: 30000   },
-  { label: '$30K – $40K',     min: 30001,   max: 40000   },
-  { label: '$40K – $50K',     min: 40001,   max: 50000   },
-  { label: '$50K – $70K',     min: 50001,   max: 70000   },
-  { label: '$70K – $100K',    min: 70001,   max: 100000  },
-  { label: '$100K – $130K',   min: 100001,  max: 130000  },
-  { label: '$130K – $150K',   min: 130001,  max: 150000  },
-  { label: 'Más de $150K',    min: 150001,  max: Infinity},
+  { label: 'Hasta $20.000',      min: 0,       max: 20000   },
+  { label: '$20.000 – $30.000',     min: 20001,   max: 30000   },
+  { label: '$30.000 – $40.000',     min: 30001,   max: 40000   },
+  { label: '$40.000 – $50.000',     min: 40001,   max: 50000   },
+  { label: '$50.000 – $70.000',     min: 50001,   max: 70000   },
+  { label: '$70.000 – $100.000',    min: 70001,   max: 100000  },
+  { label: '$100.000 – $130.000',   min: 100001,  max: 130000  },
+  { label: '$130.000 – $150.000',   min: 130001,  max: 150000  },
+  { label: 'Más de $150.000',    min: 150001,  max: Infinity},
 ];
 
 function setPVAgrupacion(modo) {
@@ -9976,7 +9977,7 @@ function exportTablaPDF(tableId, titulo) {
 <div id="page-inventario" style="display:none;position:fixed;inset:0;top:86px;z-index:10;">
   <iframe
     id="iframe-inventario"
-    src="inventario_pt.html?v=2.6.0"
+    src="inventario_pt.html?v=2.7.0"
     style="width:100%;height:100%;border:none;display:block;"
     allow="same-origin"
     title="Inventario Producto Terminado">

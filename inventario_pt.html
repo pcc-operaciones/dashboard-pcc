@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<script src="money-format.js?v=2.7"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inventario — Producto Terminado</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -13,8 +14,8 @@
 <script src="source-freshness.js"></script>
 <link rel="stylesheet" href="source-freshness.css">
 <script src="data-quality.js"></script>
-<script src="inventory-history-model.js?v=2.6"></script>
-<link rel="stylesheet" href="inventory-history.css?v=2.6">
+<script src="inventory-history-model.js?v=2.7"></script>
+<link rel="stylesheet" href="inventory-history.css?v=2.7">
 <link rel="stylesheet" href="data-quality.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -445,6 +446,17 @@ canvas{max-width:100%;}
 
   </div>
 
+  <section id="inventory-monthly" class="inventory-monthly" aria-labelledby="inventory-monthly-title">
+    <h2 id="inventory-monthly-title">Inventario mensual</h2>
+    <p>Existencias y costo conocido · todas las bodegas, incluidas Segundas y Cobros · respeta los filtros seleccionados.</p>
+    <p id="inventory-monthly-status" role="status">Consultando cierres conservados…</p>
+    <div class="inventory-monthly-grid">
+      <article><h3>Unidades al corte</h3><div class="inventory-monthly-chart"><canvas id="inventory-monthly-units" role="img" aria-label="Unidades actuales y en cada cierre mensual"></canvas></div></article>
+      <article><h3>Valor del inventario en pesos (COP)</h3><div class="inventory-monthly-chart"><canvas id="inventory-monthly-value" role="img" aria-label="Valor conocido actual y en cada cierre mensual"></canvas></div></article>
+    </div>
+    <details><summary>Ver cifras y fechas de corte</summary><div class="tw"><table><thead><tr><th>Mes</th><th>Tipo de corte</th><th>Fecha</th><th>Unidades</th><th>Valor conocido (COP)</th><th>Unidades sin costo</th></tr></thead><tbody id="inventory-monthly-rows"></tbody></table></div><p>Solo es cierre mensual un corte conservado del último día del mes. Si falta, se muestra “Sin cierre”; no se reemplaza por otra fecha. El corte actual puede estar en curso. Los valores parciales excluyen unidades sin costo. Línea y categoría usan la clasificación disponible actualmente. Se muestran hasta 12 meses.</p></details>
+  </section>
+
   <!-- FILA 1: Antigüedad + Rotación por mes + Rupturas -->
   <div class="chart-grid-3">
 
@@ -525,7 +537,7 @@ canvas{max-width:100%;}
   </div>
 
   <!-- FILA 2: Despachos + ABC + Inventario por bodega -->
-  <div class="chart-grid-3">
+  <div class="chart-grid-2">
 
     <div class="chart-card">
       <div class="cc-hdr">
@@ -562,7 +574,7 @@ canvas{max-width:100%;}
       </div>
     </div>
 
-    <div class="chart-card">
+    <div class="chart-card stock-warehouse-chart">
       <div class="cc-hdr">
         <div>
           <div class="cc-num">6</div>
@@ -570,7 +582,7 @@ canvas{max-width:100%;}
           <div class="cc-sub">Valor en costo por ubicación</div>
         </div>
       </div>
-      <canvas id="chart6" height="130"></canvas>
+      <div class="stock-warehouse-scroll"><div class="stock-warehouse-canvas"><canvas id="chart6"></canvas></div></div>
     </div>
 
   </div>
@@ -1193,7 +1205,7 @@ let abasSortAsc = false;
 
 // ══ UTILS ══
 const fmt  = n => Math.round(n).toLocaleString('es-CO');
-const fmtM = n => { if(!Number.isFinite(n)||n===0)return '—'; const a=Math.abs(n); return a>=1e6?'$'+(n/1e6).toFixed(1)+'M':a>=1e3?'$'+(n/1e3).toFixed(0)+'K':'$'+fmt(n); };
+const fmtM = n => n===0?'—':PccMoney.format(n);
 const pct  = (a,b) => b ? (a/b*100).toFixed(1)+'%' : '—';
 
 // pN: parsear número en formato colombiano (coma decimal o punto decimal)
@@ -1736,6 +1748,7 @@ async function loadCoverageChart(token,months){
 
 // ─── RESUMEN ───
 function renderResumen(){
+  window.PccInventoryMonthly?.render();
   const stockTotal=resumenExistencias(INV_DATA.filter(glFilterReal));
   const inv=INV_DATA.filter(r=>!r.esSeg && !r.esCobros && glFilter(r));
   const movFilt=MOV_DATA.filter(glFilterMov);
@@ -1998,7 +2011,7 @@ function renderResumen(){
     type:'bar',
     data:{labels:bLbls,datasets:[{label:'Costo',data:bVals,
       backgroundColor:bColors.slice(0,bArr.length),borderRadius:5,borderSkipped:false,barPercentage:.5}]},
-    options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>PccMoney.format(ctx.raw)}},
       datalabels:{
         display:true,
         anchor:'end',align:'right',
@@ -2008,7 +2021,7 @@ function renderResumen(){
       }},
       scales:{x:{display:false,beginAtZero:true,max:Math.max(...bVals,1)*1.5},
         y:{grid:{display:false},ticks:{font:{size:10}}}},
-      layout:{padding:{right:90}}}
+      layout:{padding:{right:170}}}
   });
 
   // Semáforo líneas
@@ -3894,6 +3907,7 @@ cargarTodo();
 <script>
 window.PccExecutiveInventory=()=>({status:inventarioCargando?'loading':document.getElementById('inv-load-error')?'error':INV_DATA.length?'ready':'empty',rows:INV_DATA,records:[...PccFresh.records.values()]});
 </script>
-<script src="inventory-history-view.js?v=2.6"></script>
+<script src="inventory-history-view.js?v=2.7"></script>
+<script src="inventory-monthly.js?v=2.7"></script>
 </body>
 </html>
