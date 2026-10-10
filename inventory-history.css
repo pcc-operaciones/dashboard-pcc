@@ -45,3 +45,18 @@ body[data-inventory-view="historico"] :is(#pcc-freshness,#inv-load-error,.tb-rig
 .stock-warehouse-canvas{min-width:650px;height:250px;position:relative}
 @media(max-width:1800px){.page .hero-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
 @media(max-width:700px){.page .hero-grid{grid-template-columns:1fr!important}}
+.performance-card,.abc-card{grid-column:1/-1;min-width:0}
+.page .chart-grid-2{grid-template-columns:minmax(0,1fr)!important}
+.page .chart-card{min-width:0}
+.performance-card article{min-width:0}
+.performance-card h3{font-size:13px;margin:18px 0 8px}
+.performance-card details{margin-top:14px;font-size:12px}
+.performance-card summary{cursor:pointer;color:#1b3a5c}
+.performance-card table{width:100%;border-collapse:collapse;white-space:nowrap}
+.performance-card th,.performance-card td{padding:10px;text-align:left;border-bottom:1px solid #e1e8ef}
+.abc-summary{flex:1;min-width:0}
+.abc-table{white-space:nowrap}
+.abc-view{border:1px solid #cad9e7;border-radius:5px;background:#fff;color:#1b3a5c;padding:5px 12px;cursor:pointer}
+.abc-card .abc-wrap{align-items:center;gap:24px}
+#obsol-history-note{margin-top:10px;line-height:1.5}
+@media(max-width:650px){.abc-card .abc-wrap{flex-direction:column;align-items:stretch}.abc-card canvas{margin:auto}.abc-summary{width:100%}}

@@ -60,7 +60,7 @@ function pccHistSyncCurrent_(deadline){
  if(!state||!state.current)return;
  var load=state.loads.find(function(l){return l.id===state.current.id;});
  if(!load||(props.getProperty('PCC_INV_CURRENT_LOAD')===load.id&&props.getProperty('PCC_INV_COST_VERSION')==='1'))return;
- if(props.getProperty('PCC_HIST_PUBLISHED_STATE')!==props.getProperty('PCC_HIST_STATE_FILE')||props.getProperty('PCC_HIST_PUBLICATION_VERSION')!=='3'){
+ if(props.getProperty('PCC_HIST_PUBLISHED_STATE')!==props.getProperty('PCC_HIST_STATE_FILE')||props.getProperty('PCC_HIST_PUBLICATION_VERSION')!=='4'){
   props.setProperty('PCC_INV_CURRENT_STATUS','ESPERANDO_PUBLICACION_HISTORICA');return;
  }
  if(Date.now()+90000>deadline){props.setProperty('PCC_INV_CURRENT_STATUS','CONTINUAR_SIGUIENTE_EJECUCION');return;}

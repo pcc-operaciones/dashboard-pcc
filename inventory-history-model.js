@@ -32,6 +32,31 @@ function rotationSnapshot(batch){
  }
  return {period,dispatch:[...map.values()]};
 }
+// Each month's RM totals come only from that month's preserved cut.
+function dispatchSnapshot(batch){
+ const from=batch.cutoff.slice(0,7)+'-01',to=batch.cutoff;
+ if(!companies.every(c=>covers(batch.coverage,c,from,to)))return null;
+ const grouped=new Map();
+ for(const r of batch.movements){
+  if(String(r.type).trim().toUpperCase()!=='RM'||r.date<from||r.date>to||r.out<=0)continue;
+  const key=JSON.stringify([r.company,r.ref,r.warehouse]);
+  if(!grouped.has(key))grouped.set(key,{company:r.company,ref:r.ref,warehouse:r.warehouse,units:0,amount:0,missingCostUnits:0});
+  const g=grouped.get(key);g.units+=r.out;
+  if(Number.isFinite(r.costOut)&&r.costOut>0)g.amount+=r.costOut;else g.missingCostUnits+=r.out;
+ }
+ return {from,to,rows:[...grouped.values()].map(r=>({...r,amount:Math.round(r.amount*100)/100}))};
+}
+function performanceAtCut(detail,predicate=()=>true){
+ const selected=rows=>rows.filter(r=>isFirst(r.warehouse)&&predicate(r));
+ const aging=Array.isArray(detail?.performance?.aging)?selected(detail.performance.aging):null;
+ const dispatch=detail?.performance?.dispatch;
+ const movements=dispatch?selected(dispatch.rows):null;
+ const cost=aging?sum(aging,'knownValue'):0,risk=aging?sum(aging,'riskValue'):0;
+ const units=movements?sum(movements,'units'):null,missing=movements?sum(movements,'missingCostUnits'):null;
+ return {obsolescence:cost>0?risk/cost*100:null,riskValue:risk,knownValue:cost,
+  agingMissing:aging?sum(aging,'missingCostUnits'):null,units,
+  amount:movements&&(units===0||missing<units)?Math.round(sum(movements,'amount')*100)/100:null,missingCostUnits:missing};
+}
 function coverageAtCut(detail,predicate=()=>true){
  const rotation=detail?.rotation,period=rotation&&exactPeriod(rotation.period.from,rotation.period.to,detail.cutoff);
  if(!period?.days||!Array.isArray(rotation.dispatch))return null;
@@ -142,6 +167,6 @@ function compare(current,previous){
  if(!previous)return null;const a=stockTotals(current).units,b=stockTotals(previous).units;
  return {units:a-b,percent:b===0?null:(a-b)/Math.abs(b)*100};
 }
-const api={inventoryMonthlyCuts,inventoryMonthlyValues,valuationTotals,groupStock,stockTotals,apply,monthly,filterStock,compare,covers,exactPeriod,declaredPeriod,isFirst,rotationSnapshot,coverageAtCut,monthlyCuts};
+const api={dispatchSnapshot,performanceAtCut,inventoryMonthlyCuts,inventoryMonthlyValues,valuationTotals,groupStock,stockTotals,apply,monthly,filterStock,compare,covers,exactPeriod,declaredPeriod,isFirst,rotationSnapshot,coverageAtCut,monthlyCuts};
 root.PccHistoryModel=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

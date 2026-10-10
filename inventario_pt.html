@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<script src="money-format.js?v=2.7"></script>
+<script src="money-format.js?v=2.8"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inventario — Producto Terminado</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,8 +14,8 @@
 <script src="source-freshness.js"></script>
 <link rel="stylesheet" href="source-freshness.css">
 <script src="data-quality.js"></script>
-<script src="inventory-history-model.js?v=2.7"></script>
-<link rel="stylesheet" href="inventory-history.css?v=2.7">
+<script src="inventory-history-model.js?v=2.8"></script>
+<link rel="stylesheet" href="inventory-history.css?v=2.8">
 <link rel="stylesheet" href="data-quality.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -473,7 +473,7 @@ canvas{max-width:100%;}
           <div class="cc-meta">Meta: ≤ 5%</div>
         </div>
       </div>
-      <canvas id="chart1" height="130"></canvas>
+      <canvas id="chart1" height="130"></canvas><p id="obsol-history-note" class="cc-sub" role="status"></p>
     </div>
 
     <div class="chart-card">
@@ -539,22 +539,27 @@ canvas{max-width:100%;}
   <!-- FILA 2: Despachos + ABC + Inventario por bodega -->
   <div class="chart-grid-2">
 
-    <div class="chart-card">
+    <div class="chart-card performance-card">
       <div class="cc-hdr">
         <div>
           <div class="cc-num">4</div>
           <div class="cc-title">Rotación mensual</div>
-          <div class="cc-sub">Despachos (unidades) por mes</div>
+          <div class="cc-sub">Despachos RM de primeras por mes · excluye Segundas y Cobros</div>
         </div>
         <div class="cc-actual">
           <div class="cc-actual-val" id="ch4-val">—</div>
           <div class="cc-actual-lbl">Últ. mes</div>
         </div>
       </div>
-      <canvas id="chart4" height="130"></canvas>
+      <p id="performance-status" class="cc-sub" role="status"></p>
+      <div class="inventory-monthly-grid">
+        <article><h3>Unidades despachadas</h3><div class="inventory-monthly-chart"><canvas id="chart4" role="img" aria-label="Despachos mensuales en unidades"></canvas></div></article>
+        <article><h3>Costo de despachos (COP)</h3><div class="inventory-monthly-chart"><canvas id="chart4-money" role="img" aria-label="Costo mensual de los despachos en pesos"></canvas></div></article>
+      </div>
+      <details><summary>Ver cifras y fechas de cierre</summary><div class="tw"><table><thead><tr><th>Mes</th><th>Corte</th><th>Estado</th><th>Obsolescencia</th><th>Despachos (uds)</th><th>Costo de despachos (COP)</th></tr></thead><tbody id="performance-rows"></tbody></table></div><p>Un cierre requiere el corte del último día del mes. Mes sin cierre o movimientos incompletos: sin dato. Los pesos corresponden al costo de las salidas RM del ERP; no son ventas. Los filtros de línea y categoría usan la clasificación disponible actualmente.</p></details>
     </div>
 
-    <div class="chart-card">
+    <div class="chart-card abc-card">
       <div class="cc-hdr">
         <div>
           <div class="cc-num">5</div>
@@ -563,12 +568,12 @@ canvas{max-width:100%;}
         </div>
       </div>
       <div class="abc-wrap">
-        <div style="flex-shrink:0"><canvas id="chart5" width="130" height="130"></canvas></div>
-        <div style="flex:1">
-          <table class="abc-table">
-            <thead><tr><th>Clase</th><th>% Valor</th><th>% Refs</th></tr></thead>
+        <div style="flex-shrink:0"><canvas id="chart5" width="240" height="240" role="img" aria-label="Porcentaje del costo de inventario por clase ABC"></canvas></div>
+        <div class="abc-summary">
+          <div class="tw"><table class="abc-table">
+            <thead><tr><th>Clase</th><th>% Valor</th><th>% Refs</th><th>Unidades</th><th>Costo (COP)</th><th>Detalle</th></tr></thead>
             <tbody id="abc-tbody"></tbody>
-          </table>
+          </table></div>
           <div style="font-size:10px;color:var(--muted);margin-top:8px" id="abc-nota"></div>
         </div>
       </div>
@@ -1840,10 +1845,6 @@ function renderResumen(){
   const mesesHist=buildHistMeses(6);
   const meses6=mesesHist.map(m=>m.lbl);
 
-  // Despachos reales por mes
-  const despPorMes={};
-  movFilt.filter(m=>m.tipo==='RM'&&PccHistoryModel.isFirst(m.bodega)).forEach(m=>{const k=m.fecha.substring(0,7);despPorMes[k]=(despPorMes[k]||0)+m.salidas;});
-
   // Devoluciones reales por mes
   const devPorMes={};
   movFilt.filter(m=>m.tipo==='DRM').forEach(m=>{const k=m.fecha.substring(0,7);devPorMes[k]=(devPorMes[k]||0)+m.entradas;});
@@ -1854,25 +1855,6 @@ function renderResumen(){
   // Solo el corte actual; no hay inventario histórico para reconstruir rupturas.
   const rupHist=mesesHist.map((_,i)=>i===mesesHist.length-1?parseFloat(rupturaPct):null);
 
-  // Solo el corte actual; los meses anteriores no se simulan.
-  const obsActual=parseFloat(obsolPct);
-  const obsHist=mesesHist.map((_,i)=>i===mesesHist.length-1?obsActual:null);
-
-  // CHART 1 — Obsolescencia (línea+área)
-  destroyChart('_ch1');
-  const meta20=meses6.map(()=>5);
-  window._ch1=new Chart(document.getElementById('chart1'),{
-    type:'line',
-    data:{labels:meses6,datasets:[
-      {label:'Obsolescencia %',data:obsHist,borderColor:'#B03030',backgroundColor:'rgba(176,48,48,.08)',borderWidth:2,fill:true,tension:.4,pointRadius:3,pointBackgroundColor:'#B03030'},
-      {label:'Meta 5%',data:meta20,borderColor:'rgba(176,48,48,.35)',borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false,datalabels:{display:false}}
-    ]},
-    options:{responsive:true,plugins:{legend:{display:false},
-      datalabels:{display:ctx=>ctx.datasetIndex===0&&ctx.dataIndex===obsHist.length-1,
-        anchor:'end',align:'top',color:'#B03030',font:{size:11,weight:'700'},formatter:v=>v+'%'}},
-      scales:{x:{grid:{display:false},ticks:{font:{size:10}}},
-        y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:10},callback:v=>v+'%'},border:{display:false}}}}
-  });
   document.getElementById('ch1-val').textContent=obsolPct;
 
   // CHART 2 — Días inventario
@@ -1925,68 +1907,51 @@ function renderResumen(){
   document.getElementById('ch3-parcial').textContent=rupParcialN+' refs';
   document.getElementById('ch3-ok').textContent=rupOkN+' refs';
 
-  // CHART 4 — Despachos por mes (usa mesesHist ya calculados)
-  destroyChart('_ch4');
-  const datM=mesesHist.map(m=>despPorMes[m.key]||0);
-  const maxM=Math.max(...datM,1);
-  window._ch4=new Chart(document.getElementById('chart4'),{
-    type:'bar',
-    data:{labels:meses6,datasets:[{label:'Uds',data:datM,
-      backgroundColor:datM.map(v=>v===maxM?'#0D6B5E':'rgba(13,107,94,.4)'),
-      borderRadius:5,borderSkipped:false,barPercentage:.55}]},
-    options:{responsive:true,plugins:{legend:{display:false},
-      datalabels:{anchor:'end',align:'top',color:ctx=>datM[ctx.dataIndex]===maxM?'#0D6B5E':'#6B7A8D',
-        font:{size:10,weight:'700'},formatter:v=>v>0?v.toLocaleString('es-CO'):'0'}},
-      scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{display:false,beginAtZero:true,max:maxM*1.3}},
-      layout:{padding:{top:20}}}
-  });
-  document.getElementById('ch4-val').textContent=fmt(datM[datM.length-1]||0);
-  document.getElementById('rot-ch-val').textContent=fmt(datM[datM.length-1]||0);
+  window.PccInventoryPerformance?.render();
 
   // CHART 5 — ABC
   destroyChart('_ch5');
   const agR={};
   inv.forEach(r=>{
-    if(!agR[r.ref]) agR[r.ref]={c:0,desc:r.desc,linea:r.linea};
-    agR[r.ref].c+=r.c0+r.c1+r.c2+r.c3;
+    if(!agR[r.ref]) agR[r.ref]={c:0,units:0,desc:r.desc,linea:r.linea};
+    agR[r.ref].c+=r.c0+r.c1+r.c2+r.c3;agR[r.ref].units+=r.u0+r.u1+r.u2+r.u3;
   });
   const refsArr=Object.entries(agR).filter(([,r])=>r.c>0).sort((a,b)=>b[1].c-a[1].c);
   const totalC=refsArr.reduce((a,[,r])=>a+r.c,0)||1;
-  let acum=0;const clases={A:{refs:0,val:0},B:{refs:0,val:0},C:{refs:0,val:0}};
+  let acum=0;const clases={A:{refs:0,val:0,units:0},B:{refs:0,val:0,units:0},C:{refs:0,val:0,units:0}};
   // Guardar clasificación por ref para el modal
   window._abcClasif={A:[],B:[],C:[]};
   refsArr.forEach(([ref,r])=>{
     acum+=r.c/totalC;
     const cl=acum<=0.8?'A':acum<=0.95?'B':'C';
-    clases[cl].refs++;clases[cl].val+=r.c;
+    clases[cl].refs++;clases[cl].val+=r.c;clases[cl].units+=r.units;
     window._abcClasif[cl].push({ref,desc:r.desc,linea:r.linea,costo:r.c,pct:+(r.c/totalC*100).toFixed(1)});
   });
   window._abcTotal=totalC;
-  const pA=+(clases.A.val/totalC*100).toFixed(0),pB=+(clases.B.val/totalC*100).toFixed(0),pC=+(clases.C.val/totalC*100).toFixed(0);
+  const pA=clases.A.val/totalC*100,pB=clases.B.val/totalC*100,pC=clases.C.val/totalC*100;
   window._ch5=new Chart(document.getElementById('chart5'),{
     type:'doughnut',
     data:{labels:['A','B','C'],datasets:[{data:[pA,pB,pC],
       backgroundColor:['#1E7A40','#C07A00','#6B7A8D'],borderWidth:3,borderColor:'#fff',cutout:'58%'}]},
-    options:{responsive:false,
+    options:{responsive:false,layout:{padding:32},
       onClick:(e,els)=>{ if(els.length) abrirModalABC(['A','B','C'][els[0].index]); },
       plugins:{legend:{display:false},
       datalabels:{
-        display:ctx=>ctx.dataset.data[ctx.dataIndex]>3,
+        display:ctx=>ctx.dataset.data[ctx.dataIndex]>0,
         color:['#1E7A40','#C07A00','#6B7A8D'],
         font:{size:10,weight:'700'},
-        anchor:'end',align:'end',offset:6,
-        formatter:(v,ctx)=>ctx.chart.data.labels[ctx.dataIndex]+' '+v+'%',
+        anchor:'end',align:'end',offset:4,clamp:true,
+        formatter:(v,ctx)=>ctx.chart.data.labels[ctx.dataIndex]+' '+v.toLocaleString('es-CO',{maximumFractionDigits:1})+'%',
         textAlign:'center'
       },
-      tooltip:{callbacks:{label:ctx=>' '+ctx.parsed+'% del inventario — clic para ver refs'}}}},
+      tooltip:{callbacks:{label:ctx=>' '+ctx.parsed.toLocaleString('es-CO',{maximumFractionDigits:1})+'% del inventario — clic para ver refs'}}}},
   });
   // Hacer filas de la tabla también clickeables
-  document.getElementById('abc-tbody').innerHTML=`
-    <tr style="cursor:pointer" onclick="abrirModalABC('A')"><td class="abc-a">A</td><td>${pA}%</td><td>${(clases.A.refs/refsArr.length*100).toFixed(0)}%</td><td style="color:#1E7A40;font-size:10px">🔍 Ver</td></tr>
-    <tr style="cursor:pointer" onclick="abrirModalABC('B')"><td class="abc-b">B</td><td>${pB}%</td><td>${(clases.B.refs/refsArr.length*100).toFixed(0)}%</td><td style="color:#C07A00;font-size:10px">🔍 Ver</td></tr>
-    <tr style="cursor:pointer" onclick="abrirModalABC('C')"><td class="abc-c">C</td><td>${pC}%</td><td>${(clases.C.refs/refsArr.length*100).toFixed(0)}%</td><td style="color:#6B7A8D;font-size:10px">🔍 Ver</td></tr>`;
-  document.getElementById('abc-nota').textContent=refsArr.length?'Costo conocido de primeras · clic para ver referencias.':'Sin costos informados para clasificar.';
-  if(!refsArr.length)document.getElementById('abc-tbody').innerHTML='<tr><td colspan="4">Sin valoración disponible</td></tr>';
+  document.getElementById('abc-tbody').innerHTML=['A','B','C'].map(cl=>{
+    const c=clases[cl];return `<tr><td class="abc-${cl.toLowerCase()}">${cl}</td><td>${(c.val/totalC*100).toLocaleString('es-CO',{maximumFractionDigits:1})}%</td><td>${refsArr.length?(c.refs/refsArr.length*100).toFixed(0):0}%</td><td>${fmt(c.units)}</td><td>${fmtM(c.val)}</td><td><button class="abc-view" type="button" onclick="abrirModalABC('${cl}')" aria-label="Ver referencias clase ${cl}">Ver</button></td></tr>`;
+  }).join('');
+  document.getElementById('abc-nota').textContent=refsArr.length?'Primeras con costo conocido · unidades y costo por clase. Excluye Segundas, Cobros y referencias sin valoración.':'Sin costos informados para clasificar.';
+  if(!refsArr.length)document.getElementById('abc-tbody').innerHTML='<tr><td colspan="6">Sin valoración disponible</td></tr>';
   document.getElementById('chart5').hidden=!refsArr.length;
 
   // CHART 6 — Por bodega (excluir Cobros y Segundas; filtrar T&T/YETRO si se filtra EU)
@@ -3907,7 +3872,8 @@ cargarTodo();
 <script>
 window.PccExecutiveInventory=()=>({status:inventarioCargando?'loading':document.getElementById('inv-load-error')?'error':INV_DATA.length?'ready':'empty',rows:INV_DATA,records:[...PccFresh.records.values()]});
 </script>
-<script src="inventory-history-view.js?v=2.7"></script>
-<script src="inventory-monthly.js?v=2.7"></script>
+<script src="inventory-history-view.js?v=2.8"></script>
+<script src="inventory-monthly.js?v=2.8"></script>
+<script src="inventory-performance.js?v=2.8"></script>
 </body>
 </html>

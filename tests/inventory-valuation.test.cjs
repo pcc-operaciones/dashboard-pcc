@@ -64,7 +64,7 @@ test('valuation: old publication migrates from its own archived inventory, prese
  const l=r.state().loads[0],file=r.objects.get(l.dataId),batch=JSON.parse(file.bytes.toString());delete batch.valuationVersion;
  batch.inventory.forEach(x=>{delete x.valuationVersion;delete x.unitCost;delete x.erpPrice;delete x.erpAverageCost;delete x.costSource;});file.bytes=Buffer.from(JSON.stringify(batch));
  r.props.set('PCC_HIST_PUBLICATION_VERSION','2');const qf=r.objects.get(r.props.get('PCC_HIST_QUERY_FILE')),q=JSON.parse(qf.bytes.toString());q.publicationVersion=2;qf.bytes=Buffer.from(JSON.stringify(q));
- r.ctx.procesarHistoricoPT();assert.equal(r.props.get('PCC_HIST_PUBLICATION_VERSION'),'3');
+ r.ctx.procesarHistoricoPT();assert.equal(r.props.get('PCC_HIST_PUBLICATION_VERSION'),'4');
  const updated=JSON.parse(r.objects.get(r.props.get('PCC_HIST_QUERY_FILE')).bytes.toString());assert.equal(updated.cuts[0].summary[0].value,null);assert.equal(updated.cuts[0].summary[0].missingCostUnits,10);
  assert.equal(JSON.parse(file.bytes.toString()).valuationVersion,undefined);
 });
