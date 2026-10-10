@@ -2312,14 +2312,16 @@ function renderRotacion(){
   const mK=Object.keys(porMes).sort();
   const lM=mK.map(m=>{const[,mo]=m.split('-');return ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][parseInt(mo)-1];});
   const dM=mK.map(m=>porMes[m]);
+  const mesActual=INV_DATA.find(r=>r.cutoff)?.cutoff.slice(0,7);
+  document.getElementById('rot-ch-val').textContent=fmt(porMes[mesActual]||0);
   const maxM=Math.max(...dM,1);
   destroyChart('_chDesp');
   window._chDesp=new Chart(document.getElementById('chartDespachosMes'),{
     type:'bar',
-    data:{labels:lM,datasets:[{data:dM,backgroundColor:dM.map(v=>v===maxM?'#0D6B5E':'rgba(13,107,94,.4)'),borderRadius:4,borderSkipped:false,barPercentage:.6}]},
+    data:{labels:lM,datasets:[{data:dM,backgroundColor:mK.map(m=>m===mesActual?'#0D6B5E':'rgba(13,107,94,.4)'),borderRadius:4,borderSkipped:false,barPercentage:.6}]},
     options:{responsive:true,plugins:{legend:{display:false},
       datalabels:{display:true,anchor:'end',align:'top',
-        color:ctx=>dM[ctx.dataIndex]===maxM?'#0D6B5E':'#6B7A8D',
+        color:ctx=>mK[ctx.dataIndex]===mesActual?'#0D6B5E':'#6B7A8D',
         font:{size:9,weight:'700'},
         formatter:v=>v>0?v.toLocaleString('es-CO'):''}},
       scales:{x:{grid:{display:false},ticks:{font:{size:9}}},
