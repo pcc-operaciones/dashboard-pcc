@@ -244,3 +244,11 @@ La tabla de existencias al corte utiliza el mismo componente de filtros de Por r
 - Las barras destacan el mes del corte actual, no el de mayor cantidad. Etiquetas permanentes, importes COP completos y tabla desplegable con fechas. Las consultas tardías no pueden reemplazar resultados de filtros más recientes.
 - ABC agrega unidades y costo conocido por clase, con etiquetas completas y acceso por botón al detalle. Mantiene el criterio de clasificación y las exclusiones vigentes.
 - Migración reanudable por lote: el índice público anterior sigue disponible hasta completar y verificar la nueva publicación. El activador de la cuenta propietaria realiza la migración; no se modifica su periodicidad.
+
+## Precio público por referencia (v2.9)
+
+- Fuente: columna `VTA ALMACEN FINAL` de `Costos Unificados`. Es precio de venta al público, separado del costo unitario del ERP usado para valorar existencias.
+- La unión se hace por empresa y referencia. Se toma el registro con la fecha de costeo más reciente que no supere el corte del inventario. Los escalafones son precios exactos; no se agrupan en rangos. Si el último registro no informa precio positivo o hay dos precios distintos con la misma fecha, se muestra «Sin precio identificado».
+- El filtro global de Inventario PT permite seleccionar varios precios exactos. Por referencia muestra precio y fecha de costeo, permite filtrar ambas columnas y exporta los datos. El filtro aplica al inventario actual; la comparación mensual se oculta bajo ese filtro hasta que cada cierre tenga su propio precio archivado, para evitar ceros ficticios.
+- Las nuevas cargas aceptadas guardan `precio-publico-v1.json` junto al lote privado antes de publicarlo. La publicación versión 5 incorpora precio y fecha al detalle de cada corte. Los cortes anteriores sin ese archivo muestran guion y no se revalorizan con la lista de precios vigente.
+- El paquete de Apps Script se genera con `node scripts/inventory-history/build-bundle.cjs`; el archivo resultante es `.review/inventory-history/InventarioHistorico.gs`. Debe instalarse en el proyecto del cliente para que los próximos cortes conserven su precio. El activador existente de 15 minutos continúa igual y no se añade digitación al operador.
