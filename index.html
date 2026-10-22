@@ -6149,7 +6149,7 @@ async function loadCostos() {
   if(window._executiveCostStatus==='loading')return;
   window._executiveCostStatus='loading';window.PccExecutive?.refresh();
   try {
-    const rows = await fetchSheet(COSTOS_ID, 'Costos Unificados', 'A1:DZ10000');
+    const rows = await fetchSheet(COSTOS_ID, 'Costos Unificados', 'A:DZ');
     if (!rows || rows.length < 2) { window._executiveCostStatus='empty';console.warn('Costos: sin datos'); return; }
 
     // Normalizar header: quitar tildes, mayúsculas, espacios extra
@@ -6182,7 +6182,7 @@ async function loadCostos() {
     const iCant    = col('CANTIDAD');
     const iUndM    = col('CANTIDAD','UNDS MES','UNIDADES MES');
     const iPV         = col('PRECIO DE VENTA','PRECIO VENTA');
-    const iVtaAlmacen = col('VTA ALMACEN','VTA_ALMACEN','VENTA ALMACEN','VENTA_ALMACEN','VTA ALMACEN','VTA ALMACÉN','ALMACEN VTA');
+    const iVtaAlmacen = col('VTA ALMACEN FINAL','VTA ALMACEN','VTA_ALMACEN','VENTA ALMACEN','VENTA_ALMACEN','VTA ALMACÉN','ALMACEN VTA');
     // Diagnóstico: si no se encuentra, imprimir los headers para ver el nombre real
     if (iVtaAlmacen < 0) console.warn('[Portafolio] No se encontró VTA ALMACEN. Headers disponibles:', hdr.slice(0,60).join(' | '));
     else console.log('[Portafolio] VTA ALMACEN detectado en col', iVtaAlmacen, '→', hdr[iVtaAlmacen]);
@@ -9977,7 +9977,7 @@ function exportTablaPDF(tableId, titulo) {
 <div id="page-inventario" style="display:none;position:fixed;inset:0;top:86px;z-index:10;">
   <iframe
     id="iframe-inventario"
-    src="inventario_pt.html?v=2.8.0"
+    src="inventario_pt.html?v=2.9.0"
     style="width:100%;height:100%;border:none;display:block;"
     allow="same-origin"
     title="Inventario Producto Terminado">

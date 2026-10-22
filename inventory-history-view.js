@@ -7,9 +7,10 @@ const fmt=n=>typeof n==='number'&&Number.isFinite(n)?n.toLocaleString('es-CO',{m
 const date=d=>d?d.split('-').reverse().join('/'):'—';
 const money=n=>Number.isFinite(n)?n.toLocaleString('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:2,maximumFractionDigits:2}):'—';
 const source=r=>[...(r.costSources||[]).map(s=>s==='PRECIO_UNITARIO'?'Precio unitario ERP':s==='COSTO_PROMEDIO'?'Costo promedio ERP':s),...(r.missingCostUnits?['Sin costo informado']:[])].join(' + ')||'Sin costo informado';
-const columnKeys=['company','ref','description','warehouse','units','committed','available','unitCost','knownValue','costOrigin'];
-const columnLabels=['Empresa','Referencia','Descripción','Bodega','Existencias al corte','Comprometidas','Disponibles','Costo unit. ponderado','Valor conocido','Origen del costo'];
-const columnValues=r=>columnKeys.map((key,i)=>i===9?source(r):i<4?String(r[key]).trim().replace(/\s+/g,' '):i===7?money(r.unitCost):i===8?(r.knownCostUnits?money(r.knownValue)+(r.missingCostUnits?' (parcial)':''):'—'):fmt(r[key]));
+const columnKeys=['company','ref','description','warehouse','units','committed','available','unitCost','knownValue','retailPrice','retailCostedAt','costOrigin'];
+const columnLabels=['Empresa','Referencia','Descripción','Bodega','Existencias al corte','Comprometidas','Disponibles','Costo unit. ponderado','Valor conocido','Precio público','Fecha precio','Origen del costo'];
+const columnValues=r=>columnKeys.map((key,i)=>i===11?source(r):i<4?String(r[key]).trim().replace(/\s+/g,' '):i===7?money(r.unitCost):i===8?(r.knownCostUnits?money(r.knownValue)+(r.missingCostUnits?' (parcial)':''):'—'):i===9?money(r.retailPrice):i===10?date(r.retailCostedAt):fmt(r[key]));
+const priceFilter=rows=>{const value=$('hist-price')?.value||'';return !value?rows:rows.filter(r=>value==='SIN_PRECIO'?!Number.isFinite(r.retailPrice):String(r.retailPrice)===value);};
 let coverageQueryPromise=null;
 let query=null,selected=null,comparison=null,request=0,page=0,tableRows=[],charts=[],detailCache=new Map();
 function option(value,label){const n=e('option',label);n.value=value;return n;}
@@ -67,6 +68,11 @@ async function choose(resetCompare=false){
   const compareCut=query.cuts.find(c=>c.cutoff===$('hist-compare').value);
   const [a,b]=await Promise.all([detail(cut),detail(compareCut)]);if(token!==request)return;
   selected=a;comparison=b;
+  const price=$('hist-price'),oldPrice=price.value;
+  const tiers=[...new Set(a.rows.map(r=>r.retailPrice).filter(Number.isFinite))].sort((x,y)=>x-y);
+  price.replaceChildren(option('',a.retailCapturedAt?'Todos los precios':'Precio no archivado'),...tiers.map(p=>option(String(p),money(p))),...(a.retailCapturedAt?[option('SIN_PRECIO','Sin precio identificado')]:[]));
+  price.disabled=!a.retailCapturedAt;
+  if([...price.options].some(o=>o.value===oldPrice))price.value=oldPrice;
   const oldWarehouse=$('hist-warehouse').value;
   const warehouses=[...new Set([...a.rows,...(b?.rows||[])].map(r=>r.warehouse))].sort();
   $('hist-warehouse').replaceChildren(option('','Todas las bodegas'),...warehouses.map(w=>option(w,w)));
@@ -78,33 +84,34 @@ function metric(label,value,note){const n=e('article',undefined,'hist-metric');n
 function render(){
  if(!selected)return;
  const company=$('hist-company').value,warehouse=$('hist-warehouse').value;
- const rows=M.filterStock(selected.rows,company,warehouse),prev=comparison?M.filterStock(comparison.rows,company,warehouse):null;
+ const rows=priceFilter(M.filterStock(selected.rows,company,warehouse)),prev=comparison&&(!$('hist-price').value||comparison.retailCapturedAt)?priceFilter(M.filterStock(comparison.rows,company,warehouse)):null;
  const totals=M.stockTotals(rows),delta=M.compare(rows,prev);
  $('hist-heading').textContent='Inventario al '+date(selected.cutoff);
- $('hist-metrics').replaceChildren(metric('Existencias al corte',fmt(totals.units),'Unidades registradas'),metric('Comprometidas',fmt(totals.committed),'Unidades con compromiso'),metric('Disponibles',fmt(totals.available),'Existencias menos comprometidas'),metric('Variación de existencias',delta?(delta.units>0?'+':'')+fmt(delta.units)+' uds':'—',comparison?'Frente al '+date(comparison.cutoff)+(delta.percent===null?' · Base cero':` · ${fmt(delta.percent)}%`):'Se requieren dos cortes para comparar'));
+ $('hist-metrics').replaceChildren(metric('Existencias al corte',fmt(totals.units),'Unidades registradas'),metric('Comprometidas',fmt(totals.committed),'Unidades con compromiso'),metric('Disponibles',fmt(totals.available),'Existencias menos comprometidas'),metric('Variación de existencias',delta?(delta.units>0?'+':'')+fmt(delta.units)+' uds':'—',prev?'Frente al '+date(comparison.cutoff)+(delta.percent===null?' · Base cero':` · ${fmt(delta.percent)}%`):$('hist-price').value&&comparison?'El otro corte no tiene precio público archivado':'Se requieren dos cortes para comparar'));
  $('hist-metrics').append(metric(!totals.knownCostUnits?'Valoración no disponible':totals.missingCostUnits?'Valoración conocida · parcial':'Valoración al corte',totals.knownCostUnits?money(totals.knownValue):'—',totals.missingCostUnits?fmt(totals.missingCostUnits)+' unidades sin costo informado':'Costo del ERP de este corte'));
  $('hist-cost-note').textContent='Precio unitario mayor que cero; en su ausencia, Costo prom. unit. (ins). Ambos representan costo. El unitario agrupado se pondera por existencias. Cada corte conserva sus propios costos; un guion significa costo no informado. Se muestran hasta 50 referencias pendientes; el detalle y CSV incluyen todas. '+(totals.missingCostUnits?'Los importes son subtotales conocidos, no la valoración completa.':'');
  $('hist-cost-missing').replaceChildren(...rows.filter(r=>r.missingCostUnits||(!Number.isFinite(r.knownValue)&&r.units)).slice(0,50).map(r=>e('li',r.company+' · '+r.ref+' · '+r.warehouse+': '+fmt(r.missingCostUnits??r.units)+' unidades sin costo')));
- $('hist-scope').textContent=(company||'EU + TEX')+' · '+(warehouse||'Todas las bodegas')+' · Corte declarado del ERP';
+ $('hist-scope').textContent=(company||'EU + TEX')+' · '+(warehouse||'Todas las bodegas')+' · Corte declarado del ERP'+($('hist-price').value?' · Precio: '+$('hist-price').selectedOptions[0].textContent:'');
+ $('hist-month-section').hidden=!!$('hist-price').value;
  const monthly=M.monthly(query,selected.cutoff,company,warehouse);
  $('hist-months').replaceChildren(...monthly.map(m=>{const tr=e('tr');for(const v of [m.month,date(m.cutoff),fmt(m.units),date(m.from)+' – '+date(m.to),fmt(m.in),fmt(m.out),m.status+' · '+m.stockStatus])tr.append(e('td',v));return tr;}));
  for(const ch of charts)ch.destroy();charts=[];
  const series=query.cuts.filter(c=>c.cutoff<=selected.cutoff).map(c=>({cut:c.cutoff,units:c.summary.filter(r=>(!company||r.company===company)&&(!warehouse||r.warehouse===warehouse)).reduce((n,r)=>n+r.units,0)}));
- $('hist-chart-wrap').hidden=series.length<2;
- if(typeof Chart!=='undefined'&&series.length>1){
+ $('hist-chart-wrap').hidden=series.length<2||!!$('hist-price').value;
+ if(typeof Chart!=='undefined'&&series.length>1&&!$('hist-price').value){
   charts.push(new Chart($('hist-stock-chart'),{type:'line',data:{labels:series.map(s=>date(s.cut)),datasets:[{label:'Existencias (uds)',data:series.map(s=>s.units),borderColor:'#176f65',backgroundColor:'#176f65',tension:0,pointRadius:4,fill:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false}},scales:{y:{beginAtZero:true}}}}));
  }
- $('hist-chart-note').textContent=query.cuts.filter(c=>c.cutoff<=selected.cutoff).length===1?'Primer corte conservado. La evolución aparecerá con las próximas cargas.':'Cada punto corresponde a un corte conservado; las existencias no se suman entre fechas.';
+ $('hist-chart-note').textContent=$('hist-price').value?'La evolución general se oculta con el filtro de precio: los cortes anteriores pueden no tener precio público archivado.':query.cuts.filter(c=>c.cutoff<=selected.cutoff).length===1?'Primer corte conservado. La evolución aparecerá con las próximas cargas.':'Cada punto corresponde a un corte conservado; las existencias no se suman entre fechas.';
  renderTable();
 }
-function baseTableRows(){return selected?M.filterStock(selected.rows,$('hist-company').value,$('hist-warehouse').value,$('hist-search').value):[];}
+function baseTableRows(){return selected?priceFilter(M.filterStock(selected.rows,$('hist-company').value,$('hist-warehouse').value,$('hist-search').value)):[];}
 function renderTable(){
  if(!selected)return;
  tableRows=xfFilterRows('hist',baseTableRows(),columnValues);
  const sort=XF_SORT.hist_sort;
  tableRows.sort((a,b)=>{
   if(!sort)return b.units-a.units||a.company.localeCompare(b.company)||a.ref.localeCompare(b.ref);
-  const key=columnKeys[sort.col],cmp=sort.col>=4&&sort.col<9?(a[key]??-Infinity)-(b[key]??-Infinity):String(sort.col===9?source(a):a[key]).localeCompare(String(sort.col===9?source(b):b[key]),'es',{numeric:true,sensitivity:'base'});
+  const key=columnKeys[sort.col],cmp=sort.col>=4&&[4,5,6,7,8,9].includes(sort.col)?(a[key]??-Infinity)-(b[key]??-Infinity):String(sort.col===11?source(a):a[key]).localeCompare(String(sort.col===11?source(b):b[key]),'es',{numeric:true,sensitivity:'base'});
   return sort.asc?cmp:-cmp;
  });
  xfUpdateClearBtn('hist');
@@ -117,7 +124,7 @@ function renderTable(){
 function download(){
  if(!selected)return;
  const safe=v=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"';
- const rows=[['Corte ERP',...columnLabels,'Unidades sin costo'],...tableRows.map(r=>[selected.cutoff,r.company,r.ref,r.description,r.warehouse,r.units,r.committed,r.available,r.unitCost,r.knownCostUnits?r.knownValue:null,source(r),r.missingCostUnits??r.units])];
+ const rows=[['Corte ERP',...columnLabels,'Unidades sin costo'],...tableRows.map(r=>[selected.cutoff,r.company,r.ref,r.description,r.warehouse,r.units,r.committed,r.available,r.unitCost,r.knownCostUnits?r.knownValue:null,r.retailPrice??null,r.retailCostedAt??null,source(r),r.missingCostUnits??r.units])];
  const url=URL.createObjectURL(new Blob(['\ufeff'+rows.map(row=>row.map(safe).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}));
  const a=e('a');a.href=url;a.download='Inventario_PT_'+selected.cutoff+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
@@ -130,14 +137,15 @@ function mount(){
    <label>Comparar con<select id="hist-compare" aria-label="Comparar con"><option value="">Sin comparación</option></select></label>
    <label>Empresa<select id="hist-company"><option value="">EU + TEX</option><option>EU</option><option>TEX</option></select></label>
    <label>Bodega<select id="hist-warehouse"><option value="">Todas las bodegas</option></select></label>
+   <label>Precio público<select id="hist-price" disabled><option value="">Precio no archivado</option></select></label>
   </fieldset>
   <p id="hist-loading" role="status" hidden>Consultando cortes conservados…</p>
   <div id="hist-body" hidden>
    <div class="hist-cut-title"><h3 id="hist-heading"></h3><span id="hist-scope"></span></div>
    <div id="hist-metrics" class="hist-metrics"></div><details class="hist-panel"><summary>Cómo se valora este corte · ver detalle</summary><p id="hist-cost-note"></p><ul id="hist-cost-missing"></ul></details>
    <section class="hist-panel"><h3>Evolución de existencias</h3><p id="hist-chart-note"></p><div class="hist-chart" id="hist-chart-wrap"><canvas id="hist-stock-chart" role="img" aria-label="Existencias en cada corte conservado"></canvas></div></section>
-   <section class="hist-panel"><h3>Comportamiento mensual</h3><p>Entradas y salidas de todos los tipos de movimiento, incluidos traslados. No equivalen a ventas. Se presentan con la última información conservada, limitada a la fecha elegida.</p><div class="hist-scroll"><table><thead><tr><th>Mes</th><th>Corte de existencias</th><th>Existencias</th><th>Período de movimientos</th><th>Entradas (uds)</th><th>Salidas (uds)</th><th>Cobertura</th></tr></thead><tbody id="hist-months"></tbody></table></div></section>
-   <section class="hist-panel"><div class="hist-title"><div><h3>Existencias al corte por referencia y bodega</h3><p>Incluye todas las tallas y colores de cada referencia.</p></div><div class="hist-table-actions"><button id="xf-clear-hist" class="btn-clear-filters" type="button">✕ Limpiar filtros</button><button id="hist-export" type="button">Descargar CSV</button></div></div><label class="hist-search">Buscar en el detalle<input id="hist-search" type="search" placeholder="Referencia o descripción"></label><div class="hist-scroll"><table><thead id="thead-hist"></thead><tbody id="hist-rows"></tbody></table></div><div class="hist-pages"><span id="hist-pagination"></span><button id="hist-prev" type="button">Anterior</button><button id="hist-next" type="button">Siguiente</button></div></section>
+   <section class="hist-panel" id="hist-month-section"><h3>Comportamiento mensual</h3><p>Entradas y salidas de todos los tipos de movimiento, incluidos traslados. No equivalen a ventas. Se presentan con la última información conservada, limitada a la fecha elegida.</p><div class="hist-scroll"><table><thead><tr><th>Mes</th><th>Corte de existencias</th><th>Existencias</th><th>Período de movimientos</th><th>Entradas (uds)</th><th>Salidas (uds)</th><th>Cobertura</th></tr></thead><tbody id="hist-months"></tbody></table></div></section>
+   <section class="hist-panel"><div class="hist-title"><div><h3>Existencias al corte por referencia y bodega</h3><p>Incluye todas las tallas y colores de cada referencia. El precio público se conserva con los nuevos cortes; los anteriores muestran un guion.</p></div><div class="hist-table-actions"><button id="xf-clear-hist" class="btn-clear-filters" type="button">✕ Limpiar filtros</button><button id="hist-export" type="button">Descargar CSV</button></div></div><label class="hist-search">Buscar en el detalle<input id="hist-search" type="search" placeholder="Referencia o descripción"></label><div class="hist-scroll"><table><thead id="thead-hist"></thead><tbody id="hist-rows"></tbody></table></div><div class="hist-pages"><span id="hist-pagination"></span><button id="hist-prev" type="button">Anterior</button><button id="hist-next" type="button">Siguiente</button></div></section>
    <details class="hist-panel"><summary>Cómo leer estos datos</summary><p>Solo se ofrecen cortes completos conservados. La fecha de consulta y la ejecución automática no cambian la fecha del inventario. Un corte de fin de mes requiere una exportación de ese día; el último corte disponible puede ser de otra fecha.</p><p>Un guion en movimientos indica cobertura incompleta, no cero. El primer mes empieza en la fecha de puesta en marcha. Una corrección del mismo corte reemplaza su versión de consulta; las versiones originales permanecen en el archivo privado.</p><p>La valoración está disponible solo cuando el inventario archivado de ese corte incluye costos. Los cortes antiguos no se revalorizan con precios nuevos. El Resumen general muestra obsolescencia y despachos de los cierres que tienen métricas conservadas. Las otras secciones de Inventario PT conservan su consulta actual.</p></details>
   </div>`;
  XF_COLS.hist=columnLabels.map(label=>({label,sortable:true,filtrable:true,align:'left'}));
@@ -148,7 +156,7 @@ function mount(){
  $('xf-clear-hist').addEventListener('click',()=>xfClearAll('hist','renderHistoricoTable'));
  $('hist-refresh').addEventListener('click',load);
  $('hist-cut').addEventListener('change',()=>choose(true));$('hist-compare').addEventListener('change',()=>choose());
- for(const id of ['hist-company','hist-warehouse'])$(id).addEventListener('change',()=>{xfPanelClose();page=0;render();});
+ for(const id of ['hist-company','hist-warehouse','hist-price'])$(id).addEventListener('change',()=>{xfPanelClose();page=0;render();});
  $('hist-search').addEventListener('input',()=>{xfPanelClose();page=0;renderTable();});
  $('hist-prev').addEventListener('click',()=>{page--;renderTable();});$('hist-next').addEventListener('click',()=>{page++;renderTable();});$('hist-export').addEventListener('click',download);
 }
