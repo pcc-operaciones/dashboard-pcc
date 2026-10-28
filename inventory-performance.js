@@ -31,6 +31,7 @@ async function render(){
  const current={month:cutoff?.slice(0,7),cutoff,current:true,closed:false,values:{obsolescence:cost>0?risk/cost*100:null,units:null,amount:null}};
  if(!cutoff)return;
  draw([current]);$('performance-status').textContent='Consultando cierres conservados…';$('obsol-history-note').textContent='Consultando obsolescencia de los cierres…';
+ if(GL_PRICES.size){$('performance-status').textContent='La serie de cierres se oculta con el filtro de precio público; se muestra solo la obsolescencia del inventario actual.';$('obsol-history-note').textContent='Los cierres anteriores pueden no tener precio público archivado.';return;}
  try{
   const series=await PccInventoryHistoryView.performanceSeries(cutoff);if(token!==request)return;
   const taxonomy=new Map(INV_DATA.map(r=>[JSON.stringify([r.empresa,r.ref]),r.lineaReal]));

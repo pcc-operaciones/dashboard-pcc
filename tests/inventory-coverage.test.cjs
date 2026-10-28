@@ -40,7 +40,7 @@ test('migración republica cortes existentes sin nueva carga y mantiene el archi
  const control=r.book.getSheetByName('INV_Hist_Control'),old=control.getRange(1,1).getValue();
  r.ctx.procesarHistoricoPT();
  assert.equal(r.props.get('PCC_HIST_STATE_FILE'),state);assert.equal(r.state().loads.length,1);
- assert.notEqual(control.getRange(1,1).getValue(),old);assert.equal(r.props.get('PCC_HIST_PUBLICATION_VERSION'),'4');
+ assert.notEqual(control.getRange(1,1).getValue(),old);assert.equal(r.props.get('PCC_HIST_PUBLICATION_VERSION'),'5');
  const index=JSON.parse(control.getRange(1,1).getValue()),s=r.book.getSheetByName('INV_Hist_Datos');
  const read=d=>JSON.parse(s.getRange(d.row,1,d.count,1).getValues().map(r=>r[0].slice(1)).join(''));
  const result=read(index),d=read(result.cuts[0].detail);assert.equal(d.rotation.period.days,16);assert.equal(d.rows.length,2);
@@ -51,7 +51,7 @@ test('gráfica mensual usa existencias del corte y descarta una respuesta de fil
  const code=html.slice(html.indexOf('async function loadCoverageChart('),html.indexOf('// ─── RESUMEN ───'));
  const note={},chart={data:{datasets:[{}]},options:{scales:{y:{}},plugins:{datalabels:{},tooltip:{callbacks:{}}}},updates:0,update(){this.updates++;}};
  const d=detail(batch('2026-09-18',920,1840));let release;
- const ctx={document:{getElementById:()=>note},INV_DATA:[{empresa:'EU',ref:'A',lineaReal:'EU Línea',cutoff:'2026-09-18',totalUds:999999}],MOV_DATA:[],REF_MAP:{},DESC_MAP:{},clasificarRef:()=> 'EU Línea',glFilter:()=>true,fmt:String,PccHistoryModel:M,coverageChartRequest:1};
+ const ctx={document:{getElementById:()=>note},INV_DATA:[{empresa:'EU',ref:'A',lineaReal:'EU Línea',cutoff:'2026-09-18',totalUds:999999}],MOV_DATA:[],REF_MAP:{},DESC_MAP:{},GL_PRICES:new Set(),clasificarRef:()=> 'EU Línea',glFilter:()=>true,fmt:String,PccHistoryModel:M,coverageChartRequest:1};
  ctx.window=ctx;ctx._ch2=chart;ctx.PccInventoryHistoryView={coverageSeries:()=>new Promise(r=>release=r)};
  vm.createContext(ctx);vm.runInContext(code,ctx);
  const first=ctx.loadCoverageChart(1,[{key:'2026-08'},{key:'2026-09'}]);ctx.coverageChartRequest=2;release([d]);await first;assert.equal(chart.updates,0);
