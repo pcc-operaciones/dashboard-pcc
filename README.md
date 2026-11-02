@@ -1,6 +1,6 @@
 # Dashboard PCC
 
-Dashboard estático con Gerencia General y las áreas de Operaciones, Costos e Inventario de Producto Terminado. Consulta Google Sheets desde el navegador.
+Dashboard estático con Gerencia General y las áreas de Operaciones, Costos, Inventario de Producto Terminado y Logística. Consulta Google Sheets desde el navegador.
 
 ## Versión principal
 
@@ -16,6 +16,8 @@ Dashboard estático con Gerencia General y las áreas de Operaciones, Costos e I
 Versión 2 autorizada para producción el 14 de septiembre de 2026. Incluye correcciones de confiabilidad, vigencia de fuentes y avisos compactos. Los pendientes de conciliación de datos y rediseño de gráficos siguen documentados.
 
 Sitio: https://pcc-operaciones.github.io/dashboard-pcc/ (GitHub Pages, rama `main`, carpeta raíz).
+
+Logística: https://pcc-operaciones.github.io/dashboard-pcc/#log. Esta publicación pública permite la revisión empresarial con los datos reales conectados. Incluye Resumen, Histórico, Antigüedad, Rotación, Por material, Movimientos y Compras de telas. El acceso privado con cuentas Google se trabajará después de esta revisión.
 
 ## Comparación local
 
@@ -54,6 +56,6 @@ Las credenciales de lectura presentes en el código original mantienen pendiente
 
 ## Gerencia General
 
-Vista principal desde v2.1.0: [alcance, indicadores y administración](docs/GERENCIA-GENERAL.md). La navegación inicia en Gerencia General e integra Operaciones, Costos e Inventario PT; Logística y Ventas están previstas.
+Vista principal desde v2.1.0: [alcance, indicadores y administración](docs/GERENCIA-GENERAL.md). La navegación inicia en Gerencia General e integra Operaciones, Costos, Inventario PT y Logística; Ventas está prevista.
 
 Revisión local: http://127.0.0.1:4173/after/#gg. Los compromisos se guardan en este navegador y se pueden exportar/importar; aún no existe administración compartida por roles.

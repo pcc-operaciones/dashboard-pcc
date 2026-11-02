@@ -302,7 +302,7 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
 <button class="gg-nav-button" id="gBtn-gg" onclick="switchGerencia('gg',this)">Gerencia General</button>
 <button class="gg-nav-button" id="gBtn-ops" onclick="switchGerencia('ops',this)">Operaciones PCC</button>
 <button class="gg-nav-button" id="gBtn-cos" onclick="switchGerencia('cos',this)">Costos</button>
-<button class="gg-nav-button" id="gBtn-inv" onclick="switchGerencia('inv',this)">📦 Inventario PT</button></nav><div class="gg-header-actions"><span id="gUpdTs"></span><div class="live-pill"><div class="live-lbl" id="liveLbl">Consultando áreas</div></div><button class="btn-ref" id="btnRef" onclick="doUpdate()">↻ Actualizar</button></div></div>
+<button class="gg-nav-button" id="gBtn-inv" onclick="switchGerencia('inv',this)">📦 Inventario PT</button><button class="gg-nav-button" id="gBtn-log" onclick="switchGerencia('log',this)">Logística</button></nav><div class="gg-header-actions"><span id="gUpdTs"></span><div class="live-pill"><div class="live-lbl" id="liveLbl">Consultando áreas</div></div><button class="btn-ref" id="btnRef" onclick="doUpdate()">↻ Actualizar</button></div></div>
 <main id="page-general" aria-label="Gerencia General"></main>
 
 <div class="nav">
@@ -2146,6 +2146,7 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
 // ═══════════════════════════════════════════════════
 const API_KEY = 'AIzaSyC7dyZtgc9p8RIDEvkXdXxKQCbuFo8vF8k';
 const BASE    = 'https://sheets.googleapis.com/v4/spreadsheets';
+window.PccLogisticsApiKey=()=>window._apiKey||API_KEY;
 
 const CFG = {
   TEX:  { id:'1zp2-xSGz6sZWKcUGgsXmLTxTjHKKxyt4LHETYKoQcG4',  mods:{ MOD2:'EF MOD2', MOD3:'EF MOD3', MOD4:'EF MOD4', MOD5:'EF MOD5', MOD6:'EF MOD6', MOD7:'EF MOD7' }},
@@ -3418,7 +3419,7 @@ function renderDiag() {
   loadCostos();
 
   // ── Restaurar gerencia desde localStorage ──
-  const _gerSaved = ['gg','ops','cos','inv'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'gg';
+  const _gerSaved = ['gg','ops','cos','inv','log'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'gg';
   switchGerencia(_gerSaved, null, true);
 
   // ── Actualización automática: 7:00 AM y 1:00 PM ──
@@ -5870,21 +5871,32 @@ function _fmtTs(d) {
 // ── switchGerencia: cambia entre Operaciones y Costos ──
 function switchGerenciaArea(ger, btn, silencioso) {
   _gerenciaActiva = ger;
-  PccFresh.show(ger);
+  PccFresh.show(ger==='log'?'gg':ger);
   try { localStorage.setItem('pcc_gerencia_activa', ger); } catch {}
 
   // Botones de gerencia
   const bOps = g('gBtn-ops');
   const bCos = g('gBtn-cos');
   const bInv = g('gBtn-inv');
+  const bLog = g('gBtn-log');
   const activeStyle  = 'color:#fff;border-bottom:2px solid #4ECCA3;margin-bottom:-1px;';
   const inactiveStyle= 'color:rgba(255,255,255,.45);border-bottom:2px solid transparent;margin-bottom:-1px;';
   if (bOps) bOps.style.cssText += ger==='ops' ? activeStyle : inactiveStyle;
   if (bCos) bCos.style.cssText += ger==='cos' ? activeStyle : inactiveStyle;
   if (bInv) bInv.style.cssText += ger==='inv' ? activeStyle : inactiveStyle;
+  if (bLog) bLog.style.cssText += ger==='log' ? activeStyle : inactiveStyle;
 
   // ── Caso Inventario PT ──
   const pInv = g('page-inventario');
+  const pLog = g('page-logistica');
+  if (ger === 'log') {
+    const navEl=document.querySelector('.nav'),errBar=g('errBar'),pc=g('page-costos');
+    if(navEl)navEl.style.display='none';if(errBar)errBar.style.display='none';
+    document.querySelectorAll('.page:not(#page-costos)').forEach(p=>p.classList.remove('active'));
+    if(pc)pc.style.display='none';if(pInv)pInv.style.display='none';if(pLog)pLog.style.display='block';
+    g('gUpdTs').textContent='';g('liveLbl').textContent='Logística';return;
+  }
+  if (pLog) pLog.style.display='none';
   if (ger === 'inv') {
     // Ocultar todo lo de Operaciones
     const navEl  = document.querySelector('.nav');
@@ -5953,24 +5965,25 @@ function switchGerenciaArea(ger, btn, silencioso) {
 
 
 function switchGerencia(ger,btn,silencioso){
-  ger=['gg','ops','cos','inv'].includes(ger)?ger:'gg';
+  ger=['gg','ops','cos','inv','log'].includes(ger)?ger:'gg';
   document.body.dataset.gerencia=ger;
   const general=document.getElementById('page-general');if(general)general.hidden=ger!=='gg';
   if(ger==='gg'){
     _gerenciaActiva='gg';PccFresh.show('gg');
     const inv=document.getElementById('page-inventario');if(inv)inv.style.display='none';
+    const log=document.getElementById('page-logistica');if(log)log.style.display='none';
     document.getElementById('gUpdTs').textContent='';
     document.getElementById('liveLbl').textContent='3 áreas integradas';
     window.PccExecutive?.refresh();
   }else switchGerenciaArea(ger,btn,silencioso);
-  for(const id of ['gg','ops','cos','inv']){
+  for(const id of ['gg','ops','cos','inv','log']){
     const b=document.getElementById('gBtn-'+id);if(b){b.removeAttribute('style');if(id===ger)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}
   }
   if(location.hash!=='#'+ger)history.pushState(null,'','#'+ger);
-  if(ger==='inv')requestAnimationFrame(()=>{document.getElementById('page-inventario').style.top=document.getElementById('gerencia-bar').getBoundingClientRect().bottom+'px';});
+  if(ger==='inv'||ger==='log')requestAnimationFrame(()=>{document.getElementById(ger==='inv'?'page-inventario':'page-logistica').style.top=document.getElementById('gerencia-bar').getBoundingClientRect().bottom+'px';});
   if(!silencioso&&ger==='gg')general?.querySelector('h1')?.focus({preventScroll:true});
 }
-window.addEventListener('resize',()=>{if(document.body.dataset.gerencia==='inv')document.getElementById('page-inventario').style.top=document.getElementById('gerencia-bar').getBoundingClientRect().bottom+'px';});
+window.addEventListener('resize',()=>{const ger=document.body.dataset.gerencia;if(ger==='inv'||ger==='log')document.getElementById(ger==='inv'?'page-inventario':'page-logistica').style.top=document.getElementById('gerencia-bar').getBoundingClientRect().bottom+'px';});
 
 
 // ── doUpdate: actualiza la gerencia activa ──
@@ -5983,6 +5996,8 @@ async function doUpdate() {
     if(_gerenciaActiva==='gg'){
       await Promise.allSettled([loadAll(),loadAlertas(),loadWip(),loadCalidad(),loadCostos(),g('iframe-inventario')?.contentWindow?.cargarTodo?.()]);
       window.PccExecutive?.refresh();
+    } else if(_gerenciaActiva==='log'){
+      await g('iframe-logistica')?.contentWindow?.refresh?.();
     } else if(_gerenciaActiva==='inv'){
       const inv=g('iframe-inventario')?.contentWindow;
       if(inv && typeof inv.cargarTodo==='function') await inv.cargarTodo();
@@ -9983,6 +9998,8 @@ function exportTablaPDF(tableId, titulo) {
     title="Inventario Producto Terminado">
   </iframe>
 </div>
+
+<div id="page-logistica" style="display:none;position:fixed;inset:0;top:86px;z-index:10;"><iframe id="iframe-logistica" src="logistica.html?v=1.6" style="width:100%;height:100%;border:none;display:block;" title="Logística"></iframe></div>
 
 <script src="executive-adapter.js?v=2.1"></script>
 <script src="executive.js?v=2.2"></script>
