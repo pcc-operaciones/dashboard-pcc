@@ -278,7 +278,7 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
     @page { margin:1.2cm; size:A4 landscape; }
   }</style>
 <link rel="stylesheet" href="executive.css?v=2.1">
-<link rel="stylesheet" href="atlas.css?v=1.2">
+<link rel="stylesheet" href="atlas.css?v=1.3">
 </head>
 <body data-gerencia="gg">
 <div class="wrap">
@@ -4241,10 +4241,11 @@ async function loadWip() {
   if(window._executiveWipStatus==='loading')return;
   window._executiveWipStatus='loading';window.PccExecutive?.refresh();
   try {
-    const [rowsEU, rowsTEX] = await Promise.all([
+    window.PccWipRowsPromise=Promise.all([
       fetchSheet(KPI_ID, 'EU_Lotes', 'A:AW'),
       fetchSheet(KPI_ID, 'TEX_Lotes', 'A:AX'),
     ]);
+    const [rowsEU, rowsTEX] = await window.PccWipRowsPromise;
 
     const mapCols = (hdrRow) => {
       const h = hdrRow.map(x => String(x||'').trim().toUpperCase());
@@ -5982,6 +5983,7 @@ function switchGerencia(ger,btn,silencioso){
     document.getElementById('liveLbl').textContent='Consultando áreas';
     window.PccExecutive?.refresh();
   }else switchGerenciaArea(ger,btn,silencioso);
+  if(ger==='inv')document.getElementById('iframe-inventario')?.contentWindow?.PccInventoryActivate?.();
   for(const id of ['gg','ops','cos','inv','log']){
     const b=document.getElementById('gBtn-'+id);if(b){b.removeAttribute('style');if(id===ger)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}
   }
@@ -9998,7 +10000,7 @@ function exportTablaPDF(tableId, titulo) {
 <div id="page-inventario" style="display:none;position:fixed;inset:0;top:86px;z-index:10;">
   <iframe
     id="iframe-inventario"
-    src="inventario_pt.html?v=2.9.0"
+    src="inventario_pt.html?v=2.10.0"
     style="width:100%;height:100%;border:none;display:block;"
     allow="same-origin"
     title="Inventario Producto Terminado">

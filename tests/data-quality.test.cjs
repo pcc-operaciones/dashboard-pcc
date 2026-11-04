@@ -73,7 +73,7 @@ test('fallo de la fuente principal oculta indicadores y permite reintentar',asyn
  const elements={};
  function element(){const classes=new Set();return {classList:{add:c=>classes.add(c),remove:c=>classes.delete(c),contains:c=>classes.has(c)},remove(){},after(){},textContent:''};}
  const page=element(),notes=new Map();
- const context={inventarioCargando:false,RUTA_LINEA:{},DESC_MAP:{},STOCK_MIN_LINEA:new Map(),REFS_EU_LINEA:new Set(),
+ const context={window:{parent:{}},inventoryLoadCount:0,inventoryNeedsRender:false,inventoryOpsPromise:null,BASE:'https://example.test',API_KEY:'test',KPI_ID:'kpi',PccInventoryLoader:{current:async()=>{throw Error('HTTP 503');}},inventarioCargando:false,RUTA_LINEA:{},DESC_MAP:{},STOCK_MIN_LINEA:new Map(),REFS_EU_LINEA:new Set(),
   INV_DATA:[{ref:'vieja'}],MOV_DATA:[{}],LINEA_EU_ID:'linea',INV_SHEET_ID:'inventario',
   fetchSheet:async(id)=>{if(id==='inventario')throw Error('HTTP 503');return [['REF']];},
   mapCols:()=>()=>-1,normStr:String,console:{log(){},warn(){}},setTimeout(){},

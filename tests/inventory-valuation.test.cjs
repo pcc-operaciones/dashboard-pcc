@@ -71,7 +71,7 @@ test('valuation: old publication migrates from its own archived inventory, prese
 
 test('valuation UI: stock reads raw numbers so Sheets currency formatting cannot round the costs',async()=>{
  const html=fs.readFileSync('inventario_pt.html','utf8'),code=html.slice(html.indexOf('async function fetchSheet('),html.indexOf('function normStr('));let seen;
- const c=vm.createContext({BASE:'https://example.test',API_KEY:'test',Date,AbortSignal,PccData:{load:(_,fn)=>fn()},fetch:async url=>{seen=new URL(url);return {ok:true,json:async()=>({values:[[1234.56]]})};}});vm.runInContext(code,c);
+ const c=vm.createContext({BASE:'https://example.test',API_KEY:'test',Date,AbortSignal,PccData:{load:(_,fn)=>fn()},fetch:async url=>{seen=new URL(url);return {ok:true,json:async()=>({values:[[1234.56]]})};}});c.PccInventoryLoader={request:(url,options)=>require('../inventory-loader.js').request(url,{...options,fetcher:c.fetch})};vm.runInContext(code,c);
  const data=await c.fetchSheet('test-sheet','INV_Bodegas');assert.equal(seen.searchParams.get('valueRenderOption'),'UNFORMATTED_VALUE');assert.equal(data[0][0],1234.56);
  await c.fetchSheet('test-sheet','EU_Lotes');assert.equal(seen.searchParams.has('valueRenderOption'),false);
 });

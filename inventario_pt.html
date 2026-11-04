@@ -14,6 +14,7 @@
 <script src="source-freshness.js"></script>
 <link rel="stylesheet" href="source-freshness.css">
 <script src="data-quality.js"></script>
+<script src="inventory-loader.js?v=1.0"></script>
 <script src="inventory-history-model.js?v=2.8"></script>
 <link rel="stylesheet" href="inventory-history.css?v=2.8">
 <link rel="stylesheet" href="data-quality.css">
@@ -1067,6 +1068,7 @@ let DIAS_PERIODO = 0;
 let coverageChartRequest=0;
 let PERIODO_MOV={days:0,label:"Sin movimientos",missing:[]};
 let inventarioCargando=false;
+let inventoryLoadCount=0,inventoryNeedsRender=false,inventoryActivation=null,inventoryOpsPromise=null;
 const LINEA_EU_ID  = '12rQuY0UcZdVMwbHr4mtny1ANeSR0WyfLsKPSiq4ISfA'; // Listado oficial EU Línea
 
 try{
@@ -1236,14 +1238,12 @@ function pN(v){
   return parseFloat(s)||0;
 }
 
-async function fetchSheet(sid,sheet,range='A:AZ'){
+async function fetchSheet(sid,sheet,range='A:AZ',options={}){
   const sourceRange=['INV_Resumen','INV_Bodegas','INV_Movimientos'].includes(sheet)?'A:AZ':range;
   const rawValues=['INV_Resumen','INV_Bodegas','INV_Movimientos'].includes(sheet)?'&valueRenderOption=UNFORMATTED_VALUE':'';
   const url=`${BASE}/${sid}/values/${encodeURIComponent(sheet+'!'+sourceRange)}?key=${API_KEY}${rawValues}&_=${Date.now()}`;
   return PccData.load(sheet+' · '+sid.slice(-6),async()=>{
-  const r=await fetch(url,{signal:AbortSignal.timeout(20000),cache:'no-store'});
-  if(!r.ok) throw new Error(`Error ${r.status} · ${sheet}`);
-  return (await r.json()).values||[];
+  return (await PccInventoryLoader.request(url,options)).values||[];
   },{group:'inv',sheet});
 }
 function normStr(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();}
@@ -1298,6 +1298,9 @@ async function cargarTodo(){
   if(document.body.dataset.inventoryView==='historico'&&window.PccInventoryHistoryView)return PccInventoryHistoryView.refresh();
   if(inventarioCargando)return;
   inventarioCargando=true;
+  ++inventoryLoadCount;
+  inventoryNeedsRender=true;
+  inventoryOpsPromise=null;
   document.getElementById('inv-live-label').textContent='Consultando';
   try{window.parent.PccExecutive?.refresh();}catch{}
   document.getElementById('inv-load-error')?.remove();
@@ -1308,6 +1311,13 @@ async function cargarTodo(){
   document.getElementById('loadSub').textContent='Conectando con Google Sheets...';
 
 
+  const currentRead=PccInventoryLoader.current({base:BASE,id:INV_SHEET_ID,key:API_KEY,load:PccData.load}).then(rows=>({rows}),error=>({error}));
+  let sharedTrace;
+  try{if(inventoryLoadCount===1||window.parent._executiveWipStatus==='loading')sharedTrace=window.parent.PccWipRowsPromise;}catch{}
+  const traceRead=(sharedTrace
+    ? Promise.all(['EU_Lotes','TEX_Lotes'].map((sheet,i)=>PccData.load(sheet+' · '+KPI_ID.slice(-6),async()=>(await sharedTrace)[i],{group:'inv',sheet})))
+    : Promise.all([fetchSheet(KPI_ID,'EU_Lotes','A:AW'),fetchSheet(KPI_ID,'TEX_Lotes','A:AX')]))
+    .then(rows=>({rows}),error=>({error}));
   try{
     // ── 0. Listado oficial EU Línea — gobernado 100% desde Google Sheets ──
     // Se vacía el Map hardcodeado ANTES de leer Sheets: la hoja es la única fuente de verdad.
@@ -1320,12 +1330,9 @@ async function cargarTodo(){
       let rowsLinea=[];
       for(const shName of ['CALCULO PRESUPUESTO','Hoja 1','Sheet1','EU Línea','EU Linea','LINEA','Hoja1']){
         try{
-          rowsLinea=await Promise.race([
-            fetchSheet(LINEA_EU_ID,shName,'A:V'),
-            new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),5000))
-          ]);
+          rowsLinea=await fetchSheet(LINEA_EU_ID,shName,'A:V',{timeout:5000});
           if(rowsLinea.length>1){console.log('[EU Línea] Hoja live encontrada:',shName);break;}
-        }catch(e2){/* probar siguiente */}
+        }catch(e2){if(e2.status!==400)throw e2;/* solo un nombre inexistente justifica probar otro */}
       }
       // Cabecera: REF | DESCRIPCIÓN | OBSERVACIÓN | STOCK | PLANEACIÓN | TRAZO | TELAS | CORTE | CORTADO | INSUMOS COSTURA | INSUMOS | BORDADO | ESTAMPADO | CONFECCIÓN | CONFECCIONADO | TINTORERÍA | TAMPOGRAFÍA | COSTEO | INSUMOS PRESENTACIÓN | PRESENTACIÓN | CIERRE DE OP | TOTAL RUTA
       // Las columnas de etapas van de índice 4 en adelante (hasta penúltima; la última es TOTAL RUTA)
@@ -1386,66 +1393,9 @@ async function cargarTodo(){
     }
     console.log('[EU Línea] STOCK_MIN_LINEA listo:',STOCK_MIN_LINEA.size,'refs desde Sheets.');
 
-        // ── 1. Cargar INV_Resumen (por referencia: disponibles, comprometidos, tramos, temporada) ──
-    document.getElementById('loadSub').textContent='Cargando INV_Resumen...';
-    const rowsResumen = await Promise.race([
-      fetchSheet(INV_SHEET_ID,'INV_Resumen','A:R'),
-      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000))
-    ]);
-
-    // ── 2. Cargar INV_Bodegas (detalle talla/color/bodega) ──
-    document.getElementById('loadSub').textContent='Cargando INV_Bodegas...';
-    const rowsBodegas = await Promise.race([
-      fetchSheet(INV_SHEET_ID,'INV_Bodegas','A:Q'),
-      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000))
-    ]);
-
-    // ── 3. Cargar INV_Movimientos (despachos por mes) ──
-    document.getElementById('loadSub').textContent='Cargando INV_Movimientos...';
-    const rowsMov = await Promise.race([
-      fetchSheet(INV_SHEET_ID,'INV_Movimientos','A:Q'),
-      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000))
-    ]);
-
-    const cortesLeidos=[rowsResumen,rowsBodegas,rowsMov].flatMap(rows=>{const i=rows[0]?.indexOf('FECHA_CORTE_DATOS')??-1;return i<0?[]:rows.slice(1).map(r=>r[i]);});
-    if(new Set(cortesLeidos).size>1)throw new Error('El inventario cambió durante la consulta. Pulse Actualizar para leer el mismo corte');
-
-    // ── 3b. Cargar OP_NO_RECIBIDA_BPT (OPs entregadas por Producción, pendientes en BPT) ──
-    document.getElementById('loadSub').textContent='Cargando OP No Recibidas...';
-    OP_NO_RECIBIDA={};
-    OP_NO_RECIBIDA_LIST=[];
-    try{
-      const rowsOpNr = await Promise.race([
-        fetchSheet(INV_SHEET_ID,'OP_NO_RECIBIDA_BPT','A:L'),
-        new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000))
-      ]);
-      if(rowsOpNr.length>1){
-        const c=mapCols(rowsOpNr[0]);
-        rowsOpNr.slice(1).forEach(r=>{
-          const ref=String(r[c('Referencia')]||'').trim();
-          if(!ref) return;
-          const orden=String(r[c('O.P. Numero')]||r[c('O.P. NUMERO')]||r[c('OP NUMERO')]||r[0]||'').trim();
-          const desc=String(r[c('Desc. item')]||r[c('DESC ITEM')]||'').trim();
-          const lineaOp=String(r[c('O.P. Referencia3')]||r[c('O.P. REFERENCIA3')]||'').trim();
-          const estado=String(r[c('ESTADO OP')]||r[c('ESTADO OP:')]||'').trim();
-          const fEntrega=String(r[c('FF PRESENTACION')]||r[c('FF PRESENTACIÓN')]||'').trim();
-          const undsOp=pN(r[c('UNDS OP')]||0);
-          const recibido=pN(r[c('RECIBIDO')]||0);
-          const porRecibir=Math.round(pN(r[c('POR RECIBIR')]||0));
-          const dias=Math.round(pN(r[c('DIAS EN CIERRE')]||0));
-          if(porRecibir<=0) return; // ya recibida completamente
-          const item={ref,orden,desc,lineaOp,estado,fEntrega,undsOp,recibido,porRecibir,dias};
-          OP_NO_RECIBIDA_LIST.push(item);
-          if(!OP_NO_RECIBIDA[ref]) OP_NO_RECIBIDA[ref]={ops:[],totalUds:0,maxDias:0};
-          OP_NO_RECIBIDA[ref].ops.push(item);
-          OP_NO_RECIBIDA[ref].totalUds+=porRecibir;
-          if(dias>OP_NO_RECIBIDA[ref].maxDias) OP_NO_RECIBIDA[ref].maxDias=dias;
-        });
-        console.log('[OP_NO_RECIBIDA] '+OP_NO_RECIBIDA_LIST.length+' OPs pendientes, '+Object.keys(OP_NO_RECIBIDA).length+' refs.');
-      }
-    }catch(e){
-      console.warn('[OP_NO_RECIBIDA] Hoja no disponible:', e.message);
-    }
+    const current=await currentRead;
+    if(current.error)throw current.error;
+    const [rowsResumen,rowsBodegas,rowsMov]=current.rows;
 
     // ── 4. Cargar trazabilidad KPI sheet (temporada extra si disponible) ──
     document.getElementById('loadSub').textContent='Cargando trazabilidad...';
@@ -1453,14 +1403,9 @@ async function cargarTodo(){
     WIP_LINEA={};
 
     try{
-      const rowsEU = await Promise.race([
-        fetchSheet(KPI_ID,'EU_Lotes','A:AW'),
-        new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))
-      ]);
-      const rowsTEX = await Promise.race([
-        fetchSheet(KPI_ID,'TEX_Lotes','A:AX'),
-        new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))
-      ]);
+      const trace=await traceRead;
+      if(trace.error)throw trace.error;
+      const [rowsEU,rowsTEX]=trace.rows;
       if(rowsEU.length>1){
         const c=mapCols(rowsEU[0]);
         rowsEU.slice(1).forEach(r=>{
@@ -1589,10 +1534,12 @@ async function cargarTodo(){
           if(!REF_MAP[ref]) REF_MAP[ref]={temporada:COMPROMETIDOS[ref].temporada};
           else if(!REF_MAP[ref].temporada) REF_MAP[ref].temporada=COMPROMETIDOS[ref].temporada;
           // Actualizar temporada en INV_DATA
-          INV_DATA.filter(r=>r.ref===ref&&r.temporada==='—').forEach(r=>r.temporada=COMPROMETIDOS[ref].temporada);
+          // La temporada se completa en una sola pasada después del índice.
         }
       });
     }
+
+    INV_DATA.forEach(r=>{if(r.temporada==='—'&&COMPROMETIDOS[r.ref]?.temporada)r.temporada=COMPROMETIDOS[r.ref].temporada;});
 
     // ── Procesar INV_Movimientos → MOV_DATA ──
     // Estructura real de la hoja:
@@ -1683,7 +1630,7 @@ async function cargarTodo(){
   console.log('[INV] Total INV_DATA:', INV_DATA.reduce((a,r)=>a+r.u0+r.u1+r.u2+r.u3,0), 'uds en', INV_DATA.length, 'registros');
 
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('pcc-unavailable'));
-  try{ renderTodo(); }catch(e){ console.error('Error al renderizar:',e); PccData.note('render','No se pudieron actualizar todas las vistas.'); }
+  // Gerencia consume los datos listos, sin construir las nueve vistas ocultas.
   document.getElementById('inv-live-label').textContent='Consulta completada';
   inventarioCargando=false;
   try{window.parent.PccExecutive?.refresh();}catch{}
@@ -1693,9 +1640,68 @@ async function cargarTodo(){
   glUpdateLabels();
 
   document.getElementById('loadingOv').classList.add('hidden');
+  if(inventoryIsVisible())await window.PccInventoryActivate();
+}
 
+async function loadPendingInventoryOps(generation){
+  PccData.note('op-no-recibida',null);
+    OP_NO_RECIBIDA={};
+    OP_NO_RECIBIDA_LIST=[];
+    try{
+      const rowsOpNr = await fetchSheet(INV_SHEET_ID,'OP_NO_RECIBIDA_BPT','A:L');
+      if(generation!==inventoryLoadCount)return;
+      if(rowsOpNr.length>1){
+        const c=mapCols(rowsOpNr[0]);
+        rowsOpNr.slice(1).forEach(r=>{
+          const ref=String(r[c('Referencia')]||'').trim();
+          if(!ref) return;
+          const orden=String(r[c('O.P. Numero')]||r[c('O.P. NUMERO')]||r[c('OP NUMERO')]||r[0]||'').trim();
+          const desc=String(r[c('Desc. item')]||r[c('DESC ITEM')]||'').trim();
+          const lineaOp=String(r[c('O.P. Referencia3')]||r[c('O.P. REFERENCIA3')]||'').trim();
+          const estado=String(r[c('ESTADO OP')]||r[c('ESTADO OP:')]||'').trim();
+          const fEntrega=String(r[c('FF PRESENTACION')]||r[c('FF PRESENTACIÓN')]||'').trim();
+          const undsOp=pN(r[c('UNDS OP')]||0);
+          const recibido=pN(r[c('RECIBIDO')]||0);
+          const porRecibir=Math.round(pN(r[c('POR RECIBIR')]||0));
+          const dias=Math.round(pN(r[c('DIAS EN CIERRE')]||0));
+          if(porRecibir<=0) return; // ya recibida completamente
+          const item={ref,orden,desc,lineaOp,estado,fEntrega,undsOp,recibido,porRecibir,dias};
+          OP_NO_RECIBIDA_LIST.push(item);
+          if(!OP_NO_RECIBIDA[ref]) OP_NO_RECIBIDA[ref]={ops:[],totalUds:0,maxDias:0};
+          OP_NO_RECIBIDA[ref].ops.push(item);
+          OP_NO_RECIBIDA[ref].totalUds+=porRecibir;
+          if(dias>OP_NO_RECIBIDA[ref].maxDias) OP_NO_RECIBIDA[ref].maxDias=dias;
+        });
+        console.log('[OP_NO_RECIBIDA] '+OP_NO_RECIBIDA_LIST.length+' OPs pendientes, '+Object.keys(OP_NO_RECIBIDA).length+' refs.');
+      }
+    }catch(e){
+      if(generation!==inventoryLoadCount)return;
+      PccData.note('op-no-recibida','OP No Recibidas no disponible: '+e.message);
+      console.warn('[OP_NO_RECIBIDA] Hoja no disponible:', e.message);
+    }
 
 }
+
+function inventoryIsVisible(){
+  try{return window.parent===window||window.parent.document.body.dataset.gerencia==='inv';}catch{return true;}
+}
+window.PccInventoryActivate=async function(){
+  if(inventarioCargando||!inventoryNeedsRender||document.getElementById('inv-load-error'))return;
+  if(inventoryActivation?.generation===inventoryLoadCount)return inventoryActivation.promise;
+  const generation=inventoryLoadCount;
+  const promise=(async()=>{
+    document.getElementById('loadingOv').classList.remove('hidden');
+    document.getElementById('loadSub').textContent='Preparando vistas de Inventario PT…';
+    inventoryOpsPromise??=loadPendingInventoryOps(generation);
+    await inventoryOpsPromise;
+    if(generation!==inventoryLoadCount||inventarioCargando||!inventoryIsVisible())return;
+    try{renderTodo();inventoryNeedsRender=false;}
+    catch(e){console.error('Error al renderizar:',e);PccData.note('render','No se pudieron actualizar todas las vistas.');}
+    finally{document.getElementById('loadingOv').classList.add('hidden');}
+  })();
+  inventoryActivation={generation,promise};
+  try{await promise;}finally{if(inventoryActivation?.promise===promise)inventoryActivation=null;}
+};
 
 function renderTodo(){renderCostNotice();renderResumen();renderAntiguedad();renderRotacion();renderReferencias();renderSegundas();renderCobros();renderAbastecimiento();renderOpNoRecibida();}
 

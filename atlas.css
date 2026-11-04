@@ -2,7 +2,7 @@
 #pcc-atlas{--ax-paper:#fff;--ax-ink:#20394d;--ax-muted:#526b7d;--ax-line:#dfe8ef;--ax-track:#e8f0f4;--ax-teal:#17b6a2;--ax-teal-text:#087b70;--ax-blue:#6b8fd4;--ax-sky:#239bb5;--ax-purple:#9a6cd0;--ax-amber:#cc9748;--ax-warn:#946323;font:13px/1.4 'Aptos','Segoe UI',sans-serif}
 #pcc-atlas *{box-sizing:border-box}
 #pcc-atlas [hidden]{display:none!important}
-#pcc-atlas .ax-app{color:var(--ax-ink);background:radial-gradient(ellipse at 7% 24%,#27717a,#24445a 40%,#22374f 85%);border-radius:10px;overflow:hidden;min-height:1060px;color-scheme:light}
+#pcc-atlas .ax-app{color:var(--ax-ink);background:var(--navy,#1b3a5c);border-radius:10px;overflow:hidden;min-height:1060px;color-scheme:light}
 #pcc-atlas .ax-top{display:flex;justify-content:space-between;align-items:center;gap:14px;background:#1b344c;color:#fff;padding:14px 20px;font-size:11px;letter-spacing:.04em}
 #pcc-atlas .ax-top>strong{font-weight:600}
 #pcc-atlas .ax-top>span{color:#c7d8e3;margin-right:80px;white-space:nowrap}
@@ -187,7 +187,7 @@
 @media(pointer:coarse){#pcc-atlas .ax-filter-menu summary,#pcc-atlas .ax-filter-options>label,#pcc-atlas .ax-filter-all,#pcc-atlas .ax-clear-filters,#pcc-atlas .ax-ref-link{min-height:44px}}
 
 /* La página usa el marco original del CMI; el diálogo pertenece al viewport real. */
-body[data-gerencia=gg]{background:#223b50}
+body[data-gerencia=gg]{background:var(--navy,#1b3a5c)}
 body[data-gerencia=gg] #pcc-data-quality{display:none}
 #page-general{padding:0;max-width:none;width:100%;margin:0}
 #pcc-atlas .ax-app{border-radius:0;min-height:0}

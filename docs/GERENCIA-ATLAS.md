@@ -67,3 +67,16 @@ Se contrastaron los totales con la propuesta aprobada, las 47 aperturas principa
 El ajuste de altura se comprobó en 1860×942, 1920×1080, 1440×900, 1366×768, 1280×720, 1100×700, 1100×680, 1366×650 y 1100×640: las seis áreas quedan dentro del viewport y los gráficos no se solapan. Se repitieron las 47 aperturas a 1366×768 y la vista móvil a 375×850.
 
 El servidor local de comparación admite los archivos nuevos de Atlas y las dependencias de las cuatro áreas. La URL pública no cambia en esta entrega y no se publica mediante Sites.
+
+
+## Carga de Inventario PT y coherencia de color — 4 de noviembre de 2026
+
+Se reprodujo en producción un rechazo HTTP 429 de INV_Bodegas. La carga anterior consultaba las tres tablas actuales en serie, descargaba de nuevo EU_Lotes/TEX_Lotes y construía las nueve vistas del iframe oculto, incluidas consultas históricas ajenas al resumen ejecutivo.
+
+`inventory-loader.js` reúne INV_Resumen, INV_Bodegas e INV_Movimientos en `values:batchGet`, con valores sin formato, registro de vigencia por tabla y comprobación del mismo corte. Los reintentos de 429/503 son limitados y respetan Retry-After. Los tiempos de espera cancelan la petición, en lugar de dejarla activa tras una Promise.race. No se incorpora una caché de cifras de inventario.
+
+La carga inicial reutiliza la promesa de trazabilidad de Operaciones. Una actualización exclusiva de Inventario vuelve a consultar sus fuentes; una actualización conjunta comparte la nueva lectura de WIP. La publicación de datos hacia Gerencia precede a la construcción de vistas. OP No Recibidas y las consultas históricas de Inventario se preparan al abrir su pestaña; las aperturas posteriores reutilizan esa preparación hasta Actualizar. Los errores de fuente siguen ocultando los indicadores afectados.
+
+El fondo de Gerencia utiliza `--navy` (#1B3A5C), la misma variable institucional de los subtítulos del cuadro de mando, conservando los acentos turquesa.
+
+Validación: 197 pruebas automatizadas aprobadas; 47 ampliaciones, filtros dependientes, navegación por áreas, vistas propias de Inventario, recuperación tras 400 y dos rechazos 429 simulados, y tamaños 1440/1024/736/375/320 sin desbordamiento. Las capturas reales locales conservaron 154.909 unidades, $4.493.849.774,80 de costo conocido, 2 unidades sin costo y 74.162 unidades mayores de 90 días. Durante Gerencia ya no se consultan INV_Hist_* ni OP_NO_RECIBIDA_BPT. Una comprobación del candidato con datos reales obtuvo respuesta 200 del lote de inventario en 1,39 s y publicó Inventario antes que Costos; es una observación de laboratorio sin emulación, no un SLA ni un percentil de usuarios. Los scripts, capturas y respuestas de QA permanecen fuera del repositorio.
