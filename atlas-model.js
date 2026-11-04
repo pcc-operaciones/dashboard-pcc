@@ -6,6 +6,17 @@ const company=s=>norm(s).includes('TEX')?'TEX':norm(s)==='EU'?'EU':'';
 const hierarchy=[{company:'TEX',line:'TEXSION',cats:['EVA','LAXO','DISNEY','DOTACIÓN']},{company:'EU',line:'EU',cats:['EU Línea','EU Moda']},{company:'EU',line:'YETRO',cats:['YETRO']},{company:'EU',line:'TWO&TWO',cats:['TWO&TWO']}];
 const stageFields=['fProg','fCorte','fConf','fTint','fPres'];
 const stageNames=['Planeación','Corte','Confección','Tintorería','Presentación'];
+const processNames={CORTE:'Corte',EU:'EU Línea',MODA:'EU Moda',TEX:'Costura TEX',SERV:'Servicios especiales',PRES:'Pres. TEX',PREU:'Pres. EU',PREU2:'Pres. EU2 Línea'};
+function performanceDetail(mods,key,supported,calculate){
+ const lastDay=key?new Date(Date.UTC(+key.slice(0,4),+key.slice(5,7),0)).getUTCDate():0;
+ const days=supported?[...new Set(mods.flatMap(m=>(m.daily||[]).map(d=>Number(d.dia))).filter(d=>Number.isInteger(d)&&d>=1&&d<=lastDay))].sort((a,b)=>a-b):[];
+ const processIds=[...Object.keys(processNames),...new Set(mods.map(m=>m.pk).filter(pk=>pk&&!processNames[pk]))];
+ const metric=(field,meta)=>({meta,
+  values:days.map(day=>calculate?.(mods.map(m=>({...m,daily:(m.daily||[]).filter(d=>Number(d.dia)===day)})),field)??null),
+  processes:supported?processIds.map(id=>({id,name:processNames[id]||id,value:calculate?.(mods.filter(m=>m.pk===id),field)??null})).filter(p=>finite(p.value)):[]
+ });
+ return {days,efficiency:metric('ef',.75),compliance:metric('cumpl',1)};
+}
 const monthNames=['Ene.','Feb.','Mar.','Abr.','May.','Jun.','Jul.','Ago.','Sep.','Oct.','Nov.','Dic.'];
 const stateOrder=['RETENIDO/INSUMOS','PLANEACION','CORTE','ESTAMPADO','BORDADO','CORTADO','CONFECCION','CONFECCIONADO','TINTORERIA','ESTAMPADO CONFECCIONADO','BORDADO CONFECCIONADO','NO CONFORME','COSTEO','PRESENTACION POR INSUMOS','PRESENTACION','PENDIENTE POR FICHA'];
 function taxonomy(co,raw,description,inventory=false){
@@ -53,6 +64,7 @@ function build(input,filterValue={},deps={}){
  const lots=allLots.filter(r=>r.estado&&!['ENTREGADO','CANCELADO'].includes(r.estado)&&r.cant>0);
  const states=[...new Set(lots.map(r=>r.estado))].sort((a,b)=>(stateOrder.indexOf(a)<0?99:stateOrder.indexOf(a))-(stateOrder.indexOf(b)<0?99:stateOrder.indexOf(b))).map(name=>{const rows=lots.filter(r=>r.estado===name);return {name,lots:rows.length,units:sum(rows,'cant')};});
  const ops={status:state(input.ops),wipStatus:state(input.wip),ready:ready(input.ops)&&!!key,wipReady:wipReady&&!wipUnsupported,performanceSupported:!scoped,wipSupported:!wipUnsupported,lots,wipUnits:wipReady&&!wipUnsupported?sum(lots,'cant'):null,states,stages:stageNames.map((name,i)=>({name,values:keys.map(k=>wipReady&&!wipUnsupported?sum(allLots.filter(r=>r[stageFields[i]]===k),'cant'):null)})),efficiency:ready(input.ops)&&key&&!scoped?deps.ops?.(input.ops.mods||[],'ef')??null:null,compliance:ready(input.ops)&&key&&!scoped?deps.ops?.(input.ops.mods||[],'cumpl')??null:null,records:input.ops?.records||[]};
+ ops.performance=performanceDetail(input.ops?.mods||[],key,ops.ready&&ops.performanceSupported,deps.ops);
  const invReady=ready(input.inv);
  const inventory=invReady?(input.inv.rows||[]).map(r=>({...r,...taxonomy(company(r.empresa),r.lineaReal||r.linea,r.desc,true)})).filter(match):[];
  const principal=inventory.filter(r=>!r.esSeg&&!r.esCobros);

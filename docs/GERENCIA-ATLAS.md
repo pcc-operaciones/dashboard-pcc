@@ -80,3 +80,14 @@ La carga inicial reutiliza la promesa de trazabilidad de Operaciones. Una actual
 El fondo de Gerencia utiliza `--navy` (#1B3A5C), la misma variable institucional de los subtítulos del cuadro de mando, conservando los acentos turquesa.
 
 Validación: 197 pruebas automatizadas aprobadas; 47 ampliaciones, filtros dependientes, navegación por áreas, vistas propias de Inventario, recuperación tras 400 y dos rechazos 429 simulados, y tamaños 1440/1024/736/375/320 sin desbordamiento. Las capturas reales locales conservaron 154.909 unidades, $4.493.849.774,80 de costo conocido, 2 unidades sin costo y 74.162 unidades mayores de 90 días. Durante Gerencia ya no se consultan INV_Hist_* ni OP_NO_RECIBIDA_BPT. Una comprobación del candidato con datos reales obtuvo respuesta 200 del lote de inventario en 1,39 s y publicó Inventario antes que Costos; es una observación de laboratorio sin emulación, no un SLA ni un percentil de usuarios. Los scripts, capturas y respuestas de QA permanecen fuera del repositorio.
+
+
+## Modales compactos de Operaciones — 4 de noviembre de 2026
+
+Producto en proceso conserva los estados, cantidades, lotes, orden por flujo/volumen y acceso al detalle. Las filas compactas permiten ver los trece estados actuales completos. Unidades mensuales por etapa muestra la tabla directamente debajo de la curva, con cinco filas, meses en columnas y total por etapa; no suma etapas entre sí. Se retiró la vista redundante «Etapas en un mes»; Presentación abre ahora el gráfico mensual con su tabla.
+
+Eficiencia y Cumplimiento se presentan juntos, con tendencia diaria, meta de 75%/100% y desglose por proceso. El modelo reutiliza PccData.ops para todos los cocientes: conserva ponderaciones y denominadores, excluye Servicios de eficiencia, admite resultados superiores al 100% y representa ausencia de denominador con un guion. Los filtros sin desglose respaldado continúan ocultando esos indicadores. Los gráficos de ambos paneles se destruyen al cerrar, cambiar de vista o actualizar.
+
+Los modales de etapas y desempeño omiten la franja repetida de KPIs para dedicar el espacio al contenido solicitado. Se mantiene el alcance de los filtros y las notas de lectura. En móvil, las secciones de desempeño se apilan y la tabla permite desplazamiento horizontal.
+
+Validación: 200 pruebas automatizadas aprobadas, 46 ampliaciones del tablero, navegación y recuperación de fuentes; 21 verificaciones de ajuste modal (tres vistas en siete tamaños: 1860×942, 1440×900, 1366×768, 1280×720, 1100×640, 1024×768 y 900×600) sin desplazamiento vertical del modal. Se comprobaron cifras mensuales de las capturas reales, lotes de No conforme, series activables, filtros, actualización con el modal abierto, dos curvas simultáneas, ausencia de gráficos huérfanos y vista móvil. Las capturas y scripts de QA permanecen fuera del repositorio; se utilizó Playwright porque Browser no está disponible.

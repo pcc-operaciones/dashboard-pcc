@@ -198,6 +198,80 @@ body[data-gerencia=gg] #pcc-data-quality{display:none}
 #pcc-atlas .atlas-age-donut{position:relative;max-width:340px;height:320px;margin:auto}
 #pcc-atlas .atlas-note-compact{display:none}
 #pcc-atlas .ax-dialog .ax-enlarged{min-height:200px}
+#pcc-atlas .atlas-stage-data{overflow-x:auto;width:100%;margin-top:8px}
+#pcc-atlas .atlas-stage-table{width:100%;min-width:740px;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}
+#pcc-atlas .atlas-stage-table caption{text-align:left;color:var(--ax-ink);font-size:11px;font-weight:600;padding:0 0 5px}
+#pcc-atlas .atlas-stage-table th,#pcc-atlas .atlas-stage-table td{padding:4px 6px;white-space:nowrap;text-align:right;line-height:1.3;letter-spacing:0;text-transform:none;border-bottom:1px solid var(--ax-line);color:var(--ax-ink)}
+#pcc-atlas .atlas-stage-table thead th{background:#f3f7fa;font-size:10.5px;font-weight:500}
+#pcc-atlas .atlas-stage-table th:first-child{text-align:left;width:118px}
+#pcc-atlas .atlas-stage-table tbody th{background:none;font-weight:500}
+#pcc-atlas .atlas-stage-table tr>:last-child{border-left:1px solid var(--ax-line)}
+#pcc-atlas .atlas-stage-table .ax-key{color:var(--ax-ink)}
+#pcc-atlas .atlas-series-muted{opacity:.45}
+#pcc-atlas .atlas-stage-legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin:5px 0 0}
+#pcc-atlas .atlas-performance-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;min-width:0}
+#pcc-atlas .atlas-performance-panel{min-width:0}
+#pcc-atlas .atlas-performance-panel+section{border-left:1px solid var(--ax-line);padding-left:24px}
+#pcc-atlas .atlas-performance-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#pcc-atlas .atlas-performance-heading h3{font-size:15px;font-weight:600}
+#pcc-atlas .atlas-performance-heading>strong{font:500 25px/1.2 'Bahnschrift','Segoe UI',sans-serif;font-variant-numeric:tabular-nums}
+#pcc-atlas .atlas-performance-sub{font-size:11px;color:var(--ax-muted);margin:3px 0 5px}
+#pcc-atlas .atlas-performance-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 4px;font-size:10.5px;color:var(--ax-muted)}
+#pcc-atlas .atlas-target-key{display:inline-flex;align-items:center;gap:5px}
+#pcc-atlas .atlas-target-key:before{content:'';width:12px;border-top:2px dashed #cc8585}
+#pcc-atlas .atlas-performance-chart{position:relative;height:190px;min-width:0}
+#pcc-atlas .atlas-performance-panel h4{font-size:11px;color:var(--ax-ink);margin:8px 0 6px;font-weight:600}
+#pcc-atlas .atlas-performance-panel h4>span{font-weight:400;color:var(--ax-muted)}
+#pcc-atlas .atlas-process-list{display:grid;gap:3px}
+#pcc-atlas .atlas-process-row{display:grid;grid-template-columns:120px minmax(20px,1fr) 58px;align-items:center;gap:8px;min-height:20px;font-size:11px}
+#pcc-atlas .atlas-process-row>strong{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+#pcc-atlas .atlas-process-row .ax-track{display:block;height:7px}
+#pcc-atlas .atlas-process-row .ax-fill{display:block}
+#pcc-atlas .atlas-process-row .atlas-result-met{background:#21804a}
+#pcc-atlas .atlas-process-row .atlas-result-near{background:#bd7b00}
+#pcc-atlas .atlas-process-row .atlas-result-low{background:#b65445}
+#pcc-atlas .atlas-result-text-met{color:#21804a}
+#pcc-atlas .atlas-result-text-near{color:#956000}
+#pcc-atlas .atlas-result-text-low{color:#a64438}
+@media(min-width:900px) and (min-height:600px){
+ #pcc-atlas .ax-dialog[data-detail-area=ops]{width:min(1200px,calc(100% - 32px));max-height:94dvh;padding:15px 18px}
+ #pcc-atlas .ax-dialog[data-detail-area=ops] .ax-modal-head{margin-bottom:7px;gap:12px}
+ #pcc-atlas .ax-dialog[data-detail-area=ops] .ax-modal-head h2{font-size:20px;margin-top:3px}
+ #pcc-atlas .ax-dialog[data-detail-area=ops] .ax-modal-eyebrow{font-size:10px}
+ #pcc-atlas .ax-dialog[data-detail-area=ops] .ax-close{min-width:30px;min-height:30px;font-size:23px}
+ #pcc-atlas .ax-dialog[data-detail-area=ops] .ax-modal-scope{font-size:11px;margin-bottom:7px;line-height:1.3}
+ #pcc-atlas .ax-dialog[data-detail-area=ops] .ax-modal-kpis{gap:12px;padding-bottom:8px;margin-bottom:8px}
+ #pcc-atlas .ax-dialog[data-detail-area=ops] .ax-modal-kpis span{font-size:11px}
+ #pcc-atlas .ax-dialog[data-detail-area=ops] .ax-modal-kpis strong{font-size:23px;margin:3px 0}
+ #pcc-atlas .ax-dialog[data-detail-area=ops] .ax-modal-kpis small{font-size:10.5px;line-height:1.3}
+ #pcc-atlas .ax-dialog[data-detail-area=ops] .ax-modal-controls{margin-bottom:9px;gap:12px}
+ #pcc-atlas .ax-dialog[data-detail-area=ops] .ax-modal-controls>label{font-size:11px;gap:3px}
+ #pcc-atlas .ax-dialog[data-detail-area=ops] select{min-height:30px;padding:5px 8px;font-size:11px}
+ #pcc-atlas .ax-dialog[data-detail-area=ops] .ax-enlarged{min-height:0}
+ #pcc-atlas .ax-dialog[data-detail-area=ops] .ax-modal-note{font-size:11px;line-height:1.4;padding-top:8px;margin:8px 0 0}
+ #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-full-bars{gap:3px}
+ #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-full-bar{grid-template-columns:220px minmax(0,1fr) 135px;gap:12px;min-height:20px;font-size:11px}
+ #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-full-bar>span:last-child{display:flex;align-items:baseline;justify-content:flex-end;gap:10px}
+ #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-full-bar strong{font-size:13px}
+ #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-full-bar small{min-width:44px;font-size:10.5px}
+ #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-track{height:8px}
+ #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-detail-link{font-size:11px;padding:2px 0}
+ #pcc-atlas .ax-dialog[data-detail-view=stages] .atlas-large-chart{height:clamp(130px,calc(100dvh - 470px),280px)}
+ #pcc-atlas .ax-dialog[data-detail-view=stages] .ax-series-button{font-size:11px;padding:2px 0}
+ #pcc-atlas .ax-dialog[data-detail-view=performance] .atlas-performance-chart{height:clamp(110px,calc(100dvh - 510px),210px)}
+}
+@media(max-width:899px){
+ #pcc-atlas .atlas-performance-grid{grid-template-columns:1fr;gap:20px}
+ #pcc-atlas .atlas-performance-panel+section{padding:18px 0 0;border-left:0;border-top:1px solid var(--ax-line)}
+ #pcc-atlas .ax-dialog[data-detail-view=stages] .atlas-large-chart{height:200px}
+ #pcc-atlas .atlas-process-row{grid-template-columns:115px minmax(20px,1fr) 58px;gap:6px}
+}
+@media(min-width:900px) and (min-height:600px) and (max-height:680px){
+ #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-full-bars{gap:2px}
+ #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-full-bar{min-height:18px;line-height:1.2}
+ #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-detail-link{padding:0;line-height:1.2}
+ #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-full-bar strong{line-height:1.2}
+}
 #pcc-atlas .ax-modal-controls[hidden],#pcc-atlas .ax-modal-kpis[hidden]{display:none}
 #pcc-atlas .ax-modal-kpis strong{overflow-wrap:anywhere}
 #pcc-atlas .ax-wip-preview .ax-track,#pcc-atlas .ax-wip-preview .ax-fill{display:block}

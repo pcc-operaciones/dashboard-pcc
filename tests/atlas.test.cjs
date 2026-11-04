@@ -18,3 +18,30 @@ test('sin FIFO validado no presenta cero como saldo envejecido',()=>{const sourc
 test('inventario sin metadata de costo conserva valor conocido cero y unidades no valoradas',()=>{const source=base();source.inv.rows=[{empresa:'EU',lineaReal:'EU Línea',totalUds:3,u0:3}];const v=M.build(source,{},deps);assert.equal(v.inv.knownValue,0);assert.equal(v.inv.missingCostUnits,3);});
 test('ausencia de rentabilidad válida no cuenta nulos como negativos; cero válido sí se conserva',()=>{const source=base();source.cos.rows=[{empresa:'EU',subcat:'LINEA',fecha:'2026-10',rent:null}];assert.equal(M.build(source,{},deps).cos.negativeCount,null);source.cos.rows[0].rent=0;const v=M.build(source,{},deps);assert.equal(v.cos.negativeCount,0);assert.equal(v.cos.rent,0);});
 test('ventana inválida no fabrica meses de movimientos',()=>{const source=base();source.inv.period={from:null,to:null};assert.deepEqual(M.build(source,{},deps).inv.movements.keys,[]);});
+
+test('tendencias diarias y procesos usan los mismos numeradores y denominadores del indicador global',()=>{
+ const source=base();source.ops.mods=[
+  {pk:'EU',daily:[{dia:2,pro:40,um:100,real:50,teo:100},{dia:1,pro:10,um:20,real:5,teo:10}]},
+  {pk:'EU',daily:[{dia:2,pro:150,um:300,real:90,teo:100}]},
+  {pk:'PRES',daily:[{dia:2,pro:100,um:10,real:100,teo:20}]},
+  {pk:'SERV',daily:[{dia:2,pro:200,um:100,real:10000,teo:1}]}
+ ];
+ const v=M.build(source,{},deps),p=v.ops.performance;
+ assert.deepEqual(p.days,[1,2]);assert.equal(p.efficiency.meta,.75);assert.equal(p.compliance.meta,1);
+ assert.equal(p.efficiency.values[0],.5);assert.equal(p.efficiency.values[1],240/220);
+ assert.equal(p.compliance.values[1],490/510);
+ const eu=source.ops.mods.filter(m=>m.pk==='EU');
+ assert.equal(p.efficiency.processes.find(p=>p.id==='EU').value,D.ops(eu,'ef'));
+ assert.ok(!p.efficiency.processes.some(p=>p.id==='SERV'));assert.ok(p.compliance.processes.some(p=>p.id==='SERV'));
+ assert.equal(p.efficiency.processes.find(p=>p.id==='PRES').value,5);
+});
+test('tendencia conserva ceros válidos y huecos sin denominador; no crea días futuros ni ceros ficticios',()=>{
+ const source=base();source.ops.mods=[{pk:'EU',daily:[{dia:3,pro:5,um:0,real:1,teo:0},{dia:1,pro:0,um:20,real:0,teo:10},{dia:0,pro:10,um:10},{dia:32,pro:10,um:10}]}];
+ const p=M.build(source,{},deps).ops.performance;
+ assert.deepEqual(p.days,[1,3]);assert.deepEqual(p.efficiency.values,[null,null]);assert.deepEqual(p.compliance.values,[0,null]);
+ assert.deepEqual(p.efficiency.processes,[]);
+});
+test('el detalle diario y por proceso no publica fuentes fallidas ni desgloses inexistentes',()=>{
+ for(const status of ['error','loading','empty']){const source=base();source.ops.status=status;const p=M.build(source,{},deps).ops.performance;assert.deepEqual(p.days,[]);assert.deepEqual(p.efficiency.processes,[]);assert.deepEqual(p.compliance.values,[]);}
+ const p=M.build(base(),{company:['EU']},deps).ops.performance;assert.deepEqual(p.days,[]);assert.deepEqual(p.efficiency.processes,[]);
+});

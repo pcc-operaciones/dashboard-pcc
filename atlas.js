@@ -11,16 +11,16 @@ for(const child of [...page.children]){
  else management.append(child);
 }
 page.replaceChildren(root,management,legacy);
-root.innerHTML='<div class="ax-app"><main class="ax-main"><div class="ax-heading"><div><span class="ax-eyebrow">DIRECCIÓN DE LA EMPRESA · PCC</span><h1 tabindex="-1">Gerencia General</h1><p class="ax-heading-note">Resultados clave y evolución de la empresa</p></div><button type="button" class="ax-source" data-sources>Fechas y fuentes ↗</button></div><div class="ax-global-filters" aria-label="Filtros de Gerencia General" data-filters></div><p class="ax-filter-scope" data-scope aria-live="polite"></p><div class="ax-area-grid" data-areas></div><footer class="ax-footer"><span>Clic en un KPI o gráfico para ampliar · Escape para volver</span><span data-period></span></footer></main></div><dialog class="ax-dialog" aria-labelledby="atlas-dialog-title"><div class="ax-modal-head"><div><span class="ax-modal-eyebrow" data-modal-area></span><h2 id="atlas-dialog-title"></h2></div><button type="button" class="ax-close" data-close aria-label="Cerrar vista ampliada">×</button></div><p class="ax-modal-scope" data-modal-scope></p><div class="ax-modal-kpis" data-modal-kpis></div><div class="ax-modal-controls"><label>Vista<select data-view aria-label="Vista ampliada"></select></label><label data-month-label>Mes<select data-month aria-label="Mes de producción"></select></label><label data-order-label>Orden<select data-order aria-label="Orden de los estados"><option value="flow">Orden del flujo</option><option value="volume">Mayor volumen</option></select></label><label data-material-label>Materiales<select data-material aria-label="Materiales"><option value="all">Telas + insumos</option><option value="MT001">Telas</option><option value="MT002">Insumos</option></select></label></div><div class="ax-enlarged" data-enlarged></div><div class="ax-large-legend" data-large-legend></div><p class="ax-modal-note" data-note></p></dialog>';
+root.innerHTML='<div class="ax-app"><main class="ax-main"><div class="ax-heading"><div><span class="ax-eyebrow">DIRECCIÓN DE LA EMPRESA · PCC</span><h1 tabindex="-1">Gerencia General</h1><p class="ax-heading-note">Resultados clave y evolución de la empresa</p></div><button type="button" class="ax-source" data-sources>Fechas y fuentes ↗</button></div><div class="ax-global-filters" aria-label="Filtros de Gerencia General" data-filters></div><p class="ax-filter-scope" data-scope aria-live="polite"></p><div class="ax-area-grid" data-areas></div><footer class="ax-footer"><span>Clic en un KPI o gráfico para ampliar · Escape para volver</span><span data-period></span></footer></main></div><dialog class="ax-dialog" aria-labelledby="atlas-dialog-title"><div class="ax-modal-head"><div><span class="ax-modal-eyebrow" data-modal-area></span><h2 id="atlas-dialog-title"></h2></div><button type="button" class="ax-close" data-close aria-label="Cerrar vista ampliada">×</button></div><p class="ax-modal-scope" data-modal-scope></p><div class="ax-modal-kpis" data-modal-kpis></div><div class="ax-modal-controls"><label>Vista<select data-view aria-label="Vista ampliada"></select></label><label data-order-label>Orden<select data-order aria-label="Orden de los estados"><option value="flow">Orden del flujo</option><option value="volume">Mayor volumen</option></select></label><label data-material-label>Materiales<select data-material aria-label="Materiales"><option value="all">Telas + insumos</option><option value="MT001">Telas</option><option value="MT002">Insumos</option></select></label></div><div class="ax-enlarged" data-enlarged></div><div class="ax-large-legend" data-large-legend></div><p class="ax-modal-note" data-note></p></dialog>';
 const $=s=>root.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const finite=Number.isFinite,integer=new Intl.NumberFormat('es-CO',{maximumFractionDigits:0}),decimal=new Intl.NumberFormat('es-CO',{maximumFractionDigits:1}),precise=new Intl.NumberFormat('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2});
 const num=v=>finite(v)?integer.format(v):'—',pct=v=>finite(v)?decimal.format(v*100)+'%':'—',cash=v=>finite(v)?'$ '+integer.format(v):'—',money=v=>finite(v)?'$ '+decimal.format(v/1e6)+' M':'—',exact=v=>finite(v)?'$ '+precise.format(v):'—';
 const colors=['#6b8fd4','#17b6a2','#cc9748','#9a6cd0','#239bb5'];
 const areaNames={ops:'Operaciones PCC',cos:'Costos',inv:'Inventario PT',log:'Logística',sales:'Ventas',people:'Talento Humano'};
-const views={ops:[['stages','Unidades mensuales por etapa'],['wip','Producto en proceso por estado'],['month','Etapas en un mes'],['performance','Eficiencia y cumplimiento'],['lots','Lotes en proceso']],cos:[['cost','Rentabilidad y CCU sin IVA'],['margin','Margen promedio mensual'],['negative','Costeos negativos']],inv:[['invflow','Recibidas vs. despachadas'],['invage','Antigüedad del inventario principal'],['invvalue','Costo y cobertura de valoración']],log:[['logflow','Entradas y salidas mensuales'],['stock','Existencias de telas e insumos'],['logage','Antigüedad estimada FIFO'],['company','Existencias por empresa']],sales:[['sales','Venta real frente a meta']],people:[['people','Evolución del ausentismo']]};
+const views={ops:[['stages','Unidades mensuales por etapa'],['wip','Producto en proceso por estado'],['performance','Eficiencia y cumplimiento'],['lots','Lotes en proceso']],cos:[['cost','Rentabilidad y CCU sin IVA'],['margin','Margen promedio mensual'],['negative','Costeos negativos']],inv:[['invflow','Recibidas vs. despachadas'],['invage','Antigüedad del inventario principal'],['invvalue','Costo y cobertura de valoración']],log:[['logflow','Entradas y salidas mensuales'],['stock','Existencias de telas e insumos'],['logage','Antigüedad estimada FIFO'],['company','Existencias por empresa']],sales:[['sales','Venta real frente a meta']],people:[['people','Evolución del ausentismo']]};
 const defaults={ops:'stages',cos:'cost',inv:'invflow',log:'logflow',sales:'sales',people:'people'};
-let filters={},v,source,renderTimer,area='ops',view='stages',month=null,order='flow',material='all',recordId=null,detailPage=0,returnFocus=null;
-const charts=new Set(),dialog=$('dialog');let largeChart=null;
+let filters={},v,source,renderTimer,area='ops',view='stages',order='flow',material='all',recordId=null,detailPage=0,returnFocus=null;
+const charts=new Set(),dialog=$('dialog');let largeChart=null;const detailCharts=new Set();
 try{filters=M.cleanFilters(JSON.parse(localStorage.getItem('pcc.atlas.filters.v1')||'{}'));}catch{filters=M.cleanFilters();}
 function remember(){try{localStorage.setItem('pcc.atlas.filters.v1',JSON.stringify(filters));}catch{/* El filtro sigue funcionando aunque el navegador no pueda conservarlo. */}}
 function scopeText(){return [filters.company.length?filters.company.join(' + '):'Todas las empresas',filters.line.length?filters.line.join(' + '):'Todas las líneas',filters.category.length?filters.category.join(' + '):'Todas las categorías'].join(' · ');}
@@ -35,7 +35,7 @@ function status(id){
  return sourceState(v.log.status)||'Corte '+date(v.log.meta.corte_inventario)+' · valores SIESA';
 }
 function stats(id){
- if(id==='ops')return [['Cumplimiento',pct(v.ops.compliance),v.ops.performanceSupported?'Meta 100%':'Sin desglose del indicador','performance'],['Eficiencia',pct(v.ops.efficiency),v.ops.performanceSupported?'Meta 75%':'Sin desglose del indicador','performance'],['Producto en proceso',num(v.ops.wipUnits),!v.ops.wipSupported?'Categoría TEX no disponible':v.ops.wipReady?num(v.ops.lots.length)+' lotes':sourceState(v.ops.wipStatus),'wip'],['Presentación · '+(v.key?v.months.at(-1):'período'),num(v.ops.wipReady&&v.key?v.ops.stages[4].values.at(-1):null),'Unidades cumplidas','month']];
+ if(id==='ops')return [['Cumplimiento',pct(v.ops.compliance),v.ops.performanceSupported?'Meta 100%':'Sin desglose del indicador','performance'],['Eficiencia',pct(v.ops.efficiency),v.ops.performanceSupported?'Meta 75%':'Sin desglose del indicador','performance'],['Producto en proceso',num(v.ops.wipUnits),!v.ops.wipSupported?'Categoría TEX no disponible':v.ops.wipReady?num(v.ops.lots.length)+' lotes':sourceState(v.ops.wipStatus),'wip'],['Presentación · '+(v.key?v.months.at(-1):'período'),num(v.ops.wipReady&&v.key?v.ops.stages[4].values.at(-1):null),'Unidades cumplidas','stages']];
  if(id==='cos')return [['Rentabilidad',pct(v.cos.rent),'Promedio por registro','cost'],['CCU sin IVA',pct(v.cos.ccu),'Promedio por registro','cost'],['Margen promedio',cash(v.cos.margin),'Pesos por unidad','margin'],['Costeos negativos',num(v.cos.negativeCount)+' / '+num(v.cos.count),v.cos.count>0?pct(v.cos.negativeCount===null?null:v.cos.negativeCount/v.cos.count)+' de los registros':'Registros del alcance','negative']];
  if(id==='inv'){
   const dispatchIndex=v.inv.movements.keys.indexOf(v.key);
@@ -75,7 +75,7 @@ function unavailable(id,target){
  if(id==='ops'&&target==='performance'&&!v.ops.performanceSupported)return 'Este indicador no dispone del desglose seleccionado';
  if(id==='log'&&!v.log.supported)return 'Sin desglose por línea o categoría de producto terminado';
  const state=id==='ops'&&target!=='performance'?v.ops.wipStatus:v[id]?.status;
- return sourceState(state)||(!v.key&&['stages','month','cost','margin','negative','performance'].includes(target)?'Período no configurado':'Sin registros para el alcance seleccionado');
+ return sourceState(state)||(!v.key&&['stages','cost','margin','negative','performance'].includes(target)?'Período no configurado':'Sin registros para el alcance seleccionado');
 }
 const empty=text=>'<div class="ax-empty-chart">'+esc(text)+'</div>';
 function legendHTML(setting){const short={'Planeación':'Plan.','Confección':'Conf.','Tintorería':'Tint.','Presentación':'Pres.'};return setting.series.map(s=>'<span class="ax-key" title="'+esc(s.name)+'" style="--key:'+s.color+'">'+esc(short[s.name]||s.name)+'</span>').join('');}
@@ -89,12 +89,12 @@ function drawChart(host,setting,large=false){
  if(!setting?.available||!setting.series.some(s=>s.values.some(finite))){host.innerHTML=empty(unavailable(id,large?view:host.dataset.chart));return;}
  if(typeof Chart==='undefined'){host.innerHTML=empty('El gráfico no está disponible. Consulta los valores al ampliar.');return;}
  const canvas=document.createElement('canvas');canvas.setAttribute('role','img');canvas.setAttribute('aria-label',setting.series.map(s=>s.name).join(' y ')+' · '+setting.unit);host.replaceChildren(canvas);
- const chart=new Chart(canvas,{type:setting.bars?'bar':'line',data:{labels:setting.labels,datasets:setting.series.map(s=>({label:s.name,data:s.values,borderColor:s.color,backgroundColor:setting.bars?s.color:s.color+'16',borderDash:s.dash?[5,3]:[],borderWidth:large?2.5:1.8,pointRadius:large?3:1.5,pointHoverRadius:5,pointStyle:s.dash?'rectRot':'circle',tension:0,fill:false,spanGaps:false,maxBarThickness:large?36:18}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},datalabels:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+(setting.percent?decimal.format(c.parsed.y)+'%':decimal.format(c.parsed.y))+' '+(setting.percent?'':setting.unit)}}},scales:{x:{grid:{display:false},ticks:{font:{size:11},color:'#526b7d',maxTicksLimit:large?12:4,maxRotation:0}},y:{beginAtZero:true,grid:{color:'#e4edf2'},border:{display:false},ticks:{maxTicksLimit:large?5:3,font:{size:11},color:'#526b7d',callback:n=>setting.percent?decimal.format(n)+'%':Math.abs(n)>=1000?decimal.format(n/1000)+'k':decimal.format(n)},title:{display:large,text:setting.unit,color:'#526b7d',font:{size:12}}}}}});
- charts.add(chart);if(large)largeChart=chart;
+ const chart=new Chart(canvas,{type:setting.bars?'bar':'line',data:{labels:setting.labels,datasets:setting.series.map(s=>({label:s.name,data:s.values,borderColor:s.color,backgroundColor:setting.bars?s.color:s.color+'16',borderDash:s.dash?[5,3]:[],borderWidth:large?2.5:1.8,pointRadius:s.meta?0:large?3:1.5,pointHoverRadius:5,pointStyle:s.dash?'rectRot':'circle',tension:setting.performance?0.25:0,fill:!!setting.performance&&!s.meta,spanGaps:false,maxBarThickness:large?36:18}))},options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},datalabels:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+(setting.percent?decimal.format(c.parsed.y)+'%':decimal.format(c.parsed.y))+' '+(setting.percent?'':setting.unit)}}},scales:{x:{grid:{display:false},ticks:{font:{size:11},color:'#526b7d',maxTicksLimit:setting.performance?8:large?12:4,maxRotation:0}},y:{beginAtZero:!setting.performance,grid:{color:'#e4edf2'},border:{display:false},ticks:{maxTicksLimit:large?5:3,font:{size:11},color:'#526b7d',callback:n=>setting.percent?decimal.format(n)+'%':Math.abs(n)>=1000?decimal.format(n/1000)+'k':decimal.format(n)},title:{display:large&&!setting.performance,text:setting.unit,color:'#526b7d',font:{size:12}}}}}});
+ charts.add(chart);if(large){largeChart=chart;detailCharts.add(chart);}
 }
 function renderCards(){
  const captions={ops:'Etapas independientes · WIP completo al ampliar',cos:'Promedios por registro · no es margen real de ventas',inv:'*Mes parcial · EOP recibidas / RM despachadas',log:'*Mes parcial · edad FIFO estimada',sales:'Venta al consumidor · fuente por integrar',people:'Incapacidades y recobros en el detalle'};
- const links={ops:[['wip','Estados del WIP'],['month','Etapas por mes'],['performance','Metas']],cos:[['margin','Margen mensual'],['negative','Costeos negativos']],inv:[['invage','Antigüedad'],['invvalue','Costo y cobertura']],log:[['stock','Telas e insumos'],['logage','Edad FIFO'],['company','Por empresa']],sales:[['sales','Ver alcance comercial']],people:[['people','Ver alcance de Talento Humano']]};
+ const links={ops:[['wip','Estados del WIP'],['performance','Eficiencia y cumplimiento']],cos:[['margin','Margen mensual'],['negative','Costeos negativos']],inv:[['invage','Antigüedad'],['invvalue','Costo y cobertura']],log:[['stock','Telas e insumos'],['logage','Edad FIFO'],['company','Por empresa']],sales:[['sales','Ver alcance comercial']],people:[['people','Ver alcance de Talento Humano']]};
  $('[data-areas]').innerHTML=Object.keys(areaNames).map(id=>{
   const future=['sales','people'].includes(id);let content='';
   if(id==='ops'){
@@ -107,15 +107,34 @@ function renderCards(){
  }).join('');
  root.querySelectorAll('[data-chart]').forEach(host=>drawChart(host,descriptor(host.dataset.chart)));
 }
-function destroyCharts(largeOnly=false){for(const chart of [...charts])if(!largeOnly||chart===largeChart){chart.destroy();charts.delete(chart);}largeChart=null;}
+function destroyCharts(largeOnly=false){for(const chart of [...charts])if(!largeOnly||detailCharts.has(chart)){chart.destroy();charts.delete(chart);}detailCharts.clear();largeChart=null;}
 function note(target){
  const invRange=v.inv.movements.from&&v.inv.movements.to?date(v.inv.movements.from)+' a '+date(v.inv.movements.to):'Ventana de movimientos no verificada';
- return {stages:'Unidades según la fecha de cumplimiento de cada etapa. Una prenda puede participar en varias etapas: no se suman como producción total.',wip:'Estado actual de cada lote. El volumen muestra dónde revisar; no demuestra por sí solo un cuello de botella. Clic en un estado para consultar sus lotes.',lots:'Lotes activos del alcance seleccionado; excluye entregados y cancelados.',month:'Unidades cumplidas por etapa en el mes elegido. Las etapas son medidas independientes.',performance:'Mismas fórmulas del área: eficiencia ponderada por tiempos, excluye Servicios; cumplimiento = producción / meta. Las fuentes no disponibles se excluyen del cálculo.',cost:'Promedios aritméticos por registro válido. No equivalen al margen real de ventas ni a la utilidad empresarial.',margin:'Promedio aritmético del margen en pesos por unidad por registro válido de cada mes.',negative:v.label+' · '+num(v.cos.negativeCount)+' registros negativos de '+num(v.cos.count)+' registros del alcance. Se conservan los lotes distintos de una misma referencia.',invflow:invRange+'. Recepciones EOP y despachos RM; devoluciones, compras y ajustes son conceptos separados. *Meses parciales según la ventana de la fuente.',invage:'Inventario principal: '+num(v.inv.principal)+' unidades. Mayores a 90 días: '+num(v.inv.age[3])+' ('+pct(v.inv.agedShare)+'). Todas las bodegas: '+num(v.inv.units)+' unidades.',invvalue:'Costo conocido al corte '+date(v.inv.cutoff)+'. '+num(v.inv.missingCostUnits)+' unidades sin costo en el alcance.',logflow:'Movimientos SIESA: '+date(v.log.meta.movimientos_desde)+' a '+date(v.log.meta.movimientos_hasta)+'. *Meses parciales. El selector de materiales afecta este gráfico.',stock:'Existencias de telas e insumos al '+date(v.log.meta.corte_inventario)+'. Se presenta valor; no se suman cantidades de unidades físicas diferentes.',logage:'Estimación FIFO al '+date(v.log.meta.corte_inventario)+'. Edad indeterminada separada del saldo mayor a 90 días; no equivale a obsolescencia contable.',company:'Existencias de materiales por empresa, al corte de Logística.',sales:'Venta al consumidor, ambas empresas, líneas y tiendas. Fuente comercial pendiente de integrar.',people:'Personal al corte, ausentismo, vacantes y rotación. Cierres y reglas pendientes de validar; incapacidades y recobros en el detalle.'}[target]||'';
+ return {stages:'Unidades según la fecha de cumplimiento de cada etapa. Una prenda puede participar en varias etapas: no se suman como producción total.',wip:'Estado actual de cada lote. El volumen muestra dónde revisar; no demuestra por sí solo un cuello de botella. Clic en un estado para consultar sus lotes.',lots:'Lotes activos del alcance seleccionado; excluye entregados y cancelados.',performance:'Mismas fórmulas del área: eficiencia ponderada por tiempos, excluye Servicios; cumplimiento = producción / meta. Las fuentes no disponibles se excluyen del cálculo.',cost:'Promedios aritméticos por registro válido. No equivalen al margen real de ventas ni a la utilidad empresarial.',margin:'Promedio aritmético del margen en pesos por unidad por registro válido de cada mes.',negative:v.label+' · '+num(v.cos.negativeCount)+' registros negativos de '+num(v.cos.count)+' registros del alcance. Se conservan los lotes distintos de una misma referencia.',invflow:invRange+'. Recepciones EOP y despachos RM; devoluciones, compras y ajustes son conceptos separados. *Meses parciales según la ventana de la fuente.',invage:'Inventario principal: '+num(v.inv.principal)+' unidades. Mayores a 90 días: '+num(v.inv.age[3])+' ('+pct(v.inv.agedShare)+'). Todas las bodegas: '+num(v.inv.units)+' unidades.',invvalue:'Costo conocido al corte '+date(v.inv.cutoff)+'. '+num(v.inv.missingCostUnits)+' unidades sin costo en el alcance.',logflow:'Movimientos SIESA: '+date(v.log.meta.movimientos_desde)+' a '+date(v.log.meta.movimientos_hasta)+'. *Meses parciales. El selector de materiales afecta este gráfico.',stock:'Existencias de telas e insumos al '+date(v.log.meta.corte_inventario)+'. Se presenta valor; no se suman cantidades de unidades físicas diferentes.',logage:'Estimación FIFO al '+date(v.log.meta.corte_inventario)+'. Edad indeterminada separada del saldo mayor a 90 días; no equivale a obsolescencia contable.',company:'Existencias de materiales por empresa, al corte de Logística.',sales:'Venta al consumidor, ambas empresas, líneas y tiendas. Fuente comercial pendiente de integrar.',people:'Personal al corte, ausentismo, vacantes y rotación. Cierres y reglas pendientes de validar; incapacidades y recobros en el detalle.'}[target]||'';
 }
 function table(headers,rows,renderRow){
  if(!rows.length)return empty('Sin registros para el alcance seleccionado');
  detailPage=Math.max(0,Math.min(detailPage,Math.ceil(rows.length/50)-1));const start=detailPage*50,shown=rows.slice(start,start+50);
  return '<div class="ax-record-scroll"><table class="ax-record-table"><thead><tr>'+headers.map(h=>'<th scope="col">'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+shown.map(renderRow).join('')+'</tbody></table></div><div class="atlas-pagination"><span>'+num(start+1)+'–'+num(start+shown.length)+' de '+num(rows.length)+' registros</span><button type="button" data-page="-1" '+(!detailPage?'disabled':'')+'>Anterior</button><button type="button" data-page="1" '+(start+50>=rows.length?'disabled':'')+'>Siguiente</button></div>';
+}
+function seriesButtons(config){return config.series.map((s,i)=>'<button type="button" class="ax-series-button" style="--key:'+s.color+'" data-series="'+i+'" aria-pressed="true">'+esc(s.name)+'</button>').join('');}
+function stageTable(config){
+ const total=values=>values.some(finite)?values.reduce((sum,n)=>sum+(finite(n)?n:0),0):null;
+ return '<div class="atlas-stage-data"><table class="atlas-stage-table"><caption>Unidades por etapa · '+esc(v.label)+'</caption><thead><tr><th scope="col">Etapa</th>'+config.labels.map(label=>'<th scope="col">'+esc(label)+'</th>').join('')+'<th scope="col">Total etapa</th></tr></thead><tbody>'+config.series.map((s,i)=>'<tr data-stage-row="'+i+'"><th scope="row"><span class="ax-key" style="--key:'+s.color+'">'+esc(s.name)+'</span></th>'+s.values.map(n=>'<td>'+num(n)+'</td>').join('')+'<td><strong>'+num(total(s.values))+'</strong></td></tr>').join('')+'</tbody></table></div>';
+}
+function drawPerformance(host){
+ const panels=[['efficiency','Eficiencia',v.ops.efficiency,'#1b3a5c'],['compliance','Cumplimiento',v.ops.compliance,'#0d8b7c']];
+ host.innerHTML='<div class="atlas-performance-grid">'+panels.map(([id,title,value,color])=>{
+  const data=v.ops.performance[id];
+  return '<section class="atlas-performance-panel" aria-labelledby="atlas-'+id+'"><div class="atlas-performance-heading"><h3 id="atlas-'+id+'">'+title+'</h3><strong>'+pct(value)+'</strong></div><p class="atlas-performance-sub">Tendencia diaria · '+esc(v.label)+'</p><div class="atlas-performance-legend"><span class="ax-key" style="--key:'+color+'">'+title+'</span><span class="atlas-target-key">Meta '+pct(data.meta)+'</span></div><div class="atlas-performance-chart" data-performance-chart="'+id+'"></div><h4>Por proceso <span>· barra relativa a la meta</span></h4><div class="atlas-process-list">'+(data.processes.length?data.processes.map(p=>{
+   const status=p.value>=data.meta?'met':p.value>=data.meta*.85?'near':'low';
+   return '<div class="atlas-process-row" data-process="'+esc(p.id)+'" title="'+esc(p.name+': '+pct(p.value)+', meta '+pct(data.meta))+'"><span>'+esc(p.name)+'</span><span class="ax-track"><span class="ax-fill atlas-result-'+status+'" style="width:'+Math.min(100,Math.max(0,p.value/data.meta*100))+'%"></span></span><strong class="atlas-result-text-'+status+'">'+pct(p.value)+'</strong></div>';
+  }).join(''):'<p class="ax-sub">Sin denominador válido para mostrar procesos.</p>')+'</div></section>';
+ }).join('')+'</div>';
+ for(const [id,title,,color]of panels){
+  const data=v.ops.performance[id],values=data.values.map(n=>finite(n)?n*100:null);
+  drawChart(host.querySelector('[data-performance-chart="'+id+'"]'),{available:values.some(finite),performance:true,percent:true,unit:'Porcentaje',labels:v.ops.performance.days.map(d=>'Día '+d),series:[{name:title,values,color},{name:'Meta '+pct(data.meta),values:values.map(()=>data.meta*100),color:'#cc8585',dash:true,meta:true}]},true);
+ }
 }
 function negatives(){
  const rows=[...v.cos.negative].sort((a,b)=>a.rent-b.rent);
@@ -127,7 +146,7 @@ function drawAgeDonut(host){
  if(!total||typeof Chart==='undefined'){host.innerHTML=bars(parts.map(r=>({...r,label:money(r.value),sub:'Valor FIFO'})));return;}
  host.innerHTML='<div class="atlas-age-donut"><canvas role="img" aria-label="'+esc('Edad estimada FIFO: '+pct(v.log.aged/total)+' del valor tiene más de 90 días')+'"></canvas></div>';
  const chart=new Chart(host.querySelector('canvas'),{type:'doughnut',data:{labels:parts.map(p=>p.name),datasets:[{data:parts.map(p=>p.value),backgroundColor:parts.map(p=>p.color),borderWidth:0,spacing:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'75%',animation:false,plugins:{legend:{display:false},datalabels:{display:false},tooltip:{callbacks:{label:c=>c.label+': '+money(c.parsed)}}}},plugins:[{id:'atlas-age-label',afterDraw(chart){const {ctx,chartArea}=chart;if(!chartArea)return;const x=(chartArea.left+chartArea.right)/2,y=(chartArea.top+chartArea.bottom)/2;ctx.save();ctx.textAlign='center';ctx.fillStyle='#20394d';ctx.font='500 28px Bahnschrift, sans-serif';ctx.fillText(pct(v.log.aged/total),x,y);ctx.fillStyle='#526b7d';ctx.font='12px sans-serif';ctx.fillText('+90 días · FIFO',x,y+23);ctx.restore();}}]});
- charts.add(chart);largeChart=chart;
+ charts.add(chart);detailCharts.add(chart);largeChart=chart;
  $('[data-large-legend]').innerHTML=parts.map(p=>'<span class="ax-key" style="--key:'+p.color+'">'+esc(p.name)+': '+money(p.value)+'</span>').join('');
 }
 function sourceDetails(){
@@ -140,15 +159,16 @@ function sourceDetails(){
 }
 function drawDetail(){
  if(!dialog.open)return;destroyCharts(true);const host=$('[data-enlarged]');$('[data-large-legend]').replaceChildren();
+ dialog.dataset.detailArea=area;dialog.dataset.detailView=view;
  $('[data-modal-area]').textContent=area==='sources'?'PCC · Gerencia General':areaNames[area]+' · vista ampliada';
  $('#atlas-dialog-title').textContent=area==='sources'?'Fechas y fuentes':views[area].find(s=>s[0]===view)[1];
  $('[data-modal-scope]').textContent=scopeText();
- $('[data-modal-kpis]').hidden=area==='sources'||view==='negative';
+ $('[data-modal-kpis]').hidden=area==='sources'||view==='negative'||view==='performance'||view==='stages';
  $('[data-modal-kpis]').innerHTML=area==='sources'?'':stats(area).map(s=>'<div><span>'+esc(s[0])+'</span><strong>'+esc(s[1])+'</strong><small>'+esc(s[2])+'</small></div>').join('');
  $('.ax-modal-controls').hidden=area==='sources';
  $('[data-view]').innerHTML=area==='sources'?'':views[area].map(s=>'<option value="'+s[0]+'">'+esc(s[1])+'</option>').join('');$('[data-view]').value=view;
- $('[data-month-label]').hidden=view!=='month';$('[data-order-label]').hidden=view!=='wip';$('[data-material-label]').hidden=view!=='logflow';
- $('[data-month]').innerHTML=v.months.map((m,i)=>'<option value="'+i+'">'+esc(m+' '+v.year)+'</option>').join('');$('[data-month]').value=String(month);$('[data-order]').value=order;$('[data-material]').value=material;
+ $('[data-order-label]').hidden=view!=='wip';$('[data-material-label]').hidden=view!=='logflow';
+ $('[data-order]').value=order;$('[data-material]').value=material;
  $('[data-note]').textContent=area==='sources'?'Cada fuente conserva su fecha y alcance. Las fallas y los datos parciales permanecen identificados.':note(view);
  if(area==='sources'){host.innerHTML=sourceDetails();return;}
  if(recordId!==null){
@@ -159,9 +179,15 @@ function drawDetail(){
   }
  }
  const config=descriptor(view,material);
+ if(config&&view==='stages'){
+  host.innerHTML='<div class="atlas-large-chart"></div><div class="atlas-stage-legend"></div>'+stageTable(config);
+  drawChart(host.firstElementChild,config,true);
+  if(largeChart)host.querySelector('.atlas-stage-legend').innerHTML=seriesButtons(config);
+  return;
+ }
  if(config){host.innerHTML='<div class="atlas-large-chart"></div>';drawChart(host.firstElementChild,config,true);if(largeChart){$('[data-large-legend]').innerHTML=config.series.map((s,i)=>'<button type="button" class="ax-series-button" style="--key:'+s.color+'" data-series="'+i+'" aria-pressed="true">'+esc(s.name)+'</button>').join('');host.insertAdjacentHTML('beforeend','<details class="atlas-chart-data"><summary>Ver datos del gráfico</summary>'+table(['Período',...config.series.map(s=>s.name)],config.labels.map((label,i)=>({label,index:i})),r=>'<tr><th scope="row">'+esc(r.label)+'</th>'+config.series.map(s=>'<td>'+esc(config.percent?finite(s.values[r.index])?decimal.format(s.values[r.index])+'%':'—':num(s.values[r.index]))+'</td>').join('')+'</tr>')+'</details>');}return;}
  if(view==='negative'){host.innerHTML=v.cos.ready?negatives():empty(unavailable('cos',view));return;}
- if(['wip','month','lots'].includes(view)&&!v.ops.wipReady||view==='performance'&&(!v.ops.ready||!v.ops.performanceSupported)){host.innerHTML=empty(unavailable('ops',view));return;}
+ if(['wip','lots'].includes(view)&&!v.ops.wipReady||view==='performance'&&(!v.ops.ready||!v.ops.performanceSupported)){host.innerHTML=empty(unavailable('ops',view));return;}
  if(['invage','invvalue'].includes(view)&&!v.inv.ready){host.innerHTML=empty(unavailable('inv',view));return;}
  if(['stock','logage','company'].includes(view)&&(!v.log.ready||view==='logage'&&!v.log.ageReady)){host.innerHTML=empty(v.log.ageMessage||unavailable('log',view));return;}
  if(view==='wip'){
@@ -170,8 +196,7 @@ function drawDetail(){
  }else if(view==='lots'){
   const rows=stateFilter?v.ops.lots.filter(r=>r.estado===stateFilter):v.ops.lots;
   host.innerHTML='<div class="ax-record-summary"><strong>'+esc(stateFilter||'Lotes en proceso')+'</strong><span>'+num(rows.length)+' lotes · '+num(rows.reduce((s,r)=>s+r.cant,0))+' unidades</span></div>'+table(['Empresa / línea','Orden de corte','Referencia','Producto','Estado','Unidades'],rows,r=>'<tr><td>'+esc(r.company+' / '+r.line)+'</td><td>'+esc(r.ordenCorte)+'</td><td>'+esc(r.refSap)+'</td><td>'+esc(r.producto)+'</td><td>'+esc(r.estado)+'</td><td>'+num(r.cant)+'</td></tr>');
- }else if(view==='month')host.innerHTML=bars(v.ops.stages.map((s,i)=>({name:s.name,value:s.values[month]||0,label:num(s.values[month]),sub:'unidades',color:colors[i]})));
- else if(view==='performance')host.innerHTML='<div class="ax-performance">'+[['Eficiencia de producción',v.ops.efficiency,.75],['Cumplimiento de producción',v.ops.compliance,1]].map(s=>{const max=Math.max(1.5,s[1]||0);return '<div><div class="ax-bar-label"><span>'+esc(s[0])+'</span><strong>'+pct(s[1])+'</strong></div>'+(finite(s[1])?'<div class="ax-meter" role="img" aria-label="'+esc(s[0]+': '+pct(s[1])+', meta '+pct(s[2]))+'"><span style="width:'+s[1]/max*100+'%"></span><i style="left:'+s[2]/max*100+'%"></i></div>':'<p class="ax-sub">Sin denominador válido</p>')+'<span class="ax-sub">Meta '+pct(s[2])+' · escala 0–'+pct(max)+'</span></div>';}).join('')+'</div>';
+ }else if(view==='performance')drawPerformance(host);
  else if(view==='invage')host.innerHTML=bars(v.inv.age.map((val,i)=>({name:['0–30 días','31–60 días','61–90 días','Más de 90 días'][i],value:val,label:num(val),sub:'unidades',color:[colors[1],colors[4],colors[0],colors[2]][i]})));
  else if(view==='invvalue')host.innerHTML='<div class="ax-value-detail"><span>Costo conocido del inventario PT</span><strong>'+exact(v.inv.knownValue)+'</strong><p>'+num(v.inv.units)+' unidades en todas las bodegas · '+num(v.inv.missingCostUnits)+' unidades sin costo.</p><p>'+(v.inv.missingCostUnits?'Valoración parcial: faltan costos para completar el total.':'Todas las unidades del alcance tienen costo conocido.')+'</p></div>';
  else if(view==='stock')host.innerHTML=bars(v.log.warehouses.map((r,i)=>({name:r.name,value:r.value,label:money(r.value),sub:'Valor SIESA',color:colors[i?0:1]})));
@@ -186,7 +211,6 @@ function open(id,target,trigger){
 }
 function render(){
  renderTimer=null;source=PccExecutiveSource();v=M.build(source,filters,{period:PccExecutiveModel.period,ops:PccData.ops});filters=v.filters;
- if(month===null||month>=v.months.length)month=Math.max(0,v.months.length-1);
  fitBoard();destroyCharts();drawFilters();renderCards();$('[data-period]').textContent='Cada área mantiene su corte · '+v.label;
  if(document.body.dataset.gerencia==='gg')document.getElementById('liveLbl').textContent=[v.ops,v.cos,v.inv,v.log].filter(s=>s.status==='ready').length+' áreas conectadas';
  if(dialog.open)drawDetail();
@@ -202,7 +226,7 @@ root.addEventListener('click',event=>{
  if(event.target.closest('[data-back]')){recordId=null;drawDetail();return;}
  const state=event.target.closest('[data-state]');if(state){stateFilter=state.dataset.state;view='lots';detailPage=0;drawDetail();return;}
  const paging=event.target.closest('[data-page]');if(paging){detailPage+=Number(paging.dataset.page);drawDetail();return;}
- const series=event.target.closest('[data-series]');if(series&&largeChart){const i=Number(series.dataset.series),visible=largeChart.isDatasetVisible(i);if(visible&&largeChart.data.datasets.filter((_,j)=>largeChart.isDatasetVisible(j)).length===1)return;largeChart.setDatasetVisibility(i,!visible);largeChart.update('none');series.setAttribute('aria-pressed',String(!visible));return;}
+ const series=event.target.closest('[data-series]');if(series&&largeChart){const i=Number(series.dataset.series),visible=largeChart.isDatasetVisible(i);if(visible&&largeChart.data.datasets.filter((_,j)=>largeChart.isDatasetVisible(j)).length===1)return;largeChart.setDatasetVisibility(i,!visible);largeChart.update('none');series.setAttribute('aria-pressed',String(!visible));$('[data-stage-row="'+i+'"]')?.classList.toggle('atlas-series-muted',visible);return;}
  const target=event.target.closest('[data-open]');if(target){open(target.dataset.open,target.dataset.target,target);return;}
  const summary=event.target.closest('.ax-filter-menu summary');if(summary)root.querySelectorAll('.ax-filter-menu[open]').forEach(el=>{if(el!==summary.parentElement)el.open=false;});
  if(!event.target.closest('.ax-filter-menu'))root.querySelectorAll('.ax-filter-menu[open]').forEach(el=>el.open=false);
@@ -211,7 +235,6 @@ root.addEventListener('change',event=>{
  const input=event.target;
  if(input.dataset.filter){const key=input.dataset.filter;filters[key]=input.checked?[...filters[key],input.value]:filters[key].filter(x=>x!==input.value);changeFilters();}
  else if(input.matches('[data-view]')){view=input.value;recordId=null;stateFilter='';detailPage=0;drawDetail();}
- else if(input.matches('[data-month]')){month=Number(input.value);drawDetail();}
  else if(input.matches('[data-order]')){order=input.value;drawDetail();}
  else if(input.matches('[data-material]')){material=input.value;drawDetail();}
 });
