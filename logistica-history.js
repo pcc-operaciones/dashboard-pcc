@@ -5,6 +5,7 @@ const num=value=>fmt.format(Number(value)||0);
 const money=value=>'$ '+num(value);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const state={index:null,detail:null,chart:null,page:0,request:0};
+let indexPromise=null;
 const pageSize=100;
 const col=(label,key,type='text')=>({label,type,get:r=>r[key]});
 const histGrid=window.PccLogisticsGrid.create('histTable',[
@@ -159,10 +160,10 @@ async function selectCut(){
     $('histBody').hidden=true;message(error.message||'No se pudo consultar el histórico.','error');
   }
 }
-async function load(){
-  ++state.request;state.index=null;state.detail=null;$('histBody').hidden=true;
-  message('Consultando cortes conservados…','loading');
-  try{
+async function readIndex(force=false){
+  if(state.index&&!force)return state.index;
+  if(indexPromise)return indexPromise;
+  indexPromise=(async()=>{
     const {sid,key}=await connection();
     const control=await values(sid,key,'LOG_Hist_Control','A1');
     const descriptor=JSON.parse(control[0]?.[0]||'null');
@@ -171,7 +172,15 @@ async function load(){
     if(index.schema!==1||!Array.isArray(index.cuts)||!index.cuts.length||
        index.cuts.some(c=>!Array.isArray(c.summary)||!c.detail))
       throw Error('No hay cortes históricos válidos para consultar.');
-    state.index=index;chooseOptions();await selectCut();
+    state.index=index;return index;
+  })();
+  try{return await indexPromise}finally{indexPromise=null}
+}
+async function load(force=false){
+  ++state.request;state.detail=null;$('histBody').hidden=true;
+  message('Consultando cortes conservados…','loading');
+  try{
+    await readIndex(force);chooseOptions();await selectCut();
   }catch(error){$('histBody').hidden=true;message(error.message||'No se pudo consultar el histórico.','error')}
 }
 function csv(){
@@ -186,9 +195,9 @@ function csv(){
   a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 document.querySelector('[data-page="historico"]').addEventListener('click',()=>{
-  if(!state.index)load();else render();
+  if(!state.detail)load();else render();
 });
-$('histRefresh').addEventListener('click',load);
+$('histRefresh').addEventListener('click',()=>load(true));
 $('histCut').addEventListener('change',()=>{updateComparisons();selectCut()});
 $('histCompare').addEventListener('change',render);
 $('histSearch').addEventListener('input',()=>{state.page=0;renderRows()});
@@ -196,4 +205,5 @@ $('histPrev').addEventListener('click',()=>{state.page--;renderRows()});
 $('histNext').addEventListener('click',()=>{state.page++;renderRows()});
 $('histCsv').addEventListener('click',csv);
 for(const id of ['company','type','warehouse','unit'])$(id).addEventListener('change',render);
+window.PccLogisticsHistory={readIndex};
 })();

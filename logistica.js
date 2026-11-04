@@ -8,6 +8,7 @@ if(typeof Chart!=='undefined'&&typeof ChartDataLabels!=='undefined')Chart.regist
 let materialPage=0,coveragePage=0,agePage=0,stockAgePage=0;
 let docsMode='rows';
 let monthlyMode='quantity',detailCode='',detailLimit=100;
+const stockChartMode={MT001:'quantity',MT002:'quantity'};
 const pageSize=100;
 const n=v=>{const x=Number(v);if(!Number.isFinite(x))throw Error('Valor numérico inválido en la hoja');return x};
 const str=v=>String(v==null?'':v).trim();
@@ -211,15 +212,28 @@ function renderCharts(){
       const card=$(id).closest('.chart-card');
       card.hidden=!stock.some(r=>r.warehouse===warehouse);
       if(card.hidden){if(charts[id])charts[id].destroy();delete charts[id];continue}
-      const selected=$(selectId).value;
+      const selected=$(selectId).value,valueMode=stockChartMode[warehouse]==='value';
+      $(warehouse==='MT001'?'fabricUnitLabel':'supplyUnitLabel').hidden=valueMode;
       const byCompany=['EU','TEX'].filter(company=>s.company==='all'||s.company===company)
         .map(company=>({company,summary:M.stockSummary(stock.filter(r=>r.company===company&&
-          r.warehouse===warehouse&&r.unit===selected))}));
+          r.warehouse===warehouse&&r.unit===selected)),value:M.stockSummary(stock.filter(r=>
+          r.company===company&&r.warehouse===warehouse)).value}));
       const selectedSummary=M.stockSummary(stock.filter(r=>r.warehouse===warehouse&&r.unit===selected));
       $(warehouse==='MT001'?'fabricSummary':'supplySummary').textContent=
-        'Físico '+num(selectedSummary.quantity[selected])+' '+selected+' · Comprometido '+
-        num(selectedSummary.committed[selected])+' '+selected+' · Disponible '+
-        num(selectedSummary.available[selected])+' '+selected;
+        valueMode?'Existencia al corte: '+money(byCompany.reduce((total,r)=>total+r.value,0))+
+          ' · valor según SIESA; el compromiso no tiene valoración separada en la fuente.':
+          'Físico '+num(selectedSummary.quantity[selected])+' '+selected+' · Comprometido '+
+          num(selectedSummary.committed[selected])+' '+selected+' · Disponible '+
+          num(selectedSummary.available[selected])+' '+selected;
+      if(valueMode){
+        chart(id,'bar',{labels:byCompany.map(g=>g.company+' · '+M.WAREHOUSES[warehouse]),datasets:[
+          {label:'Existencia · $',data:byCompany.map(g=>g.value),backgroundColor:'#0D6B5E',borderRadius:3}
+        ]},{indexAxis:'y',layout:{padding:{right:100}},plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:c=>money(c.parsed.x)}},datalabels:{display:c=>Number(c.dataset.data[c.dataIndex])>0,
+            anchor:'end',align:'end',clip:false,color:'#1B3A5C',font:{family:'DM Sans',size:10,weight:700},
+            formatter:moneyCompact}},scales:{x:{beginAtZero:true,ticks:{callback:v=>moneyCompact(v)}},y:{grid:{display:false}}}});
+        continue;
+      }
       chart(id,'bar',{labels:byCompany.map(g=>g.company+' · '+M.WAREHOUSES[warehouse]),datasets:[
         {label:'Disponible · '+selected,data:byCompany.map(g=>g.summary.available[selected]||0),backgroundColor:'#0D6B5E',borderRadius:3},
         {label:'Comprometido · '+selected,data:byCompany.map(g=>g.summary.committed[selected]||0),backgroundColor:'#C07A00',borderRadius:3}
@@ -611,6 +625,7 @@ function render(){
     money(top.reduce((sum,r)=>sum+r.value,0))+'</td></tr>';
   $('quality').textContent=num(sum.zeroCost)+' posiciones con existencia positiva y costo total cero en la selección. Revisar en SIESA.';
   renderMaterials();renderCoverage();renderStockAge();renderAge();renderRotation();renderCharts();
+  window.PccLogisticsOverview?.render(state);
   window.PccLogisticsPurchases?.render();
 }
 async function sheet(sid,name,key,range='A:K'){
@@ -683,6 +698,7 @@ async function refresh(){
     state.meta=after;syncMovementRange();fillUnits();fillWarehouseUnits();fillRotationUnits();render();
     status('Inventario: '+date(after.corte_inventario)+' · Movimientos: '+date(after.movimientos_desde)+' a '+
       date(after.movimientos_hasta)+' · '+num(stock.length)+' posiciones y '+num(moves.length)+' movimientos.');
+    window.PccLogisticsOverview?.loadHistory();
     await window.PccLogisticsPurchases?.load((name,range)=>sheet(sid,name,key,range),stock,moves,after);
   }catch(e){
     if(state.meta)status('No se pudo actualizar: '+e.message+'. Siguen visibles las cifras del corte '+state.meta.corte_inventario+'.','stale');
@@ -757,6 +773,17 @@ $('movementAll').addEventListener('click',()=>{
   render();
 });
 for(const id of ['fabricUnit','supplyUnit'])$(id).addEventListener('change',render);
+for(const [buttonId,warehouse,mode] of [
+  ['fabricQuantityMode','MT001','quantity'],['fabricValueMode','MT001','value'],
+  ['supplyQuantityMode','MT002','quantity'],['supplyValueMode','MT002','value']])$(buttonId).addEventListener('click',()=>{
+    stockChartMode[warehouse]=mode;
+    for(const [id,buttonMode] of [[warehouse==='MT001'?'fabricQuantityMode':'supplyQuantityMode','quantity'],
+      [warehouse==='MT001'?'fabricValueMode':'supplyValueMode','value']]){
+      $(id).classList.toggle('active',buttonMode===mode);
+      $(id).setAttribute('aria-pressed',String(buttonMode===mode));
+    }
+    renderCharts();
+  });
 for(const id of ['rotWarehouse','rotUnit'])$(id).addEventListener('change',()=>{
   if(id==='rotWarehouse')fillRotationUnits(true);renderRotation();
 });
