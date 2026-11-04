@@ -6,6 +6,8 @@ Implementación del diseño aprobado el 4 de noviembre de 2026. Rama de trabajo:
 
 La entrada `#gg` conserva el marco y las pestañas del CMI. Presenta seis paneles, cuatro indicadores por panel, superficies blancas sobre fondo azul/turquesa y esquinas de 6 px. Operaciones muestra las unidades mensuales por etapa y los tres estados con mayor volumen del WIP; Costos, PT y Logística muestran un gráfico principal cada uno.
 
+La vista de escritorio ocupa todo el ancho y adapta la altura de las dos filas al espacio disponible bajo la navegación. Desde 1100 px de ancho y 640 px de alto, las seis áreas quedan visibles en una pantalla, con los cuatro KPIs de cada área en una fila y miniaturas de los cinco gráficos. En alturas menores se compacta también el encabezado. Las notas secundarias pasan al detalle en pantallas bajas; la indicación de unidades PT sin costo permanece visible. Los diálogos conservan los valores, notas, leyendas y controles completos. En móvil o ventanas más estrechas los paneles se apilan con desplazamiento, para conservar legibilidad.
+
 Los botones de indicadores y gráficos abren un diálogo ampliado. Se cierra con X o Escape. El alcance de los filtros se muestra dentro del detalle. Los gráficos incluyen leyendas interactivas y una tabla alternativa de valores; no se descargan nuevas bibliotecas.
 
 Ventas y Talento Humano permanecen en construcción, con los indicadores previstos y sin cifras simuladas. La agenda de alertas, los compromisos, su importación/exportación y su almacenamiento anterior siguen disponibles en «Alertas y seguimiento de compromisos», debajo de los seis paneles.
@@ -61,5 +63,7 @@ Dieciséis pruebas del modelo cubren fórmulas, denominadores, período, filtros
 La revisión de navegador utiliza las páginas de trabajo y las bibliotecas externas originales con capturas reales locales del 4 de noviembre. Las respuestas de negocio y las dependencias almacenadas para esta revisión permanecen fuera del repositorio. No representan una consulta nueva al servicio de Google Sheets; la implementación conserva las conexiones existentes para su uso normal.
 
 Se contrastaron los totales con la propuesta aprobada, las 47 aperturas principales, referencia/lote y retorno, filtros EU/TEX/YETRO/LAXO, lotes de No conforme, las cinco pestañas, tamaños 1440/1024/736/375/320, ausencia de desbordamiento horizontal y recuperación de Costos tras un fallo simulado. No se detectaron errores de ejecución. Se usó Playwright instalado porque el plugin Browser no estaba disponible; las fuentes tipográficas remotas usaron su respaldo declarado durante esta revisión sin red.
+
+El ajuste de altura se comprobó en 1860×942, 1920×1080, 1440×900, 1366×768, 1280×720, 1100×700, 1100×680, 1366×650 y 1100×640: las seis áreas quedan dentro del viewport y los gráficos no se solapan. Se repitieron las 47 aperturas a 1366×768 y la vista móvil a 375×850.
 
 El servidor local de comparación admite los archivos nuevos de Atlas y las dependencias de las cuatro áreas. La URL pública no cambia en esta entrega y no se publica mediante Sites.
