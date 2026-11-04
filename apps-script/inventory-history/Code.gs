@@ -75,8 +75,11 @@ function procesarHistoricoPT(){
   var batch=PccInventoryHistory.prepare(files,{today:Utilities.formatDate(new Date(),'America/Bogota','yyyy-MM-dd'),startCutoff:state&&state.startCutoff,rowLimit:c.erpRowLimit});
   if(!pccHistUnchanged_(sources)){pccHistStatus_('ARCHIVOS_CAMBIARON','Respaldo conservado; esperar a que termine la carga.');return;}
   var canonical=pccHistNamed_(batchFolder,'corte.json');if(!canonical)canonical=pccHistJson_(batchFolder,'corte.json',batch);
+  if(Date.now()-t0>300000){pccHistStatus_('CONTINUAR_SIGUIENTE_EJECUCION','Corte preparado; el precio público se conservará antes de aceptar la carga.');return;}
   var next=PccInventoryHistory.accept(state,batch,loadId,new Date().toISOString());
   var entry=next.loads.find(function(l){return l.id===loadId;});entry.folderId=batchFolder.getId();entry.dataId=canonical.getId();
+  try{pccHistRetailSnapshot_(entry,batch);props.setProperty('PCC_RETAIL_STATUS','GUARDADO · Corte '+batch.cutoff);}
+  catch(retailError){props.setProperty('PCC_RETAIL_STATUS','SIN_PRECIO · '+String(retailError.message||retailError).slice(0,250));console.warn('Precio público pendiente: '+String(retailError));}
   // A new state file is complete and read back before a single pointer is changed.
   // Never overwrite the previous accepted state. Current views publish separately.
   var stateFile=pccHistJson_(folder,'PCC_ESTADO_'+Utilities.getUuid()+'.json',next);

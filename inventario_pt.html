@@ -14,8 +14,9 @@
 <script src="source-freshness.js"></script>
 <link rel="stylesheet" href="source-freshness.css">
 <script src="data-quality.js"></script>
-<script src="inventory-history-model.js?v=2.8"></script>
-<link rel="stylesheet" href="inventory-history.css?v=2.8">
+<script src="inventory-history-model.js?v=2.9"></script>
+<script src="inventory-retail-model.js?v=2.9"></script>
+<link rel="stylesheet" href="inventory-history.css?v=2.9">
 <link rel="stylesheet" href="data-quality.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -359,6 +360,14 @@ canvas{max-width:100%;}
     </div>
   </div>
   <div class="gl-sep"></div>
+  <span class="flbl">Precio público:</span>
+  <div class="gl-filter" id="gf-precio">
+    <button class="gl-filter-btn" id="gf-precio-btn" onclick="glToggle('precio')" disabled title="Precio público del último costeo registrado hasta el corte del inventario">
+      <span id="gf-precio-lbl">Cargando…</span><span class="glarrow">▼</span>
+    </button>
+    <div class="gl-dropdown" id="gf-precio-dd"></div>
+  </div>
+  <div class="gl-sep"></div>
   <button class="gl-clear-btn" onclick="glClear()">✕ Limpiar</button>
 </div>
 
@@ -450,11 +459,11 @@ canvas{max-width:100%;}
     <h2 id="inventory-monthly-title">Inventario mensual</h2>
     <p>Existencias y costo conocido · todas las bodegas, incluidas Segundas y Cobros · respeta los filtros seleccionados.</p>
     <p id="inventory-monthly-status" role="status">Consultando cierres conservados…</p>
-    <div class="inventory-monthly-grid">
+  <div class="inventory-monthly-grid" id="inventory-monthly-grid">
       <article><h3>Unidades al corte</h3><div class="inventory-monthly-chart"><canvas id="inventory-monthly-units" role="img" aria-label="Unidades actuales y en cada cierre mensual"></canvas></div></article>
       <article><h3>Valor del inventario en pesos (COP)</h3><div class="inventory-monthly-chart"><canvas id="inventory-monthly-value" role="img" aria-label="Valor conocido actual y en cada cierre mensual"></canvas></div></article>
     </div>
-    <details><summary>Ver cifras y fechas de corte</summary><div class="tw"><table><thead><tr><th>Mes</th><th>Tipo de corte</th><th>Fecha</th><th>Unidades</th><th>Valor conocido (COP)</th><th>Unidades sin costo</th></tr></thead><tbody id="inventory-monthly-rows"></tbody></table></div><p>Solo es cierre mensual un corte conservado del último día del mes. Si falta, se muestra “Sin cierre”; no se reemplaza por otra fecha. El corte actual puede estar en curso. Los valores parciales excluyen unidades sin costo. Línea y categoría usan la clasificación disponible actualmente. Se muestran hasta 12 meses.</p></details>
+    <details id="inventory-monthly-detail"><summary>Ver cifras y fechas de corte</summary><div class="tw"><table><thead><tr><th>Mes</th><th>Tipo de corte</th><th>Fecha</th><th>Unidades</th><th>Valor conocido (COP)</th><th>Unidades sin costo</th></tr></thead><tbody id="inventory-monthly-rows"></tbody></table></div><p>Solo es cierre mensual un corte conservado del último día del mes. Si falta, se muestra “Sin cierre”; no se reemplaza por otra fecha. El corte actual puede estar en curso. Los valores parciales excluyen unidades sin costo. Línea y categoría usan la clasificación disponible actualmente. Se muestran hasta 12 meses.</p></details>
   </section>
 
   <!-- FILA 1: Antigüedad + Rotación por mes + Rupturas -->
@@ -808,6 +817,7 @@ canvas{max-width:100%;}
 
   <div class="sec-block-full" style="padding:12px">
     <div class="export-bar"><span class="lbl">Por referencia</span><div class="exp-btns"><button class="btn-clear-filters" id="xf-clear-ref" onclick="xfClearAll('ref','renderReferencias')">✕ Limpiar filtros</button><button class="btn-exp btn-xlsx" onclick="exportarExcelRef()">📥 Excel</button><button class="btn-exp btn-pdf" onclick="exportarPDF('referencias')">📄 PDF</button></div></div>
+    <p style="font-size:11px;color:var(--muted);margin:0 0 8px">Precio público: VTA ALMACEN FINAL del último costeo registrado hasta el corte, por empresa y referencia. Es distinto del costo del inventario.</p>
     <div class="tw" style="overflow:auto;max-height:420px"><table>
       <thead id="thead-ref"><tr></tr></thead>
       <tbody id="tb-ref"></tbody>
@@ -1089,7 +1099,7 @@ let OP_NO_RECIBIDA={}, OP_NO_RECIBIDA_LIST=[]; // ref → {ops, totalUds, maxDia
 let STOCK_MIN_LINEA = new Map([['105539',200],['7697',200],['105542',200],['7699',200],['7698',200],['101970',200],['105538',200],['101971',200],['103621',200],['103710',200],['104372',200],['103612',200],['104121',200],['105572',200],['105114',200],['103135',200],['101275',200],['102141',200],['105604',200],['105212',200],['105196',200],['105137',200],['101433',200],['105416',200],['105155',200],['105272',200],['102755',200],['101285',200],['101097',200],['102943',200],['104184',200],['103463',200],['102223',200],['105216',200],['3557',200],['106134',200],['106135',200],['105392',200],['105600',200],['105624',200],['105383',200],['3556',200],['102952',200],['104164',200],['104778',200],['101713',200],['104777',200],['100984',200],['104997',200],['104289',200],['104586',200],['100729',200],['104551',200],['101553',200],['101863',200],['7148',200],['106391',200],['103848',200],['103842',200],['104066',200],['101300',200],['101300-1',200],['7700',200],['7700-1',200],['105245',200],['105103',200],['105197',200],['105246',200],['101948',200],['104065',200],['104415',200],['104161',200],['105566',200],['105565',200],['105478',200],['105854',200],['102786',200],['105901',200],['106376',200],['105519',200],['105845',200],['105846',200],['1138',200],['105855',200],['104324',200],['104346',200],['105226',200],['105185',200],['105224',200],['105259',200],['103760',200],['104699',200],['7385',200],['7119',200],['7384',200],['103186',200],['105253',200],['105254',200],['105654',200],['105265',200],['105163',200],['104056',200],['104529',200],['105569',200],['104797',200],['103857',200],['104552',200],['101538',200],['101539',200],['101152',200],['104390',200],['106392',200],['106365',200],['103042',200],['104531',200],['104533',200],['4003',200],['100651',200],['100652',200],['101961',200],['100782',200],['101550',200],['104532',200],['103899',200],['101502-3',200],['105851',200],['105423',200],['106151',200],['106123',200],['106124',200],['105826',200],['104475',200],['105133',200],['105892',200],['365',200],['366',200],['363',200],['105127',200],['105808',200],['105279',200],['106126',200],['105295',200],['106119',200],['103856',200],['105632',200],['104327',200],['105243',200],['103754',200],['101480',200],['103161',200],['104234',200],['102896',200],['104190',200],['4004',200],['106136',200]]);
 // REFS_EU_LINEA: Set derivado del Map para clasificación rápida
 let REFS_EU_LINEA = new Set(STOCK_MIN_LINEA.keys());
-let sortState={ant:{col:9,asc:false},ref:{col:10,asc:false}};
+let sortState={ant:{col:9,asc:false},ref:{col:12,asc:false}};
 let tramoFilter='TODOS';
 let pagState={ant:{page:0,size:50},ref:{page:0,size:50}};
 
@@ -1097,6 +1107,42 @@ let pagState={ant:{page:0,size:50},ref:{page:0,size:50}};
 let GL_LINEAS   = new Set();  // vacío = todas
 let GL_CATS     = new Set();  // vacío = todas
 let GL_BODEGAS  = new Set();  // vacío = todas
+let GL_PRICES   = new Set();  // valores exactos; SIN_PRECIO incluye referencias sin dato confiable
+let RETAIL_PRICES = new Map(), RETAIL_READY=false;
+const COSTOS_PRICE_ID='1_Bayb-gfBHizgidaaIYoKA_bh96eNDtJwN5Nqa1TCWM';
+const retailOf=r=>RETAIL_PRICES.get(PccRetailPrice.key(r.empresa||r.company,r.ref));
+const retailValue=r=>retailOf(r)?.price??null;
+function glPriceFiltro(r){
+ if(!GL_PRICES.size)return true;
+ const value=retailValue(r);
+ return value===null?GL_PRICES.has('SIN_PRECIO'):GL_PRICES.has(String(value));
+}
+function retailLabel(value){return value===null?'Sin precio':'$ '+Number(value).toLocaleString('es-CO');}
+function retailDate(r){const d=retailOf(r)?.costedAt;return d?d.split('-').reverse().join('/'):'—';}
+async function loadRetailPrices(cutoff){
+ const cols=['A','H','CQ','CX'];
+ const params=new URLSearchParams({key:API_KEY,valueRenderOption:'UNFORMATTED_VALUE',dateTimeRenderOption:'SERIAL_NUMBER'});
+ cols.forEach(col=>params.append('ranges',`'Costos Unificados'!${col}2:${col}`));
+ const response=await fetch(`${BASE}/${COSTOS_PRICE_ID}/values:batchGet?${params}`,{cache:'no-store',signal:AbortSignal.timeout(25000)});
+ if(!response.ok)throw Error('No se pudo leer la hoja de Costos (HTTP '+response.status+').');
+ const ranges=(await response.json()).valueRanges||[];
+ if(ranges.length!==4||ranges.some(x=>!Array.isArray(x.values)))throw Error('La hoja de Costos no devolvió todas las columnas de precios.');
+ const values=ranges.map(x=>x.values),length=Math.max(...values.map(x=>x.length));
+ const records=Array.from({length},(_,i)=>({company:values[0][i]?.[0],costedAt:values[1][i]?.[0],ref:values[2][i]?.[0],price:values[3][i]?.[0]}));
+ return PccRetailPrice.select(records,cutoff);
+}
+function retailOptions(){
+ const dd=document.getElementById('gf-precio-dd'),btn=document.getElementById('gf-precio-btn');
+ if(!RETAIL_READY){btn.disabled=true;document.getElementById('gf-precio-lbl').textContent='No disponible';dd.textContent='';return;}
+ btn.disabled=false;
+ const prices=[...new Set(INV_DATA.map(retailValue).filter(v=>v!==null))].sort((a,b)=>a-b);
+ dd.replaceChildren();
+ for(const value of [...prices,'SIN_PRECIO']){
+  const label=document.createElement('label');label.className='gl-dd-item';
+  const cb=document.createElement('input');cb.type='checkbox';cb.value=String(value);cb.checked=GL_PRICES.has(cb.value);cb.addEventListener('change',()=>glChange('precio'));
+  label.append(cb,document.createTextNode(' '+(value==='SIN_PRECIO'?'Sin precio identificado':retailLabel(value))));dd.append(label);
+ }
+}
 
 // Mapa de bodegas disponibles para el filtro (se pobla al cargar)
 // cod → descripción
@@ -1171,6 +1217,7 @@ function glCatFiltro(linea, desc){
 }
 // Filtro combinado línea + categoría + bodega para un registro de INV_DATA
 function glFilter(r){
+  if(!glPriceFiltro(r)) return false;
   if(!glLineaFiltro(r.linea)) return false;
   if(!glCatFiltro(r.linea, r.desc)) return false;
   if(GL_BODEGAS.size > 0 && !GL_BODEGAS.has(r.bodega)) return false;
@@ -1179,6 +1226,7 @@ function glFilter(r){
 
 // Filtro global para registros de MOV_DATA
 function glFilterMov(m){
+  if(!glPriceFiltro(m))return false;
   if(GL_BODEGAS.size>0&&!GL_BODEGAS.has(m.bodega))return false;
   if(GL_LINEAS.size===0 && GL_CATS.size===0) return true;
   // MOV_DATA tiene campo linea; para categoría usar DESC_MAP
@@ -1192,6 +1240,7 @@ function glFilterMov(m){
 function glFilterFirstMov(m){return PccHistoryModel.isFirst(m.bodega)&&glFilterMov(m);}
 // Filtro para Segundas/Cobros — usa lineaReal porque linea='Segundas'/'Cobros'
 function glFilterReal(r){
+  if(!glPriceFiltro(r))return false;
   if(GL_LINEAS.size===0 && GL_CATS.size===0 && GL_BODEGAS.size===0) return true;
   const linea = r.lineaReal || r.linea;
   if(!glLineaFiltro(linea)) return false;
@@ -1298,6 +1347,7 @@ async function cargarTodo(){
   if(document.body.dataset.inventoryView==='historico'&&window.PccInventoryHistoryView)return PccInventoryHistoryView.refresh();
   if(inventarioCargando)return;
   inventarioCargando=true;
+  RETAIL_READY=false;RETAIL_PRICES=new Map();GL_PRICES.clear();
   document.getElementById('inv-live-label').textContent='Consultando';
   document.getElementById('inv-load-error')?.remove();
   document.querySelectorAll('.page:not(#page-historico)').forEach(el=>el.classList.add('pcc-unavailable'));
@@ -1681,6 +1731,12 @@ async function cargarTodo(){
   console.log('[INV] Totales por bodega:', JSON.stringify(Object.entries(verif).sort((a,b)=>b[1].uds-a[1].uds).slice(0,10).reduce((o,[k,v])=>(o[k]=v,o),{})));
   console.log('[INV] Total INV_DATA:', INV_DATA.reduce((a,r)=>a+r.u0+r.u1+r.u2+r.u3,0), 'uds en', INV_DATA.length, 'registros');
 
+  const cutoff=INV_DATA.find(r=>r.cutoff)?.cutoff;
+  try{
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(cutoff||''))throw Error('El corte del inventario no está disponible.');
+    RETAIL_PRICES=await loadRetailPrices(cutoff);RETAIL_READY=true;PccData.note('precios',null);
+  }catch(e){PccData.note('precios','Precios públicos no disponibles: '+e.message+' Las existencias y costos siguen disponibles.');}
+  retailOptions();
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('pcc-unavailable'));
   try{ renderTodo(); }catch(e){ console.error('Error al renderizar:',e); PccData.note('render','No se pudieron actualizar todas las vistas.'); }
   document.getElementById('inv-live-label').textContent='Consulta completada';
@@ -1725,6 +1781,7 @@ function resumenExistencias(rows){
 
 async function loadCoverageChart(token,months){
  const note=document.getElementById('coverage-history-note');
+ if(GL_PRICES.size){note.textContent='La serie de cortes se oculta con el filtro de precio público; la cifra actual usa el inventario y despachos del período visible.';return;}
  note.textContent='Consultando cortes conservados…';
  const cutoff=INV_DATA.find(r=>r.cutoff)?.cutoff;
  try{
@@ -2202,6 +2259,8 @@ const XF_COLS = {
     {label:'Temporada', filtrable:true, sortable:true},
     {label:'Total uds', filtrable:false, sortable:true, align:'right'},
     {label:'Costo', filtrable:false, sortable:true, align:'right'},
+    {label:'Precio público', filtrable:true, sortable:true, align:'right'},
+    {label:'Fecha precio', filtrable:true, sortable:true},
     {label:'0–30d', filtrable:false, sortable:true, align:'right', color:'#1E7A40'},
     {label:'30–60d', filtrable:false, sortable:true, align:'right', color:'#C07A00'},
     {label:'60–90d', filtrable:false, sortable:true, align:'right', color:'#E07020'},
@@ -2423,9 +2482,10 @@ function renderReferencias(){
   const busq=document.getElementById('busq-ref').value.toLowerCase();
   const agR={};
   INV_DATA.filter(r=>!r.esSeg && glFilter(r)).forEach(r=>{
-    if(!agR[r.ref])agR[r.ref]={ref:r.ref,desc:r.desc,linea:r.linea,temporada:r.temporada,u0:0,u1:0,u2:0,u3:0,c:0,missingCostUnits:0};
-    agR[r.ref].missingCostUnits+=r.missingCostUnits||0;
-    agR[r.ref].u0+=r.u0;agR[r.ref].u1+=r.u1;agR[r.ref].u2+=r.u2;agR[r.ref].u3+=r.u3;agR[r.ref].c+=r.c0+r.c1+r.c2+r.c3;
+    const key=PccRetailPrice.key(r.empresa,r.ref);
+    if(!agR[key])agR[key]={ref:r.ref,empresa:r.empresa,desc:r.desc,linea:r.linea,temporada:r.temporada,u0:0,u1:0,u2:0,u3:0,c:0,missingCostUnits:0,retailPrice:retailValue(r),retailCostedAt:retailOf(r)?.costedAt||null};
+    agR[key].missingCostUnits+=r.missingCostUnits||0;
+    agR[key].u0+=r.u0;agR[key].u1+=r.u1;agR[key].u2+=r.u2;agR[key].u3+=r.u3;agR[key].c+=r.c0+r.c1+r.c2+r.c3;
   });
   const todosRef=Object.values(agR);
   // KPIs riesgo globales (antes de filtrar)
@@ -2446,19 +2506,19 @@ function renderReferencias(){
   xfInitThead('ref','renderReferencias');
   data = xfFilterRows('ref', data, r=>{
     const tot=r.u0+r.u1+r.u2+r.u3;
-    return [r.ref,r.desc,r.linea,r.temporada,tot,r.c,r.u0,r.u1,r.u2,r.u3,(tot?r.u3/tot*100:0).toFixed(0)+'%',''];
+    return [r.ref,r.desc,r.linea,r.temporada,tot,r.c,retailLabel(r.retailPrice),r.retailCostedAt||'—',r.u0,r.u1,r.u2,r.u3,(tot?r.u3/tot*100:0).toFixed(0)+'%',''];
   });
   data = xfSortRows('ref', data, r=>{
     const tot=r.u0+r.u1+r.u2+r.u3;
-    return [r.ref,r.desc,r.linea,r.temporada,tot,r.c,r.u0,r.u1,r.u2,r.u3,tot?r.u3/tot:0];
+    return [r.ref,r.desc,r.linea,r.temporada,tot,r.c,r.retailPrice??-Infinity,r.retailCostedAt||'',r.u0,r.u1,r.u2,r.u3,tot?r.u3/tot:0];
   });
   // sortState.ref como fallback si no hay xf sort
   if(!XF_SORT['ref_sort']){
     const{col,asc}=sortState.ref;
     data.sort((a,b)=>{const ta=a.u0+a.u1+a.u2+a.u3,tb=b.u0+b.u1+b.u2+b.u3;
       const pa=ta?a.u3/ta:0,pb=tb?b.u3/tb:0;
-      const va=[a.ref,a.desc,a.linea,a.temporada,ta,a.c,a.u0,a.u1,a.u2,a.u3,pa];
-      const vb=[b.ref,b.desc,b.linea,b.temporada,tb,b.c,b.u0,b.u1,b.u2,b.u3,pb];
+      const va=[a.ref,a.desc,a.linea,a.temporada,ta,a.c,a.retailPrice??-Infinity,a.retailCostedAt||'',a.u0,a.u1,a.u2,a.u3,pa];
+      const vb=[b.ref,b.desc,b.linea,b.temporada,tb,b.c,b.retailPrice??-Infinity,b.retailCostedAt||'',b.u0,b.u1,b.u2,b.u3,pb];
       return asc?(va[col]>vb[col]?1:-1):(va[col]<vb[col]?1:-1);});
   }
   const{page,size}=pagState.ref;
@@ -2468,6 +2528,7 @@ function renderReferencias(){
       <td class="navy">${r.ref}</td><td>${r.desc}</td><td>${lt(r.linea)}</td>
       <td style="color:var(--muted);font-size:11px">${r.temporada}</td>
       <td>${fmt(tot)}</td><td>${fmtM(r.c)}${r.missingCostUnits?' · parcial':''}</td>
+      <td title="Precio público por unidad">${retailLabel(r.retailPrice)}</td><td>${r.retailCostedAt?retailDate(r):'—'}</td>
       <td class="tramo-0">${r.u0||'—'}</td><td class="tramo-1">${r.u1||'—'}</td>
       <td class="tramo-2">${r.u2||'—'}</td><td class="${r.u3>0?'tramo-3':''}">${r.u3||'—'}</td>
       <td class="${p>=.5?'bad':p>=.25?'warn':''}">${(p*100).toFixed(0)}%</td>
@@ -2481,7 +2542,7 @@ function renderReferencias(){
     const su2=data.reduce((a,r)=>a+r.u2,0),su3=data.reduce((a,r)=>a+r.u3,0);
     const sc=data.reduce((a,r)=>a+r.c,0);
     tf.innerHTML=`<tr><td colspan="4" style="text-align:right">TOTAL (${data.length} refs)</td>
-      <td>${fmt(su0+su1+su2+su3)}</td><td>${fmtM(sc)}</td>
+      <td>${fmt(su0+su1+su2+su3)}</td><td>${fmtM(sc)}</td><td></td><td></td>
       <td class="tramo-0">${fmt(su0)}</td><td class="tramo-1">${fmt(su1)}</td>
       <td class="tramo-2">${fmt(su2)}</td><td class="tramo-3">${fmt(su3)}</td>
       <td></td><td></td></tr>`;
@@ -3151,6 +3212,9 @@ function glChange(which){
   } else if(which==='bod') {
     GL_BODEGAS.clear();
     document.querySelectorAll('#gf-bod-dd input:checked').forEach(cb=>GL_BODEGAS.add(cb.value));
+  } else if(which==='precio') {
+    GL_PRICES.clear();
+    document.querySelectorAll('#gf-precio-dd input:checked').forEach(cb=>GL_PRICES.add(cb.value));
   }
   glUpdateLabels();
   renderTodo();
@@ -3197,11 +3261,16 @@ function glUpdateLabels(){
     if(GL_BODEGAS.size===0){lblB.textContent='Todas';btnB.classList.remove('active-filter');}
     else{lblB.textContent=[...GL_BODEGAS].join(', ');btnB.classList.add('active-filter');}
   }
+  const btnP=document.getElementById('gf-precio-btn'),lblP=document.getElementById('gf-precio-lbl');
+  if(RETAIL_READY){
+    lblP.textContent=GL_PRICES.size===0?'Todos':GL_PRICES.size===1?(GL_PRICES.has('SIN_PRECIO')?'Sin precio':retailLabel([...GL_PRICES][0])):GL_PRICES.size+' precios';
+    btnP.classList.toggle('active-filter',GL_PRICES.size>0);
+  }
 }
 
 function glClear(){
-  GL_LINEAS.clear();GL_CATS.clear();GL_BODEGAS.clear();
-  document.querySelectorAll('#gf-linea-dd input,#gf-bod-dd input').forEach(cb=>cb.checked=false);
+  GL_LINEAS.clear();GL_CATS.clear();GL_BODEGAS.clear();GL_PRICES.clear();
+  document.querySelectorAll('#gf-linea-dd input,#gf-bod-dd input,#gf-precio-dd input').forEach(cb=>cb.checked=false);
   glRebuildCats();
   glUpdateLabels();
   renderTodo();
@@ -3637,15 +3706,16 @@ function exportarExcelRef(){
   if(!window.XLSX){alert('Librería no disponible.');return;}
   const agR={};
   INV_DATA.filter(r=>!r.esSeg&&!r.esCobros&&glFilter(r)).forEach(r=>{
-    if(!agR[r.ref])agR[r.ref]={ref:r.ref,desc:r.desc,linea:r.linea,temporada:r.temporada,u0:0,u1:0,u2:0,u3:0,c:0};
-    agR[r.ref].u0+=r.u0;agR[r.ref].u1+=r.u1;agR[r.ref].u2+=r.u2;agR[r.ref].u3+=r.u3;agR[r.ref].c+=r.c0+r.c1+r.c2+r.c3;
+    const key=PccRetailPrice.key(r.empresa,r.ref);
+    if(!agR[key])agR[key]={ref:r.ref,desc:r.desc,linea:r.linea,temporada:r.temporada,u0:0,u1:0,u2:0,u3:0,c:0,retailPrice:retailValue(r),retailCostedAt:retailOf(r)?.costedAt||null};
+    agR[key].u0+=r.u0;agR[key].u1+=r.u1;agR[key].u2+=r.u2;agR[key].u3+=r.u3;agR[key].c+=r.c0+r.c1+r.c2+r.c3;
   });
   const rows=Object.values(agR).map(r=>{
     const tot=r.u0+r.u1+r.u2+r.u3;
-    return [r.ref,r.desc,r.linea,r.temporada,tot,r.c,r.u0,r.u1,r.u2,r.u3,tot>0?+(r.u3/tot*100).toFixed(1):0];
+    return [r.ref,r.desc,r.linea,r.temporada,tot,r.c,r.retailPrice,r.retailCostedAt,r.u0,r.u1,r.u2,r.u3,tot>0?+(r.u3/tot*100).toFixed(1):0];
   });
-  const wb=exBuildWb('Por Referencia',[{name:'Por Referencia',hdr:['Ref.','Descripción','Línea','Temporada','Total','Costo','0–30d','30–60d','60–90d','+90d','%+90d'],rows,
-    cols:[{wch:12},{wch:30},{wch:14},{wch:20},{wch:10},{wch:14},{wch:8},{wch:8},{wch:8},{wch:8},{wch:8}]}]);
+  const wb=exBuildWb('Por Referencia',[{name:'Por Referencia',hdr:['Ref.','Descripción','Línea','Temporada','Total','Costo','Precio público','Fecha precio','0–30d','30–60d','60–90d','+90d','%+90d'],rows,
+    cols:[{wch:12},{wch:30},{wch:14},{wch:20},{wch:10},{wch:14},{wch:15},{wch:14},{wch:8},{wch:8},{wch:8},{wch:8},{wch:8}]}]);
   exWrite(wb,'Referencias_BPT');
 }
 
@@ -3874,8 +3944,8 @@ cargarTodo();
 <script>
 window.PccExecutiveInventory=()=>({status:inventarioCargando?'loading':document.getElementById('inv-load-error')?'error':INV_DATA.length?'ready':'empty',rows:INV_DATA,records:[...PccFresh.records.values()]});
 </script>
-<script src="inventory-history-view.js?v=2.8"></script>
-<script src="inventory-monthly.js?v=2.8"></script>
-<script src="inventory-performance.js?v=2.8"></script>
+<script src="inventory-history-view.js?v=2.9"></script>
+<script src="inventory-monthly.js?v=2.9"></script>
+<script src="inventory-performance.js?v=2.9"></script>
 </body>
 </html>

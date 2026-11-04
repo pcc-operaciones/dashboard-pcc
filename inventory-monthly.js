@@ -41,6 +41,10 @@ function draw(points){
 async function render(){
  const token=++request,cutoff=resumenExistencias(INV_DATA).cutoff;
  clear();
+ const filtered=GL_PRICES.size>0;
+ $('inventory-monthly-grid').hidden=filtered;
+ $('inventory-monthly-detail').hidden=filtered;
+ if(filtered){$('inventory-monthly-status').textContent='La comparación mensual se oculta al filtrar por precio público: los cierres anteriores no tienen necesariamente un precio archivado para cada referencia.';return;}
  if(!cutoff){$('inventory-monthly-status').textContent='Se requiere un corte de inventario uniforme para mostrar la evolución.';return;}
  const current=INV_DATA.map(r=>({company:r.empresa,ref:r.ref,warehouse:r.bodega,description:r.desc,units:r.totalUds,committed:0,available:r.totalUds,knownValue:r.knownValue,missingCostUnits:r.missingCostUnits,knownCostUnits:Math.max(0,Math.abs(r.totalUds)-(r.missingCostUnits||0)),costSources:[]}));
  const taxonomy=new Map(INV_DATA.map(r=>[JSON.stringify([r.empresa,r.ref]),r.lineaReal]));

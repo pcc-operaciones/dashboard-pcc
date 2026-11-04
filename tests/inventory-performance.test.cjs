@@ -42,7 +42,7 @@ test('métricas derivadas usan fecha y archivos propios y se reutilizan sin reca
 test('gráficos respetan filtros nuevos, muestran etiquetas permanentes y destacan el mes actual aunque sea menor',async()=>{
  const nodes=new Map(),element=()=>({style:{},children:[],append(x){this.children.push(x);},replaceChildren(...xs){this.children=xs;},parentElement:{style:{}}});
  const get=id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id);};let resolve;
- const ctx={document:{getElementById:get,createElement:element},PccHistoryModel:M,PccMoney:{format:v=>'$ '+v.toLocaleString('es-CO')},INV_DATA:[{empresa:'EU',ref:'01',lineaReal:'EU Línea',u0:10,c0:100,c1:0,c2:0,c3:0}],MOV_DATA:[],REF_MAP:{},DESC_MAP:{},glFilter:()=>true,resumenExistencias:()=>({cutoff:'2026-10-08'}),clasificarRef:()=> 'EU Línea',destroyChart(){},Chart:class{constructor(node,config){Object.assign(this,config);}}};
+ const ctx={document:{getElementById:get,createElement:element},PccHistoryModel:M,PccMoney:{format:v=>'$ '+v.toLocaleString('es-CO')},INV_DATA:[{empresa:'EU',ref:'01',lineaReal:'EU Línea',u0:10,c0:100,c1:0,c2:0,c3:0}],MOV_DATA:[],REF_MAP:{},DESC_MAP:{},GL_PRICES:new Set(),glFilter:()=>true,resumenExistencias:()=>({cutoff:'2026-10-08'}),clasificarRef:()=> 'EU Línea',destroyChart(){},Chart:class{constructor(node,config){Object.assign(this,config);}}};
  ctx.window=ctx;ctx.PccInventoryHistoryView={performanceSeries:()=>new Promise(r=>resolve=r)};vm.createContext(ctx);vm.runInContext(fs.readFileSync('inventory-performance.js','utf8'),ctx);
  const old=ctx.PccInventoryPerformance.render();const finishOld=resolve;
  const fresh=ctx.PccInventoryPerformance.render();
