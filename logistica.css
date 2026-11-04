@@ -167,7 +167,7 @@ tr:hover td{background:#FAFBFF}
 .pill{background:#EEF3F9;color:var(--navy);border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700}
 .quality{background:#fff7e8;border-left:3px solid var(--amber);padding:10px 12px;font-size:12px;margin:0 0 12px}
 .pending{background:white;border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-top:14px}
-.pending-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.pending-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
 .pending-grid div{background:#F8FAFC;border:1px dashed #cbd9e5;border-radius:7px;padding:11px}
 .pending strong{display:block;color:var(--navy);font-size:11px;margin-bottom:4px}
 .pending span,.pending p{color:var(--muted);font-size:10px;line-height:1.45}
@@ -199,6 +199,6 @@ tr:hover td{background:#FAFBFF}
 #histMessage{margin:0 0 12px}
 .empty{text-align:center;color:var(--muted);padding:22px}
 @media(max-width:1100px){.hero-grid,body[data-area="general"] .hero-grid{grid-template-columns:repeat(2,1fr)}.metric-grid,.metric-grid.summary-metrics,.metric-grid.rotation-metrics,body[data-area="general"] .summary-metrics,body[data-area="telas"] .summary-metrics,body[data-area="insumos"] .summary-metrics,.age-buckets,#consumptionAgeBuckets,#stockAgeBuckets{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:850px){.chart-grid,.table-grid,.overview-duo{grid-template-columns:1fr}.pending-grid{grid-template-columns:repeat(2,1fr)}.coverage-summary{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:850px){.chart-grid,.table-grid,.overview-duo{grid-template-columns:1fr}.coverage-summary{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.topbar{padding:0 12px}.tb-sub,.date-lbl{display:none}.area-nav,.nav{padding:0 8px}.area-btn,.nav-btn{padding:11px 12px}.filter-bar{padding:9px 12px;position:static}.filter-bar label{flex:1 1 42%}.filter-bar select{width:100%;min-width:0}.movement-controls label{flex:1 1 42%}.movement-controls input{width:100%;min-width:0}main{padding:0 12px 20px}.banner{margin:10px 12px 0}.hero-grid{gap:7px}.hero-card{display:block;padding:10px}.hero-icon{display:none}.hero-card strong{font-size:17px}.metric-grid,body[data-area="general"] .summary-metrics,body[data-area="telas"] .summary-metrics,body[data-area="insumos"] .summary-metrics{grid-template-columns:repeat(2,1fr)}.metric-card strong{font-size:17px}.pending-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
