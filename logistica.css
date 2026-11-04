@@ -25,7 +25,7 @@ body[data-area="general"] .filter-bar{top:43px}
 .hist-controls label:has(#rotWarehouse){display:none}
 body[data-area="general"] #mainUnitFilter,body[data-area="general"] .area-quantity,body[data-area="general"] .area-detail{display:none}
 body[data-area="general"] .general-value{display:flex}
-body[data-area="general"] .summary-metrics{grid-template-columns:repeat(5,minmax(0,1fr))}
+body[data-area="general"] .summary-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
 body[data-area="general"] .area-age{display:none}
 body[data-area="telas"] .overview-only,body[data-area="insumos"] .overview-only,body[data-area="telas"] .overview-age,body[data-area="insumos"] .overview-age{display:none}
 body[data-area="telas"] .supply-metric,body[data-area="insumos"] .fabric-metric{display:none}
@@ -53,7 +53,6 @@ main{padding:0 20px 28px}
 .metric-card span{display:block;color:var(--muted);font-size:10px;line-height:1.35}
 .overview-age{text-align:left;font:inherit;cursor:pointer;width:100%}
 .overview-age:hover{background:#fff8f8;border-color:#e8b1b1}
-.overview-age:disabled{cursor:default;opacity:.65}
 .overview-panel{margin-bottom:14px}
 .overview-duo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .overview-duo .overview-panel{min-width:0;position:relative;overflow:hidden;background:linear-gradient(165deg,#fff 62%,#F8FBFD);box-shadow:0 6px 20px #1b3a5c0a}
@@ -77,12 +76,16 @@ main{padding:0 20px 28px}
 h1{color:var(--navy);font-size:20px;line-height:1.2;margin:0 0 4px}
 .section-heading p{color:var(--muted);font-size:11px;margin:0}
 .hero-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+body[data-area="general"] .hero-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 .hero-card{min-width:0;background:white;border:1px solid var(--border);border-radius:12px;padding:15px;display:flex;align-items:center;gap:12px;position:relative;overflow:hidden}
+.hero-card.overview-age:hover{box-shadow:0 6px 18px #1b3a5c14;transform:translateY(-1px)}
+.hero-card.overview-age span{color:var(--red);font-weight:700}
 .general-value{display:none}
 .hero-card:after{content:"";position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--navy)}
-.hero-card.c-teal:after{background:var(--teal)}.hero-card.c-green:after{background:var(--green)}.hero-card.c-amber:after{background:var(--amber)}
+.hero-card.c-teal:after{background:var(--teal)}.hero-card.c-green:after{background:var(--green)}.hero-card.c-amber:after{background:var(--amber)}.hero-card.c-red:after{background:var(--red)}
 .hero-icon{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;flex:none;font-size:20px}
 .hero-icon.navy{background:#EEF3F9;color:var(--navy)}.hero-icon.teal{background:#E6F4F1;color:var(--teal)}.hero-icon.green{background:#D1FAE5;color:var(--green)}.hero-icon.amber{background:#FEF3C7;color:var(--amber)}
+.hero-icon.red{background:#FDECEB;color:var(--red)}
 .hero-card small{display:block;color:var(--muted);font-size:9px;letter-spacing:.5px;text-transform:uppercase;font-weight:700}
 .hero-card strong{display:block;font-size:21px;line-height:1.1;margin:5px 0;color:var(--text);font-weight:800;overflow-wrap:anywhere}
 .hero-card span{font-size:10px;color:var(--muted)}
@@ -195,7 +198,7 @@ tr:hover td{background:#FAFBFF}
 #buyDetail{width:min(1200px,96vw)}
 #histMessage{margin:0 0 12px}
 .empty{text-align:center;color:var(--muted);padding:22px}
-@media(max-width:1100px){.hero-grid{grid-template-columns:repeat(2,1fr)}.metric-grid,.metric-grid.summary-metrics,.metric-grid.rotation-metrics,body[data-area="general"] .summary-metrics,body[data-area="telas"] .summary-metrics,body[data-area="insumos"] .summary-metrics,.age-buckets,#consumptionAgeBuckets,#stockAgeBuckets{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:1100px){.hero-grid,body[data-area="general"] .hero-grid{grid-template-columns:repeat(2,1fr)}.metric-grid,.metric-grid.summary-metrics,.metric-grid.rotation-metrics,body[data-area="general"] .summary-metrics,body[data-area="telas"] .summary-metrics,body[data-area="insumos"] .summary-metrics,.age-buckets,#consumptionAgeBuckets,#stockAgeBuckets{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:850px){.chart-grid,.table-grid,.overview-duo{grid-template-columns:1fr}.pending-grid{grid-template-columns:repeat(2,1fr)}.coverage-summary{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.topbar{padding:0 12px}.tb-sub,.date-lbl{display:none}.area-nav,.nav{padding:0 8px}.area-btn,.nav-btn{padding:11px 12px}.filter-bar{padding:9px 12px;position:static}.filter-bar label{flex:1 1 42%}.filter-bar select{width:100%;min-width:0}.movement-controls label{flex:1 1 42%}.movement-controls input{width:100%;min-width:0}main{padding:0 12px 20px}.banner{margin:10px 12px 0}.hero-grid{gap:7px}.hero-card{display:block;padding:10px}.hero-icon{display:none}.hero-card strong{font-size:17px}.metric-grid,body[data-area="general"] .summary-metrics,body[data-area="telas"] .summary-metrics,body[data-area="insumos"] .summary-metrics{grid-template-columns:repeat(2,1fr)}.metric-card strong{font-size:17px}.pending-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}

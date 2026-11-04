@@ -42,7 +42,6 @@ function renderCurrentAge(){
     ['MT001','agedFabricValue','agedFabricNote','agedFabricCard'],
     ['MT002','agedSupplyValue','agedSupplyNote','agedSupplyCard']]){
     const rows=state.data.age.filter(r=>selected(r)&&r.warehouse===warehouse);
-    $(cardId).disabled=!state.data.age.length;
     $(valueId).textContent=state.data.age.length?money(rows.reduce((sum,r)=>sum+r.riskValue,0)):'—';
     $(noteId).textContent=state.data.age.length?
       num(rows.filter(r=>r.riskValue>0).length)+' referencias +90 · ver detalle':
@@ -140,12 +139,13 @@ function renderHistory(){
   $('overviewHistoryStatus').className='banner'+(cuts.some(c=>!ageGroups(c))?' warn':'');
 }
 function openAge(warehouse){
-  if(!state.data?.age.length)return;
+  if(!state.data)return;
   const rows=state.data.age.filter(r=>selected(r)&&r.warehouse===warehouse&&
     (r.riskValue>0||Number(r.values[4])>0)).sort((a,b)=>b.riskValue-a.riskValue);
   $('overviewAgeDetailTitle').textContent=(warehouse==='MT001'?'Telas':'Insumos')+' · saldo estimado +90 días';
-  $('overviewAgeDetailNote').textContent='Corte '+state.data.meta.corte_inventario+
-    ' · valor estimado por FIFO. La edad indeterminada se presenta aparte y no se cuenta como +90.';
+  $('overviewAgeDetailNote').textContent=state.data.age.length?'Corte '+state.data.meta.corte_inventario+
+    ' · valor estimado por FIFO. La edad indeterminada se presenta aparte y no se cuenta como +90.':
+    'El detalle FIFO del corte '+state.data.meta.corte_inventario+' aún no está disponible: '+state.data.ageMessage;
   $('overviewAgeDetailRows').innerHTML=rows.map(r=>'<tr><td>'+esc(r.company)+'</td><td>'+esc(r.ref)+
     '</td><td>'+esc(r.name)+'</td><td>'+esc(r.unit)+'</td><td class="num">'+num(r.qty[3])+
     '</td><td class="num">'+money(r.riskValue)+'</td><td class="num">'+money(r.values[4])+

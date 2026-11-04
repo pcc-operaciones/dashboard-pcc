@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
-<link rel="stylesheet" href="logistica.css?v=1.4">
+<link rel="stylesheet" href="logistica.css?v=1.5">
 </head>
 <body data-area="general">
 <header class="topbar">
@@ -49,13 +49,13 @@
       <div class="hero-card c-amber area-quantity"><div class="hero-icon amber">◫</div><div><small>Comprometido</small><strong id="committed">—</strong><span id="available">—</span></div></div>
       <div class="hero-card c-teal general-value"><div class="hero-icon teal">🧵</div><div><small>Valor · telas</small><strong id="valueFabric">—</strong><span>MT001 · EU + TEX según selección</span></div></div>
       <div class="hero-card c-green general-value"><div class="hero-icon green">▣</div><div><small>Valor · insumos</small><strong id="valueSupply">—</strong><span>MT002 · EU + TEX según selección</span></div></div>
+      <button class="hero-card c-red overview-age" id="agedFabricCard" type="button" aria-haspopup="dialog" aria-controls="overviewAgeDetail"><div class="hero-icon red">⌛</div><div><small>Telas · valor +90 días</small><strong id="agedFabricValue">—</strong><span id="agedFabricNote">Ver referencias y valor estimado</span></div></button>
+      <button class="hero-card c-red overview-age" id="agedSupplyCard" type="button" aria-haspopup="dialog" aria-controls="overviewAgeDetail"><div class="hero-icon red">⌛</div><div><small>Insumos · valor +90 días</small><strong id="agedSupplyValue">—</strong><span id="agedSupplyNote">Ver referencias y valor estimado</span></div></button>
     </div>
     <div class="metric-grid summary-metrics">
       <div class="metric-card teal fabric-metric"><small>Días inventario · telas</small><strong id="daysFabric">—</strong><span id="daysFabricSub">MT001 · unidad MT · meta 45 días</span></div>
       <div class="metric-card green supply-metric"><small>Días inventario · insumos</small><strong id="daysSupply">—</strong><span id="daysSupplySub">MT002 · unidad UND · meta 45 días</span></div>
       <div class="metric-card red area-age"><small>Saldo estimado +90 días</small><strong id="obsolescence">—</strong><span id="obsolescenceMeters">Cantidad +90 días: —</span><span id="obsolescenceSub">Pendiente de publicación FIFO en Apps Script</span></div>
-      <button class="metric-card red overview-age" id="agedFabricCard" type="button"><small>Telas · valor +90 días</small><strong id="agedFabricValue">—</strong><span id="agedFabricNote">Ver referencias y valor estimado</span></button>
-      <button class="metric-card red overview-age" id="agedSupplyCard" type="button"><small>Insumos · valor +90 días</small><strong id="agedSupplyValue">—</strong><span id="agedSupplyNote">Ver referencias y valor estimado</span></button>
       <div class="metric-card amber"><small>Sin CPN en últimos 90 días</small><strong id="noConsumption90">—</strong><span id="noConsumption90Sub">Referencias con existencia positiva</span></div>
     </div>
     <div class="chart-grid chart-grid-value">
@@ -197,5 +197,5 @@
     </div>
   </section>
 </main>
-<script src="logistica-model.js?v=0.9"></script><script src="logistica-grid.js?v=0.2"></script><script src="logistica-compras-model.js?v=1.2"></script><script src="logistica.js?v=1.7"></script><script src="logistica-compras.js?v=1.3"></script><script src="logistica-history.js?v=0.4"></script><script src="logistica-overview.js?v=0.2"></script>
+<script src="logistica-model.js?v=0.9"></script><script src="logistica-grid.js?v=0.2"></script><script src="logistica-compras-model.js?v=1.2"></script><script src="logistica.js?v=1.7"></script><script src="logistica-compras.js?v=1.3"></script><script src="logistica-history.js?v=0.4"></script><script src="logistica-overview.js?v=0.3"></script>
 </body></html>
