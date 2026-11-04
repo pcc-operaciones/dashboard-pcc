@@ -5,8 +5,8 @@ Dashboard estático con Gerencia General y las áreas de Operaciones, Costos, In
 ## Versión principal
 
 - Producción: rama `main`.
-- Versión aprobada: `v2.1.0` (Gerencia General), 15 de septiembre de 2026.
-- Desarrollo y revisión: `codex/gerencia-general`.
+- Gerencia General: Atlas turquesa, diseño y publicación aprobados el 4 de noviembre de 2026, sobre la base `v2.1.0`.
+- Desarrollo y revisión de Atlas: `codex/atlas-gerencia-general`.
 - Respaldo de la versión principal anterior: `v2.0.0`.
 - Cambios de esta entrega: [docs/VERSION-2.1.md](docs/VERSION-2.1.md).
 - Punto de partida: etiqueta `baseline/pre-v2-2026-09-14` (commit `205395e2b34a6f16e42449296f601fab279b1ffa`).
@@ -55,6 +55,8 @@ Propuestas de gráficos y cambios visuales: [revisión visual](docs/REVISION-VIS
 Las credenciales de lectura presentes en el código original mantienen pendiente una revisión separada de restricciones y acceso. No copiar claves ni respuestas de negocio a documentación, pruebas o comentarios.
 
 ## Gerencia General
+
+Rediseño aprobado Atlas turquesa: [implementación, filtros y validación](docs/GERENCIA-ATLAS.md). Integra seis paneles con las fuentes existentes, detalles ampliables y filtros de empresa, línea y categoría. Publicación autorizada el 4 de noviembre de 2026 en [Gerencia General](https://pcc-operaciones.github.io/dashboard-pcc/#gg).
 
 Vista principal desde v2.1.0: [alcance, indicadores y administración](docs/GERENCIA-GENERAL.md). La navegación inicia en Gerencia General e integra Operaciones, Costos, Inventario PT y Logística; Ventas está prevista.
 

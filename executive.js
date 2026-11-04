@@ -57,6 +57,7 @@ function render(){
  if(!issues.length)list.append(e('p',current.areas.some(a=>a.status==='Consultando')?'Consultando las áreas. Los asuntos aparecerán al completar las cargas.':'Sin alertas para gestionar.','gg-empty'));
  $('gg-issue-count').textContent=issues.length+' alertas';
  if(document.body.dataset.gerencia==='gg')$('liveLbl').textContent=current.areas.some(a=>a.active&&a.status==='Consultando')?'Consultando áreas':'3 áreas integradas';
+ window.PccAtlas?.refresh();
 }
 function refresh(){if(!timer)timer=setTimeout(render,120);}
 function renderTasks(){
@@ -117,6 +118,6 @@ function mount(){
 }
 window.PccExecutive={refresh};
 mount();
-switchGerencia(['gg','ops','cos','inv'].includes(location.hash.slice(1))?location.hash.slice(1):'gg',null,true);
-window.addEventListener('hashchange',()=>{const area=location.hash.slice(1);switchGerencia(['gg','ops','cos','inv'].includes(area)?area:'gg',null,true);});
+switchGerencia(['gg','ops','cos','inv','log'].includes(location.hash.slice(1))?location.hash.slice(1):'gg',null,true);
+window.addEventListener('hashchange',()=>{const area=location.hash.slice(1);switchGerencia(['gg','ops','cos','inv','log'].includes(area)?area:'gg',null,true);});
 })();

@@ -16,6 +16,7 @@
 <script src="data-quality.js"></script>
 <link rel="stylesheet" href="data-quality.css">
 <script src="executive-model.js?v=2.4"></script>
+<script src="atlas-model.js?v=1.0"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;}
@@ -277,6 +278,7 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
     @page { margin:1.2cm; size:A4 landscape; }
   }</style>
 <link rel="stylesheet" href="executive.css?v=2.1">
+<link rel="stylesheet" href="atlas.css?v=1.0">
 </head>
 <body data-gerencia="gg">
 <div class="wrap">
@@ -4236,6 +4238,8 @@ const ORDEN_WIP = ['RETENIDO/INSUMOS','PLANEACION','CORTE','ESTAMPADO','BORDADO'
   'NO CONFORME','COSTEO','PRESENTACION POR INSUMOS','PRESENTACION'];
 
 async function loadWip() {
+  if(window._executiveWipStatus==='loading')return;
+  window._executiveWipStatus='loading';window.PccExecutive?.refresh();
   try {
     const [rowsEU, rowsTEX] = await Promise.all([
       fetchSheet(KPI_ID, 'EU_Lotes', 'A:AW'),
@@ -4360,6 +4364,7 @@ async function loadWip() {
 
     WIP_DATA = [...euData, ...texData];
     window._WIP_ALL = [...allEU, ...allTEX];
+    window._executiveWipStatus=window._WIP_ALL.length?'ready':'empty';
 
     // Sprint 0 — verificación en consola (puedes eliminar esto luego)
     if (WIP_DATA.length > 0) {
@@ -4377,8 +4382,9 @@ async function loadWip() {
     renderWip();
     // Si la pestaña Datos está activa, re-renderizar ahora que _WIP_ALL está disponible
   } catch(e) {
+    window._executiveWipStatus='error';
     console.warn('WIP:', e.message);
-  }
+  } finally {window.PccExecutive?.refresh();}
 }
 
 function showWipTab(tab, btn) {
@@ -5973,7 +5979,7 @@ function switchGerencia(ger,btn,silencioso){
     const inv=document.getElementById('page-inventario');if(inv)inv.style.display='none';
     const log=document.getElementById('page-logistica');if(log)log.style.display='none';
     document.getElementById('gUpdTs').textContent='';
-    document.getElementById('liveLbl').textContent='3 áreas integradas';
+    document.getElementById('liveLbl').textContent='Consultando áreas';
     window.PccExecutive?.refresh();
   }else switchGerenciaArea(ger,btn,silencioso);
   for(const id of ['gg','ops','cos','inv','log']){
@@ -5994,7 +6000,7 @@ async function doUpdate() {
   if(btn){btn.disabled=true;btn.textContent='↻ Actualizando';}
   try {
     if(_gerenciaActiva==='gg'){
-      await Promise.allSettled([loadAll(),loadAlertas(),loadWip(),loadCalidad(),loadCostos(),g('iframe-inventario')?.contentWindow?.cargarTodo?.()]);
+      await Promise.allSettled([loadAll(),loadAlertas(),loadWip(),loadCalidad(),loadCostos(),g('iframe-inventario')?.contentWindow?.cargarTodo?.(),g('iframe-logistica')?.contentWindow?.refresh?.()]);
       window.PccExecutive?.refresh();
     } else if(_gerenciaActiva==='log'){
       await g('iframe-logistica')?.contentWindow?.refresh?.();
@@ -9992,16 +9998,17 @@ function exportTablaPDF(tableId, titulo) {
 <div id="page-inventario" style="display:none;position:fixed;inset:0;top:86px;z-index:10;">
   <iframe
     id="iframe-inventario"
-    src="inventario_pt.html?v=2.8.0"
+    src="inventario_pt.html?v=2.9.0"
     style="width:100%;height:100%;border:none;display:block;"
     allow="same-origin"
     title="Inventario Producto Terminado">
   </iframe>
 </div>
 
-<div id="page-logistica" style="display:none;position:fixed;inset:0;top:86px;z-index:10;"><iframe id="iframe-logistica" src="logistica.html?v=2.1" style="width:100%;height:100%;border:none;display:block;" title="Logística"></iframe></div>
+<div id="page-logistica" style="display:none;position:fixed;inset:0;top:86px;z-index:10;"><iframe id="iframe-logistica" src="logistica.html?v=2.2" style="width:100%;height:100%;border:none;display:block;" title="Logística"></iframe></div>
 
-<script src="executive-adapter.js?v=2.1"></script>
-<script src="executive.js?v=2.2"></script>
+<script src="executive-adapter.js?v=2.2"></script>
+<script src="executive.js?v=2.3"></script>
+<script src="atlas.js?v=1.0"></script>
 </body>
 </html>

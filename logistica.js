@@ -3,6 +3,9 @@ const M=window.PccLogisticsModel,$=id=>document.getElementById(id);
 const fmt=new Intl.NumberFormat('es-CO',{maximumFractionDigits:2});
 const compactFmt=new Intl.NumberFormat('es-CO',{notation:'compact',maximumFractionDigits:1});
 const state={stock:[],moves:[],age:[],ageMessage:'Pendiente de publicación FIFO en Apps Script',meta:null};
+let executiveStatus='loading',executiveError='';
+window.PccExecutiveLogistics=()=>({...state,status:executiveStatus,error:executiveError,ageReady:executiveStatus==='ready'&&!state.ageMessage});
+const notifyExecutive=()=>{try{parent.PccExecutive?.refresh();}catch{}};
 const charts={};
 if(typeof Chart!=='undefined'&&typeof ChartDataLabels!=='undefined')Chart.register(ChartDataLabels);
 let materialPage=0,coveragePage=0,agePage=0,stockAgePage=0;
@@ -675,13 +678,15 @@ async function readStockAge(sid,key,current){
   }catch(error){return {rows:[],message:error.message}}
 }
 async function refresh(){
+  if(window._logisticsRefreshing)return;
+  window._logisticsRefreshing=true;executiveStatus='loading';executiveError='';notifyExecutive();
   try{
     if(location.protocol==='file:'){
       status('Abra Logística desde el CMI mediante un servidor local (http://127.0.0.1:4174/#log). Chrome bloquea la carga de datos desde file://.','error');
-      return;
+      executiveStatus='error';return;
     }
     const cfg=await(await fetch('config.json',{cache:'no-store'})).json(),sid=cfg.logistica?.sheetId;
-    if(!sid){status('Conexión pendiente: falta indicar la hoja de Google Sheets para Logística.','warn');return}
+    if(!sid){executiveStatus='empty';status('Conexión pendiente: falta indicar la hoja de Google Sheets para Logística.','warn');return}
     const key=parent.PccLogisticsApiKey?.();
     if(!key)throw Error('Abra Logística desde la pestaña del CMI (index.html#log)');
     status('Consultando Google Sheets…','loading');
@@ -696,16 +701,18 @@ async function refresh(){
     const aging=await readStockAge(sid,key,after);
     state.stock=stock;state.moves=moves;state.age=aging.rows;state.ageMessage=aging.message;
     state.meta=after;syncMovementRange();fillUnits();fillWarehouseUnits();fillRotationUnits();render();
+    executiveStatus='ready';notifyExecutive();
     status('Inventario: '+date(after.corte_inventario)+' · Movimientos: '+date(after.movimientos_desde)+' a '+
       date(after.movimientos_hasta)+' · '+num(stock.length)+' posiciones y '+num(moves.length)+' movimientos.');
     window.PccLogisticsOverview?.loadHistory();
     await window.PccLogisticsPurchases?.load((name,range)=>sheet(sid,name,key,range),stock,moves,after);
   }catch(e){
+    executiveStatus='error';executiveError=e.message;
     if(state.meta)status('No se pudo actualizar: '+e.message+'. Siguen visibles las cifras del corte '+state.meta.corte_inventario+'.','stale');
     else if(/LOG_Control/.test(e.message))status('La hoja de Logística aún no tiene un corte publicado.','warn');
     else status('Logística sin datos publicados: '+e.message,'error');
     console.error('[Logística]',e);
-  }
+  }finally{window._logisticsRefreshing=false;notifyExecutive();}
 }
 function exportMaterials(){
   if(!state.meta)return;

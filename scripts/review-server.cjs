@@ -8,11 +8,12 @@ const root = path.resolve(__dirname, '..');
 const baseline = 'baseline/pre-v2-2026-09-14';
 const cache = path.join(root, '.review', 'sources');
 fs.mkdirSync(cache, {recursive:true});
-const files = ['index.html','inventario_pt.html','config.json','data-quality.js','data-quality.css','source-freshness.js','source-freshness.css','executive-model.js','executive-adapter.js','executive.js','executive.css','inventory-history-model.js','inventory-history-view.js','inventory-history.css'];
+const primaryFiles=['index.html','inventario_pt.html','config.json'];
+const files=[...primaryFiles,...fs.readdirSync(root).filter(f=>/\.(html|css|js)$/.test(f)&&!primaryFiles.includes(f))];
 const before = Object.fromEntries(files.slice(0,3).map(f=>[f,execFileSync('git',['show',`${baseline}:${f}`],{cwd:root,encoding:'utf8',maxBuffer:2000000})]));
 const originals = before['index.html'] + before['inventario_pt.html'] + before['config.json'];
 const key = originals.match(/AIza[\w-]+/)[0];
-const allowed = new Set((originals+fs.readFileSync(path.join(root,'inventario_pt.html'),'utf8')).match(/[A-Za-z0-9_-]{30,}/g));
+const allowed = new Set((originals+['index.html','inventario_pt.html','config.json'].map(f=>fs.readFileSync(path.join(root,f),'utf8')).join('')).match(/[A-Za-z0-9_-]{30,}/g));
 const pending = new Map();
 const inject = `<script>window.PCC_REVIEW=true;const realFetch=window.fetch.bind(window);window.fetch=(input,opts)=>{const u=new URL(typeof input==='string'?input:input.url,location.href);return realFetch(u.hostname==='sheets.googleapis.com'?'/__sheets?path='+encodeURIComponent(u.pathname):input,opts);};</script>`;
 http.createServer(async(req,res)=>{
