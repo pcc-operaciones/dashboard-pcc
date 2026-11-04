@@ -87,11 +87,15 @@ function syncMovementRange(){
   if(from.value>to.value){from.value=min;to.value=max;}
   $('movementWindow').textContent='Disponible: '+min+' a '+max+' · fechas incluidas.';
 }
-function fillUnits(){
-  const units=[...new Set(state.stock.concat(state.moves).map(r=>r.unit).filter(Boolean))].sort();
+function fillUnits(preferDefault=false){
+  const selectedScope=scope();
+  const units=[...new Set(state.stock.concat(state.moves).filter(r=>M.matchScope(r,selectedScope))
+    .map(r=>r.unit).filter(Boolean))].sort();
   const previous=$('unit').value;
   $('unit').innerHTML=units.map(u=>'<option value="'+esc(u)+'">'+esc(u)+'</option>').join('');
-  if(units.includes(previous))$('unit').value=previous;else if(units.includes('MT'))$('unit').value='MT';
+  const preferred=document.body.dataset.area==='insumos'?'UND':'MT';
+  $('unit').value=!preferDefault&&units.includes(previous)?previous:
+    units.includes(preferred)?preferred:units[0]||'';
 }
 function fillWarehouseUnits(){
   for(const [id,warehouse,preferred] of [['fabricUnit','MT001','MT'],['supplyUnit','MT002','UND']]){
@@ -122,12 +126,38 @@ function monthsInRange(from,to){
 }
 function activePage(){return document.querySelector('.nav-btn.active')?.dataset.page||'resumen'}
 function setPage(name){
+  if(name==='compras'&&document.body.dataset.area!=='telas')return;
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===name));
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+name));
   document.querySelector('.filter-bar').classList.toggle('purchases-only',name==='compras');
   window.scrollTo(0,0);
   renderCharts();
   if(name==='compras')window.PccLogisticsPurchases?.render();
+}
+function setArea(area){
+  document.body.dataset.area=area;
+  $('type').value=area==='telas'?'Telas':area==='insumos'?'Insumos':'all';
+  $('warehouse').value=area==='telas'?'MT001':area==='insumos'?'MT002':'all';
+  $('detailNav').hidden=area==='general';
+  document.querySelector('.fabric-nav').hidden=area!=='telas';
+  document.querySelector('.supply-nav').hidden=area!=='insumos';
+  document.querySelectorAll('.area-btn').forEach(button=>{
+    const selected=button.dataset.area===area;
+    button.classList.toggle('active',selected);
+    button.setAttribute('aria-pressed',String(selected));
+  });
+  $('inventoryTitle').textContent=area==='general'?'Resumen de Logística':
+    area==='telas'?'Inventario de telas · MT001':'Inventario de insumos · MT002';
+  const material=area==='insumos'?'insumos':'telas';
+  $('movementTitle').textContent='Movimientos de '+material;
+  $('ageTitle').textContent='Antigüedad de '+material;
+  $('rotationTitle').textContent='Rotación de '+material+' e inventario en días';
+  $('materialTitle').textContent='Existencias de '+material+' por material';
+  $('historyTitle').textContent='Histórico de '+material;
+  materialPage=0;coveragePage=0;agePage=0;stockAgePage=0;
+  if(state.meta){fillUnits(true);fillWarehouseUnits();fillRotationUnits(true)}
+  setPage('resumen');
+  if(state.meta)render();
 }
 function chart(id,type,data,options){
   if(charts[id])charts[id].destroy();
@@ -246,7 +276,8 @@ function renderCharts(){
   }
   if(activePage()==='antiguedad'){
     if(state.age.length){
-      const age=stockAgeRows(false),groups=['EU · Telas','EU · Insumos','TEX · Telas','TEX · Insumos'];
+      const age=stockAgeRows(false),material=document.body.dataset.area==='insumos'?'Insumos':'Telas';
+      const groups=['EU · '+material,'TEX · '+material];
       chart('chartStockAge','bar',{labels:groups,datasets:[
         '0–30','31–60','61–90','+90','Sin edad'].map((label,index)=>({label,
           data:groups.map(group=>age.filter(r=>group.startsWith(r.company)&&
@@ -496,13 +527,19 @@ function render(){
   const {from:movementFrom,to:movementTo}=movementRange();
   const moves=M.movementRows(state.moves,s,movementFrom,movementTo),sum=M.stockSummary(stock);
   $('headerCut').textContent='Corte '+date(state.meta.corte_inventario);
-  $('scopeCaption').textContent='Existencias al '+date(state.meta.corte_inventario)+' · EU y TEX separados por bodega.';
+  const area=document.body.dataset.area;
+  $('scopeCaption').textContent='Existencias al '+date(state.meta.corte_inventario)+' · '+
+    (area==='general'?'EU y TEX por tipo de bodega.':area==='telas'?'Telas · MT001 · EU y TEX.':'Insumos · MT002 · EU y TEX.');
   $('value').textContent=money(sum.value);$('positions').textContent=num(sum.positions);
+  const areaStock=state.stock.filter(r=>s.company==='all'||r.company===s.company);
+  $('valueFabric').textContent=money(M.stockSummary(areaStock.filter(r=>r.warehouse==='MT001')).value);
+  $('valueSupply').textContent=money(M.stockSummary(areaStock.filter(r=>r.warehouse==='MT002')).value);
   $('physical').textContent=num(sum.quantity[u]);
   $('physicalSub').textContent=u+' · existencia física';
   $('committed').textContent=num(sum.committed[u])+' '+u;
   $('available').textContent=num(sum.available[u])+' '+u+' disponibles';
   const cut=state.meta.corte_inventario,from=state.meta.movimientos_desde;
+  $('ageSourceRange').textContent='La exportación comienza el '+date(from)+' y el corte es '+date(cut)+'.';
   const cutMoves=state.moves.filter(r=>M.matchScope(r,s)&&r.date<=cut);
   for(const [warehouse,selectId,valueId,subId] of [
     ['MT001','fabricUnit','daysFabric','daysFabricSub'],['MT002','supplyUnit','daysSupply','daysSupplySub']]){
@@ -517,10 +554,13 @@ function render(){
   $('noConsumption90Sub').textContent=money(noCpn.reduce((total,r)=>total+r.costTotal,0))+' en existencias';
   $('obsolescence').textContent=state.age.length?money(state.age.filter(r=>M.matchScope(r,s))
     .reduce((total,r)=>total+r.riskValue,0)):'—';
-  const agedFabric=state.age.filter(r=>M.matchScope(r,s)&&r.warehouse==='MT001'&&r.unit==='MT');
-  $('obsolescenceMeters').textContent=state.age.length?
-    'Telas +90: '+num(agedFabric.reduce((total,r)=>total+r.qty[3],0))+' MT · sin edad: '+
-    num(agedFabric.reduce((total,r)=>total+r.qty[4],0))+' MT':'Metros de tela: —';
+  const ageWarehouse=area==='insumos'?'MT002':'MT001',ageUnit=area==='insumos'?'UND':'MT';
+  const agedGroup=state.age.filter(r=>M.matchScope(r,s)&&r.warehouse===ageWarehouse&&r.unit===ageUnit);
+  $('obsolescenceMeters').textContent=area==='general'?
+    'Cantidades por separado en Telas e Insumos':state.age.length?
+      num(agedGroup.reduce((total,r)=>total+r.qty[3],0))+' '+ageUnit+' +90 · '+
+      num(agedGroup.reduce((total,r)=>total+r.qty[4],0))+' '+ageUnit+' sin edad':
+      'Cantidad +90 días: —';
   $('obsolescenceSub').textContent=state.age.length?'Valor +90 días bajo FIFO · revisar edad no determinada':state.ageMessage;
   const groups=warehouseGroups(stock).map(g=>{const [company,warehouse]=g.label.split(' · '),x=g.summary;
     return {company,warehouse,positions:x.positions,value:x.value,physical:x.quantity[u]||0,
@@ -690,10 +730,11 @@ function exportStockAge(){
     stockAgeRows().map(r=>[state.meta.corte_inventario,r.company,r.warehouse,r.ref,r.name,r.unit,
       r.physical,r.value,...r.qty,r.riskValue,r.status]));
 }
-document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>setPage(b.dataset.page)));
+document.querySelectorAll('.area-btn').forEach(b=>b.addEventListener('click',()=>setArea(b.dataset.area)));
+document.querySelectorAll('.nav-btn[data-page]').forEach(b=>b.addEventListener('click',()=>setPage(b.dataset.page)));
 for(const id of ['company','type','warehouse','unit'])$(id).addEventListener('change',()=>{
   materialPage=0;coveragePage=0;agePage=0;stockAgePage=0;
-  if(id==='company')fillWarehouseUnits();
+  if(id==='company'){fillUnits();fillWarehouseUnits();}
   if(id==='company')window.PccLogisticsPurchases?.filterOptions();
   if(['company','type','warehouse'].includes(id))fillRotationUnits();
   render();
@@ -766,9 +807,10 @@ $('materialNext').addEventListener('click',()=>{materialPage++;renderMaterials()
 $('materialCsv').addEventListener('click',exportMaterials);
 $('refreshBtn').addEventListener('click',refresh);
 $('clearFilters').addEventListener('click',()=>{
-  $('company').value='all';$('type').value='all';$('warehouse').value='all';
+  $('company').value='all';
   if(state.meta){$('movementFrom').value=state.meta.movimientos_desde;$('movementTo').value=state.meta.movimientos_hasta;}
-  materialPage=0;coveragePage=0;agePage=0;stockAgePage=0;fillWarehouseUnits();fillRotationUnits();render();
+  materialPage=0;coveragePage=0;agePage=0;stockAgePage=0;fillUnits(true);fillWarehouseUnits();fillRotationUnits();render();
 });
+document.body.dataset.area='general';
 window.refresh=refresh;refresh();
 })();

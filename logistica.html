@@ -7,44 +7,52 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
-<link rel="stylesheet" href="logistica.css?v=1.1">
+<link rel="stylesheet" href="logistica.css?v=1.2">
 </head>
-<body>
+<body data-area="general">
 <header class="topbar">
   <div class="tb-left"><div class="tb-icon">▦</div><div><div class="tb-title">Logística · Materiales</div><div class="tb-sub">Espíritu Urbano &amp; Texsion · Telas e insumos</div></div></div>
   <div class="tb-right"><span class="live-pill" id="stateTag">EN CONSTRUCCIÓN</span><span class="date-lbl" id="headerCut">Corte —</span><button class="btn-ref" id="refreshBtn" type="button">↻ Actualizar</button></div>
 </header>
-<nav class="nav" aria-label="Secciones de Logística">
-  <button class="nav-btn active" type="button" data-page="resumen">📊 Resumen general</button>
+<nav class="area-nav" aria-label="Procesos de Logística">
+  <button class="area-btn active" type="button" data-area="general" aria-pressed="true">📊 Resumen de Logística</button>
+  <button class="area-btn" type="button" data-area="telas" aria-pressed="false">🧵 Telas · MT001</button>
+  <button class="area-btn" type="button" data-area="insumos" aria-pressed="false">▣ Insumos · MT002</button>
+</nav>
+<nav class="nav" id="detailNav" aria-label="Análisis del subproceso" hidden>
+  <button class="nav-btn active" type="button" data-page="resumen">Inventario</button>
   <button class="nav-btn" type="button" data-page="historico">Histórico</button>
   <button class="nav-btn" type="button" data-page="antiguedad">⏳ Antigüedad</button>
   <button class="nav-btn" type="button" data-page="rotacion">🔄 Rotación</button>
   <button class="nav-btn" type="button" data-page="materiales">🏷️ Por material</button>
   <button class="nav-btn" type="button" data-page="movimientos">Movimientos</button>
-  <button class="nav-btn" type="button" data-page="compras">🧵 Compras de telas</button>
+  <button class="nav-btn fabric-nav" type="button" data-page="compras">Compras de telas</button>
+  <button class="nav-btn supply-nav" type="button" disabled hidden title="Se requieren informes de compras de insumos">Compras de insumos · pendiente</button>
 </nav>
 <div class="filter-bar">
   <label>Empresa<select id="company"><option value="all">EU + TEX</option><option value="EU">EU</option><option value="TEX">TEX</option></select></label>
-  <label class="inventory-filter">Tipo de bodega<select id="type"><option value="all">Telas + insumos</option><option value="Telas">Telas · MT001</option><option value="Insumos">Insumos · MT002</option></select></label>
-  <label class="inventory-filter">Bodega<select id="warehouse"><option value="all">Todas</option><option value="MT001">MT001 · Telas</option><option value="MT002">MT002 · Insumos</option></select></label>
-  <label class="inventory-filter">Unidad<select id="unit"></select></label>
+  <label class="internal-filter">Tipo de bodega<select id="type"><option value="all">Telas + insumos</option><option value="Telas">Telas · MT001</option><option value="Insumos">Insumos · MT002</option></select></label>
+  <label class="internal-filter">Bodega<select id="warehouse"><option value="all">Todas</option><option value="MT001">MT001 · Telas</option><option value="MT002">MT002 · Insumos</option></select></label>
+  <label class="inventory-filter" id="mainUnitFilter">Unidad<select id="unit"></select></label>
   <button class="clear-btn" id="clearFilters" type="button">✕ Limpiar</button>
 </div>
 <div class="banner" id="status" role="status">Preparando conexión con Google Sheets…</div>
 <main>
   <section class="page active" id="page-resumen">
-    <div class="section-heading"><div><h1>Inventario de materiales</h1><p id="scopeCaption">Existencias del corte declarado en SIESA.</p></div></div>
+    <div class="section-heading"><div><h1 id="inventoryTitle">Resumen de Logística</h1><p id="scopeCaption">Existencias del corte declarado en SIESA.</p></div></div>
     <details class="metric-scope"><summary>Cómo se calculan rotación, días y antigüedad</summary><p>Días de inventario = existencia física al corte ÷ consumo neto diario CPN − DCN, por bodega y unidad. La rotación anualizada usa el mismo consumo y el stock actual. La antigüedad es una estimación FIFO preparada en Apps Script: EAC fecha compras recibidas; el saldo anterior a la ventana se clasifica en +90 solo si el rango supera 90 días. Otras entradas sin origen identificable quedan como edad no determinada.</p></details>
     <span class="sec-header">Resumen general</span>
     <div class="hero-grid">
       <div class="hero-card c-navy"><div class="hero-icon navy">▦</div><div><small>Valor de existencias</small><strong id="value">—</strong><span>Importe en pesos según SIESA</span></div></div>
       <div class="hero-card c-teal"><div class="hero-icon teal">≡</div><div><small>Posiciones de inventario</small><strong id="positions">—</strong><span>Empresa, bodega y referencia</span></div></div>
-      <div class="hero-card c-green"><div class="hero-icon green">▣</div><div><small>Existencia física</small><strong id="physical">—</strong><span id="physicalSub">Seleccione unidad</span></div></div>
-      <div class="hero-card c-amber"><div class="hero-icon amber">◫</div><div><small>Comprometido</small><strong id="committed">—</strong><span id="available">—</span></div></div>
+      <div class="hero-card c-green area-quantity"><div class="hero-icon green">▣</div><div><small>Existencia física</small><strong id="physical">—</strong><span id="physicalSub">Seleccione unidad</span></div></div>
+      <div class="hero-card c-amber area-quantity"><div class="hero-icon amber">◫</div><div><small>Comprometido</small><strong id="committed">—</strong><span id="available">—</span></div></div>
+      <div class="hero-card c-teal general-value"><div class="hero-icon teal">🧵</div><div><small>Valor · telas</small><strong id="valueFabric">—</strong><span>MT001 · EU + TEX según selección</span></div></div>
+      <div class="hero-card c-green general-value"><div class="hero-icon green">▣</div><div><small>Valor · insumos</small><strong id="valueSupply">—</strong><span>MT002 · EU + TEX según selección</span></div></div>
     </div>
     <div class="metric-grid summary-metrics">
-      <div class="metric-card teal"><small>Días inventario · telas</small><strong id="daysFabric">—</strong><span id="daysFabricSub">MT001 · unidad MT · meta 45 días</span></div>
-      <div class="metric-card green"><small>Días inventario · insumos</small><strong id="daysSupply">—</strong><span id="daysSupplySub">MT002 · unidad UND · meta 45 días</span></div>
+      <div class="metric-card teal fabric-metric"><small>Días inventario · telas</small><strong id="daysFabric">—</strong><span id="daysFabricSub">MT001 · unidad MT · meta 45 días</span></div>
+      <div class="metric-card green supply-metric"><small>Días inventario · insumos</small><strong id="daysSupply">—</strong><span id="daysSupplySub">MT002 · unidad UND · meta 45 días</span></div>
       <div class="metric-card red"><small>Saldo estimado +90 días</small><strong id="obsolescence">—</strong><span id="obsolescenceMeters">Metros de tela: —</span><span id="obsolescenceSub">Pendiente de publicación FIFO en Apps Script</span></div>
       <div class="metric-card amber"><small>Sin CPN en últimos 90 días</small><strong id="noConsumption90">—</strong><span id="noConsumption90Sub">Referencias con existencia positiva</span></div>
     </div>
@@ -55,20 +63,20 @@
       <section class="chart-card"><div class="cc-hdr"><div><h2>Existencia y compromiso · telas</h2><p>MT001 · físico = comprometido + disponible</p></div><label class="chart-unit">Unidad<select id="fabricUnit"></select></label></div><p class="commitment-summary" id="fabricSummary"></p><div class="chart-wrap"><canvas id="chartFabric" aria-label="Existencias disponibles y comprometidas de telas"></canvas></div></section>
       <section class="chart-card"><div class="cc-hdr"><div><h2>Existencia y compromiso · insumos</h2><p>MT002 · físico = comprometido + disponible</p></div><label class="chart-unit">Unidad<select id="supplyUnit"></select></label></div><p class="commitment-summary" id="supplySummary"></p><div class="chart-wrap"><canvas id="chartSupply" aria-label="Existencias disponibles y comprometidas de insumos"></canvas></div></section>
     </div>
-    <div class="table-grid">
+    <div class="table-grid area-detail">
       <section class="chart-card"><div class="cc-hdr"><div><h2>Existencias por bodega</h2><p>No se mezclan cantidades de distintas unidades.</p></div></div><div class="scroll"><table id="warehousesTable"><thead><tr><th>Empresa</th><th>Bodega</th><th class="num">Posiciones</th><th class="num">Valor</th><th class="num">Físico</th><th class="num">Comprometido</th><th class="num">Disponible</th></tr></thead><tbody id="warehouses"></tbody></table></div></section>
       <section class="chart-card"><div class="cc-hdr"><div><h2>Calidad de existencias</h2><p>Control sobre importes sin costo informado.</p></div></div><p class="quality" id="quality">Se verificará al cargar la hoja.</p><p class="explain">Las cantidades y costos provienen de los Excel del corte. El valor del inventario no se calcula con costos de movimientos.</p></section>
     </div>
     <section class="pending"><h2>Controles pendientes de fuente</h2><div class="pending-grid">
-      <div><strong>Cobertura · meta 45 días</strong><span>La pestaña Rotación muestra una estimación con este corte y el consumo CPN menos DCN del período. Falta validar la regla definitiva.</span></div>
+      <div><strong>Cobertura · meta 45 días</strong><span>Rotación muestra una estimación por tipo de material con el corte y el consumo CPN menos DCN del período. Falta validar la regla definitiva.</span></div>
       <div><strong>Edad del saldo · FIFO estimado</strong><span>Se calcula con entradas EAC, todos los movimientos y el saldo al corte. Las entradas sin fecha de ingreso original quedan como edad no determinada.</span></div>
-      <div><strong>Proveedores y compras</strong><span>El informe de compras de telas habilita comprador, proveedor y precio. Órdenes, fechas prometidas y cumplimiento siguen pendientes de fuente.</span></div>
+      <div><strong>Proveedores y compras</strong><span>Telas cuenta con comprador, proveedor y precio. Compras de insumos, órdenes, fechas prometidas y cumplimiento siguen pendientes de fuente.</span></div>
       <div><strong>Compromiso por OP</strong><span>El inventario informa cantidad comprometida, pero no la OP asociada.</span></div>
       <div><strong>Alertas de abastecimiento</strong><span>Requiere demanda futura, mínimos acordados y plazos de suministro.</span></div>
     </div></section>
   </section>
   <section class="page" id="page-movimientos">
-    <div class="section-heading"><div><h1>Movimientos de materiales</h1><p id="movementCaption">Entradas y salidas del período exportado.</p></div></div>
+    <div class="section-heading"><div><h1 id="movementTitle">Movimientos de telas</h1><p id="movementCaption">Entradas y salidas del período exportado.</p></div></div>
     <div class="movement-controls"><label>Desde<input id="movementFrom" type="date" aria-label="Movimientos desde"></label><label>Hasta<input id="movementTo" type="date" aria-label="Movimientos hasta"></label><button id="movementAll" type="button">Ver todo el rango</button><span id="movementWindow">Fechas disponibles según el informe publicado.</span></div>
     <div class="chart-grid movement-docs-grid"><section class="chart-card"><div class="cc-hdr"><div><h2 id="docsChartTitle">Movimientos por tipo de documento</h2><p id="docsChartCaption">Conteo de filas; no suma unidades diferentes.</p></div></div><div class="movement-chart-mode" role="group" aria-label="Mostrar movimientos por"><button id="docsModeRows" type="button" class="active" aria-pressed="true">Número de registros</button><button id="docsModeQuantity" type="button" aria-pressed="false">Cantidad movida</button></div><div class="chart-wrap tall"><canvas id="chartDocs" aria-label="Movimientos por tipo de documento"></canvas></div></section>
       <section class="chart-card"><div class="cc-hdr"><div><h2>Tipos de transacción</h2><p>Registros: todas las unidades · cantidades: unidad elegida · costos: todas las unidades del filtro. Selecciona un tipo para ver el detalle.</p></div></div><div class="scroll tall"><table id="docsTable"><thead><tr><th>Documento</th><th class="num">Filas</th><th class="num">Con entrada</th><th class="num">Con salida</th><th class="num">Cantidad entrada</th><th class="num">Cantidad salida</th><th class="num">Costo entrada</th><th class="num">Costo salida</th></tr></thead><tbody id="docs"></tbody><tfoot id="docsFooter"></tfoot></table></div></section></div>
@@ -78,7 +86,7 @@
   </section>
   <dialog id="movementDetail" class="movement-dialog" aria-labelledby="movementDetailTitle"><div class="dialog-heading"><div><h2 id="movementDetailTitle">Detalle de transacciones</h2><p id="movementDetailCaption"></p></div><button id="movementDetailClose" type="button" aria-label="Cerrar detalle">×</button></div><p class="dialog-note">Filas disponibles en el exportado SIESA; no incluye número de documento ni línea. Las cantidades se muestran por registro y unidad.</p><div class="scroll detail"><table><thead><tr><th>Fecha</th><th>Empresa</th><th>Bodega</th><th>Referencia</th><th>Material</th><th>Unidad</th><th class="num">Entrada</th><th class="num">Salida</th><th class="num">Costo entrada</th><th class="num">Costo salida</th></tr></thead><tbody id="movementDetailRows"></tbody></table></div><div class="dialog-footer"><span id="movementDetailTotal"></span><button id="movementDetailMore" type="button">Ver más registros</button></div></dialog>
   <section class="page" id="page-antiguedad">
-    <div class="section-heading"><div><h1>Antigüedad de materiales</h1><p>Separamos la edad del saldo desde su ingreso del tiempo transcurrido desde el último consumo CPN observado.</p></div></div>
+    <div class="section-heading"><div><h1 id="ageTitle">Antigüedad de telas</h1><p>Separamos la edad del saldo desde su ingreso del tiempo transcurrido desde el último consumo CPN observado.</p></div></div>
     <span class="sec-header">Edad estimada del saldo · FIFO</span>
     <p class="age-explainer">Apps Script asigna las salidas a las existencias más antiguas. EAC usa la fecha efectiva de recepción; la edad sin origen verificable se informa aparte. El valor por tramo se distribuye con el costo promedio del saldo al corte.</p>
     <div class="age-buckets" id="stockAgeBuckets"></div>
@@ -90,12 +98,12 @@
     <div class="age-buckets" id="consumptionAgeBuckets"></div>
     <div class="chart-grid">
       <section class="chart-card"><div class="cc-hdr"><div><h2>Referencias por tiempo sin consumo</h2><p>Solo referencias con existencia positiva, separadas por empresa, bodega y unidad.</p></div></div><div class="chart-wrap"><canvas id="chartConsumptionAge" aria-label="Referencias por tiempo desde el último CPN observado"></canvas></div></section>
-      <section class="chart-card"><div class="cc-hdr"><div><h2>Alcance del control</h2><p>La exportación comienza el 25/07/2026 y el corte es 25/10/2026.</p></div></div><p class="age-explainer">«Sin CPN en 90 días» significa que la referencia no presenta consumo de producción en la ventana observada. No indica cuándo ingresó el saldo, ni prueba que nunca se haya consumido antes de la ventana. La devolución DCN no se usa como fecha de consumo.</p><p class="quality" id="ageRiskValue">Valor asociado sin CPN: —</p></section>
+      <section class="chart-card"><div class="cc-hdr"><div><h2>Alcance del control</h2><p id="ageSourceRange">Ventana observada según el informe publicado.</p></div></div><p class="age-explainer">«Sin CPN en 90 días» significa que la referencia no presenta consumo de producción en la ventana observada. No indica cuándo ingresó el saldo, ni prueba que nunca se haya consumido antes de la ventana. La devolución DCN no se usa como fecha de consumo.</p><p class="quality" id="ageRiskValue">Valor asociado sin CPN: —</p></section>
     </div>
     <section class="chart-card"><div class="table-tools"><label>Buscar referencia o descripción<input type="search" id="ageSearch" placeholder="Buscar material"></label><label>Tramo<select id="ageCategory"><option value="all">Todos</option><option>0–30 días</option><option>31–60 días</option><option>61–90 días</option><option>+90 días</option><option>Sin CPN en 90 días</option></select></label><span id="ageCount"></span><button id="ageCsv" type="button">Descargar CSV</button></div><div class="scroll detail"><table id="ageTable"><thead><tr><th>Empresa</th><th>Bodega</th><th>Referencia</th><th>Material</th><th>Unidad</th><th class="num">Físico</th><th class="num">Valor</th><th>Último CPN</th><th class="num">Días</th><th>Tramo</th></tr></thead><tbody id="ageRows"></tbody><tfoot id="ageFooter"></tfoot></table></div><div class="pager"><button id="agePrev" type="button">Anterior</button><button id="ageNext" type="button">Siguiente</button></div></section>
   </section>
   <section class="page" id="page-rotacion">
-    <div class="section-heading"><div><h1>Rotación e inventario en días</h1><p id="coverageCaption">Existencia física ÷ consumo neto diario de producción. No mide antigüedad del material.</p></div></div>
+    <div class="section-heading"><div><h1 id="rotationTitle">Rotación de telas e inventario en días</h1><p id="coverageCaption">Existencia física ÷ consumo neto diario de producción. No mide antigüedad del material.</p></div></div>
     <div class="coverage-note">Referencia: 45 días para telas e insumos, con banda de ±10 % (40,5 a 49,5 días). Cálculo provisional con CPN salidas menos DCN entradas del período exportado hasta el corte. Una devolución puede corresponder a un consumo anterior.</div>
     <div class="hist-controls"><label>Bodega para indicadores<select id="rotWarehouse"><option value="MT001">Telas · MT001</option><option value="MT002">Insumos · MT002</option></select></label><label>Unidad<select id="rotUnit"></select></label></div>
     <span class="sec-header">Indicadores del período</span>
@@ -116,7 +124,7 @@
     <section class="chart-card coverage-table"><div class="table-tools"><label>Buscar referencia o descripción<input type="search" id="coverageSearch" placeholder="Buscar material"></label><label>Categoría<select id="coverageCategory"><option value="all">Todas</option><option value="Bajo 40,5 d">Bajo 40,5 d</option><option value="En meta">En meta</option><option value="Sobre 49,5 d">Sobre 49,5 d</option><option value="Sin consumo neto en período">Sin consumo neto en período</option><option value="Sin existencia">Sin existencia</option></select></label><span id="coverageCount"></span><button id="coverageCsv" type="button">Descargar CSV</button></div><div class="scroll detail"><table id="coverageTable"><thead><tr><th>Empresa</th><th>Bodega</th><th>Referencia</th><th>Material</th><th>Unidad</th><th class="num">Físico</th><th class="num">Consumo neto</th><th class="num">Días</th><th>Categoría</th><th class="num">Valor</th></tr></thead><tbody id="coverageRows"></tbody><tfoot id="coverageFooter"></tfoot></table></div><div class="pager"><button id="coveragePrev" type="button">Anterior</button><button id="coverageNext" type="button">Siguiente</button></div></section>
   </section>
   <section class="page" id="page-materiales">
-    <div class="section-heading"><div><h1>Existencias por material</h1><p>Detalle al corte por empresa, bodega, referencia y unidad.</p></div></div>
+    <div class="section-heading"><div><h1 id="materialTitle">Existencias de telas por material</h1><p>Detalle al corte por empresa, bodega, referencia y unidad.</p></div></div>
     <section class="chart-card"><div class="table-tools"><label>Buscar referencia o descripción<input type="search" id="materialSearch" placeholder="Buscar material"></label><span id="materialCount"></span><button id="materialCsv" type="button">Descargar CSV</button></div>
       <div class="scroll detail"><table id="materialsTable"><thead><tr><th>Empresa</th><th>Bodega</th><th>Referencia</th><th>Material</th><th>U. M.</th><th class="num">Físico</th><th class="num">Comprometido</th><th class="num">Disponible</th><th class="num">Valor</th></tr></thead><tbody id="materials"></tbody><tfoot id="materialsFooter"></tfoot></table></div>
       <div class="pager"><button id="materialPrev" type="button">Anterior</button><button id="materialNext" type="button">Siguiente</button></div></section>
@@ -153,7 +161,7 @@
   </section>
   <dialog class="movement-dialog" id="buyDetail" aria-labelledby="buyDetailTitle"><div class="dialog-heading"><div><h2 id="buyDetailTitle">Detalle de compras</h2><p id="buyDetailNote"></p></div><button id="buyDetailClose" type="button" aria-label="Cerrar detalle">×</button></div><div class="scroll detail"><table><thead id="buyDetailHead"></thead><tbody id="buyDetailRows"></tbody><tfoot id="buyDetailTotal"></tfoot></table></div><div class="dialog-footer"><span id="buyDetailCount"></span><button id="buyDetailMore" type="button">Mostrar 100 más</button></div></dialog>
   <section class="page" id="page-historico">
-    <div class="section-heading"><div><h1>Histórico de Logística</h1><p id="histIntro">Consulta cortes efectivamente conservados desde la puesta en marcha.</p></div></div>
+    <div class="section-heading"><div><h1 id="historyTitle">Histórico de telas</h1><p id="histIntro">Consulta cortes efectivamente conservados desde la puesta en marcha.</p></div></div>
     <div class="hist-controls"><label>Corte de inventario<select id="histCut"></select></label><label>Comparar con<select id="histCompare"><option value="">Sin comparación</option></select></label><button id="histRefresh" type="button">Consultar cortes</button></div>
     <div class="banner loading" id="histMessage" role="status">Abre esta sección para consultar el histórico.</div>
     <div id="histBody" hidden>
@@ -175,5 +183,5 @@
     </div>
   </section>
 </main>
-<script src="logistica-model.js?v=0.9"></script><script src="logistica-grid.js?v=0.2"></script><script src="logistica-compras-model.js?v=1.2"></script><script src="logistica.js?v=1.5"></script><script src="logistica-compras.js?v=1.3"></script><script src="logistica-history.js?v=0.3"></script>
+<script src="logistica-model.js?v=0.9"></script><script src="logistica-grid.js?v=0.2"></script><script src="logistica-compras-model.js?v=1.2"></script><script src="logistica.js?v=1.6"></script><script src="logistica-compras.js?v=1.3"></script><script src="logistica-history.js?v=0.3"></script>
 </body></html>
