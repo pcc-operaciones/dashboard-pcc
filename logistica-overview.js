@@ -6,17 +6,35 @@ const num=value=>fmt.format(Number(value)||0),money=value=>'$ '+num(value);
 const moneyCompact=value=>'$ '+compact.format(Number(value)||0);
 const pct=value=>fmt.format(value)+' %';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const state={data:null,index:null,flowChart:null,historyChart:null,request:0};
+const state={data:null,index:null,charts:{},request:0};
 function company(){return $('company').value}
 function selected(row){return company()==='all'||row.company===company()}
-function draw(id,kind,config){
-  if(state[kind]){state[kind].destroy();state[kind]=null}
+function draw(id,config){
+  if(state.charts[id]){state.charts[id].destroy();delete state.charts[id]}
   const canvas=$(id);
   if(typeof Chart==='undefined'){
     canvas.hidden=true;return;
   }
   canvas.hidden=false;
-  state[kind]=new Chart(canvas,config);
+  state.charts[id]=new Chart(canvas,config);
+}
+function gradient(ctx,top,bottom){
+  const area=ctx.chart.chartArea;
+  if(!area)return top;
+  const fill=ctx.chart.ctx.createLinearGradient(0,area.top,0,area.bottom);
+  fill.addColorStop(0,top);fill.addColorStop(1,bottom);
+  return fill;
+}
+function chartOptions(asValue=true){
+  return {responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:24,right:12}},
+    plugins:{legend:{position:'top',labels:{color:'#52677C',font:{family:'DM Sans',size:10,weight:600},boxWidth:10,usePointStyle:true,pointStyle:'rectRounded'}},
+      tooltip:{backgroundColor:'#183654',padding:10,callbacks:{label:c=>c.dataset.label+': '+(asValue?money(c.parsed.y):num(c.parsed.y))}},
+      datalabels:{display:c=>Number(c.dataset.data[c.dataIndex])>0,anchor:'end',align:'end',offset:c=>c.datasetIndex===1?17:3,
+        color:'#183654',clip:false,font:{family:'DM Sans',size:10,weight:700},
+        formatter:v=>asValue?moneyCompact(v):compact.format(v)}},
+    scales:{x:{ticks:{color:'#64778B',font:{family:'DM Sans',size:10}},grid:{display:false},border:{display:false}},
+      y:{beginAtZero:true,grace:'24%',ticks:{color:'#8292A2',font:{family:'DM Sans',size:9},callback:v=>asValue?moneyCompact(v):compact.format(v)},
+        grid:{color:'#E4ECF3'},border:{display:false}}}};
 }
 function renderCurrentAge(){
   if(!state.data)return;
@@ -39,21 +57,17 @@ function renderFlow(){
   const supply=M.monthlyMovements(source.filter(r=>r.warehouse==='MT002'),from,to);
   $('overviewFlowNote').textContent='Costos de todas las transacciones del informe vigente · '+from+' a '+to+
     '. Los meses incompletos se marcan con *.';
-  $('overviewFlowRows').innerHTML=fabric.map((r,i)=>'<tr><td>'+esc(r.month)+(r.partial?' *':'')+
-    '</td><td>'+esc(r.from)+' a '+esc(r.to)+'</td><td class="num">'+money(r.inCost)+
-    '</td><td class="num">'+money(r.outCost)+'</td><td class="num">'+money(supply[i].inCost)+
-    '</td><td class="num">'+money(supply[i].outCost)+'</td></tr>').join('');
-  draw('overviewFlowChart','flowChart',{type:'bar',data:{labels:fabric.map(r=>r.month+(r.partial?' *':'')),datasets:[
-    {label:'Telas · entradas',data:fabric.map(r=>r.inCost),backgroundColor:'#0D6B5E',borderRadius:3},
-    {label:'Telas · salidas',data:fabric.map(r=>r.outCost),backgroundColor:'#1B3A5C',borderRadius:3},
-    {label:'Insumos · entradas',data:supply.map(r=>r.inCost),backgroundColor:'#36A38E',borderRadius:3},
-    {label:'Insumos · salidas',data:supply.map(r=>r.outCost),backgroundColor:'#4E6F98',borderRadius:3}
-  ]},options:{responsive:true,maintainAspectRatio:false,animation:false,
-    plugins:{legend:{labels:{font:{family:'DM Sans',size:10},boxWidth:11}},
-      tooltip:{callbacks:{label:c=>c.dataset.label+': '+money(c.parsed.y)}},
-      datalabels:{display:false}},
-    scales:{x:{ticks:{font:{family:'DM Sans',size:10}},grid:{display:false}},
-      y:{beginAtZero:true,ticks:{callback:v=>moneyCompact(v)},grid:{color:'#E2E8F0'}}}}});
+  for(const [warehouse,rows,prefix,colors] of [
+    ['MT001',fabric,'Fabric',['#0D6B5E','#1B3A5C']],
+    ['MT002',supply,'Supply',['#36A38E','#4E6F98']]]){
+    $('overview'+prefix+'FlowRows').innerHTML=rows.map(r=>'<tr><td>'+esc(r.month)+(r.partial?' *':'')+
+      '</td><td>'+esc(r.from)+' a '+esc(r.to)+'</td><td class="num">'+money(r.inCost)+
+      '</td><td class="num">'+money(r.outCost)+'</td></tr>').join('');
+    draw('overview'+prefix+'FlowChart',{type:'bar',data:{labels:rows.map(r=>r.month+(r.partial?' *':'')),datasets:[
+      {label:'Entradas · $',data:rows.map(r=>r.inCost),backgroundColor:c=>gradient(c,colors[0],warehouse==='MT001'?'#39A995':'#81C9B9'),borderRadius:6,maxBarThickness:34},
+      {label:'Salidas · $',data:rows.map(r=>r.outCost),backgroundColor:c=>gradient(c,colors[1],warehouse==='MT001'?'#547396':'#829DC0'),borderRadius:6,maxBarThickness:34}
+    ]},options:chartOptions()});
+  }
 }
 function monthCuts(){
   const byMonth=new Map();
@@ -80,44 +94,35 @@ function ageGroups(cut){
       .reduce((total,r)=>total+Number(r.values[4]||0),0)
   })));
 }
-function fillMetricOptions(cuts){
-  const select=$('overviewHistoryMetric'),previous=select.value;
+function fillMetricOptions(cuts,warehouse,prefix){
+  const select=$('overview'+prefix+'Metric'),previous=select.value;
   const options=[new Option('Valor de inventario · $','value')];
-  for(const [warehouse,name] of [['MT001','Telas'],['MT002','Insumos']]){
-    const units=[...new Set(cuts.flatMap(c=>c.summary.filter(r=>r.warehouse===warehouse).map(r=>r.unit)))].sort();
-    for(const unit of units)options.push(new Option(name+' · '+unit,warehouse+':'+unit));
-  }
+  const units=[...new Set(cuts.flatMap(c=>c.summary.filter(r=>r.warehouse===warehouse).map(r=>r.unit)))].sort();
+  for(const unit of units)options.push(new Option('Cantidad · '+unit,unit));
   select.replaceChildren(...options);
   select.value=[...select.options].some(o=>o.value===previous)?previous:'value';
 }
 function renderHistory(){
   if(!state.index||!state.data||document.body.dataset.area!=='general')return;
-  const cuts=monthCuts();fillMetricOptions(cuts);
-  const metric=$('overviewHistoryMetric').value,asValue=metric==='value';
+  const cuts=monthCuts();
   const labels=cuts.map(c=>c.cutoff.slice(0,7)+(monthEnd(c.cutoff)?'':' *'));
-  const datasets=asValue?[
-    {label:'Telas · $',warehouse:'MT001',color:'#0D6B5E'},
-    {label:'Insumos · $',warehouse:'MT002',color:'#1B3A5C'}
-  ]: [{label:metric.startsWith('MT001')?'Telas · '+metric.split(':')[1]:'Insumos · '+metric.split(':')[1],
-    warehouse:metric.split(':')[0],unit:metric.split(':')[1],color:'#0D6B5E'}];
-  draw('overviewHistoryChart','historyChart',{type:'bar',data:{labels,datasets:datasets.map(d=>({
-    label:d.label,data:cuts.map(c=>sum(grouped(c,d.warehouse,d.unit),asValue?'value':'physical')),
-    backgroundColor:d.color,borderRadius:4
-  }))},options:{responsive:true,maintainAspectRatio:false,animation:false,
-    plugins:{legend:{labels:{font:{family:'DM Sans',size:10},boxWidth:11}},
-      tooltip:{callbacks:{label:c=>c.dataset.label+': '+(asValue?money(c.parsed.y):num(c.parsed.y))}},
-      datalabels:{display:c=>Number(c.dataset.data[c.dataIndex])>0,anchor:'end',align:'end',
-        color:'#1B3A5C',clip:true,font:{family:'DM Sans',size:9,weight:700},
-        formatter:v=>asValue?moneyCompact(v):compact.format(v)}},
-    layout:{padding:{top:18,right:15}},
-    scales:{x:{ticks:{font:{family:'DM Sans',size:10}},grid:{display:false}},
-      y:{beginAtZero:true,grace:'18%',ticks:{callback:v=>asValue?moneyCompact(v):num(v)},grid:{color:'#E2E8F0'}}}}});
+  for(const [warehouse,prefix,colors] of [
+    ['MT001','Fabric',['#0D6B5E','#44B2A0']],
+    ['MT002','Supply',['#1B3A5C','#6C91BC']]]){
+    fillMetricOptions(cuts,warehouse,prefix);
+    const metric=$('overview'+prefix+'Metric').value,asValue=metric==='value';
+    const values=cuts.map(c=>sum(grouped(c,warehouse,asValue?null:metric),asValue?'value':'physical'));
+    $('overview'+prefix+'HistoryHead').textContent=asValue?'Valor · $':'Cantidad · '+metric;
+    $('overview'+prefix+'HistoryRows').innerHTML=cuts.map((c,i)=>'<tr><td>'+esc(c.cutoff.slice(0,7))+
+      '</td><td>'+esc(c.cutoff)+'</td><td>'+(monthEnd(c.cutoff)?'Último día del mes':'Último corte disponible')+
+      '</td><td class="num">'+(asValue?money(values[i]):num(values[i])+' '+esc(metric))+'</td></tr>').join('');
+    draw('overview'+prefix+'HistoryChart',{type:'bar',data:{labels,datasets:[{
+      label:asValue?'Valor de inventario · $':'Existencia física · '+metric,data:values,
+      backgroundColor:c=>gradient(c,colors[0],colors[1]),borderRadius:7,maxBarThickness:68
+    }]},options:{...chartOptions(asValue),plugins:{...chartOptions(asValue).plugins,legend:{display:false}}}});
+  }
   $('overviewHistoryNote').textContent='* último corte disponible del mes; no equivale a cierre. '+
     'El valor corresponde a la fecha exacta indicada en la tabla.';
-  $('overviewHistoryRows').innerHTML=cuts.map(c=>'<tr><td>'+esc(c.cutoff.slice(0,7))+
-    '</td><td>'+esc(c.cutoff)+'</td><td>'+(monthEnd(c.cutoff)?'Último día del mes':'Último corte disponible')+
-    '</td><td class="num">'+money(sum(grouped(c,'MT001'),'value'))+
-    '</td><td class="num">'+money(sum(grouped(c,'MT002'),'value'))+'</td></tr>').join('');
   $('overviewAgeRows').innerHTML=cuts.map(c=>{
     const age=ageGroups(c),group=warehouse=>age?.filter(r=>selected(r)&&r.warehouse===warehouse)||[];
     const f=group('MT001'),s=group('MT002');
@@ -163,14 +168,17 @@ async function loadHistory(){
     state.index=index;renderHistory();
   }catch(error){
     if(token!==state.request)return;
-    state.index=null;$('overviewHistoryRows').replaceChildren();$('overviewAgeRows').replaceChildren();
-    if(state.historyChart){state.historyChart.destroy();state.historyChart=null}
+    state.index=null;$('overviewFabricHistoryRows').replaceChildren();$('overviewSupplyHistoryRows').replaceChildren();$('overviewAgeRows').replaceChildren();
+    for(const id of ['overviewFabricHistoryChart','overviewSupplyHistoryChart']){
+      if(state.charts[id]){state.charts[id].destroy();delete state.charts[id]}
+    }
     $('overviewHistoryStatus').textContent='Histórico no disponible: '+(error.message||String(error));
     $('overviewHistoryStatus').className='banner warn';
   }
 }
 function render(data){state.data=data;renderCurrentAge();renderFlow();renderHistory()}
-$('overviewHistoryMetric').addEventListener('change',renderHistory);
+$('overviewFabricMetric').addEventListener('change',renderHistory);
+$('overviewSupplyMetric').addEventListener('change',renderHistory);
 $('agedFabricCard').addEventListener('click',()=>openAge('MT001'));
 $('agedSupplyCard').addEventListener('click',()=>openAge('MT002'));
 $('overviewAgeDetailClose').addEventListener('click',()=>$('overviewAgeDetail').close());

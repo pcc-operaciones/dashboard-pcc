@@ -55,8 +55,17 @@ main{padding:0 20px 28px}
 .overview-age:hover{background:#fff8f8;border-color:#e8b1b1}
 .overview-age:disabled{cursor:default;opacity:.65}
 .overview-panel{margin-bottom:14px}
+.overview-duo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.overview-duo .overview-panel{min-width:0;position:relative;overflow:hidden;background:linear-gradient(165deg,#fff 62%,#F8FBFD);box-shadow:0 6px 20px #1b3a5c0a}
+.overview-duo .overview-panel:before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#0D6B5E,#4BB5A2);opacity:.85}
+.overview-duo .overview-supply:before{background:linear-gradient(90deg,#1B3A5C,#799EC3)}
+.overview-section-title{margin:4px 0 10px;padding-left:2px}
+.overview-section-title h2{color:var(--navy);font-size:12px;letter-spacing:.45px;text-transform:uppercase;margin:0 0 3px}
+.overview-section-title p{color:var(--muted);font-size:10px;line-height:1.4;margin:0}
+.overview-history-status{margin:0 0 12px}
 .overview-panel h3{color:var(--navy);font-size:12px;margin:18px 0 5px}
-.overview-panel .chart-wrap{height:310px}
+.overview-panel .chart-wrap{height:270px}
+.overview-duo .chart-wrap{margin-top:8px}
 .overview-panel .scroll{max-height:300px;margin-top:12px}
 .overview-panel .banner{margin:0 0 12px}
 .overview-panel .cc-hdr{display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap}
@@ -187,6 +196,6 @@ tr:hover td{background:#FAFBFF}
 #histMessage{margin:0 0 12px}
 .empty{text-align:center;color:var(--muted);padding:22px}
 @media(max-width:1100px){.hero-grid{grid-template-columns:repeat(2,1fr)}.metric-grid,.metric-grid.summary-metrics,.metric-grid.rotation-metrics,body[data-area="general"] .summary-metrics,body[data-area="telas"] .summary-metrics,body[data-area="insumos"] .summary-metrics,.age-buckets,#consumptionAgeBuckets,#stockAgeBuckets{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:850px){.chart-grid,.table-grid{grid-template-columns:1fr}.pending-grid{grid-template-columns:repeat(2,1fr)}.coverage-summary{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:850px){.chart-grid,.table-grid,.overview-duo{grid-template-columns:1fr}.pending-grid{grid-template-columns:repeat(2,1fr)}.coverage-summary{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.topbar{padding:0 12px}.tb-sub,.date-lbl{display:none}.area-nav,.nav{padding:0 8px}.area-btn,.nav-btn{padding:11px 12px}.filter-bar{padding:9px 12px;position:static}.filter-bar label{flex:1 1 42%}.filter-bar select{width:100%;min-width:0}.movement-controls label{flex:1 1 42%}.movement-controls input{width:100%;min-width:0}main{padding:0 12px 20px}.banner{margin:10px 12px 0}.hero-grid{gap:7px}.hero-card{display:block;padding:10px}.hero-icon{display:none}.hero-card strong{font-size:17px}.metric-grid,body[data-area="general"] .summary-metrics,body[data-area="telas"] .summary-metrics,body[data-area="insumos"] .summary-metrics{grid-template-columns:repeat(2,1fr)}.metric-card strong{font-size:17px}.pending-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
