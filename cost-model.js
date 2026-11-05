@@ -62,8 +62,8 @@ function variations(rows,anchor,allowedIds){
   const recent=g.rows.filter(r=>window.recent.includes(r.fecha)),historical=g.rows.filter(r=>window.historical.includes(r.fecha));
   if(!recent.length||!historical.length)return [];
   const before=mean(historical,'ct'),after=mean(recent,'ct'),change=after-before,delta=change/Math.abs(before);
-  return Math.abs(delta)>1e-12?[{...g,before,after,change,delta,recentCount:recent.length,historicalCount:historical.length,recentRows:recent,historicalRows:historical}]:[];
- }).sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta)||a.id.localeCompare(b.id));
+  return delta>1e-12?[{...g,before,after,change,delta,recentCount:recent.length,historicalCount:historical.length,recentRows:recent,historicalRows:historical}]:[];
+ }).sort((a,b)=>b.delta-a.delta||a.id.localeCompare(b.id));
  return {anchor,...window,rows:entries.slice(0,5),comparable:entries.length};
 }
 const api={summary,period,inPeriod,classify,references,rankings,variations,windows,monthLabel,number,percent};

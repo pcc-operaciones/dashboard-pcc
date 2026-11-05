@@ -47,9 +47,16 @@ test('Costos: ventanas mensuales cruzan años sin el desborde de los días 29–
  const w=C.windows('2026-01');assert.deepEqual(w.recent,['2025-12','2026-01']);assert.deepEqual(w.historical,['2025-06','2025-07','2025-08','2025-09','2025-10','2025-11']);
  assert.deepEqual(C.windows('2026-03').recent,['2026-02','2026-03']);
 });
-test('Costos: variación compara costo total unitario medio por lote, excluye ajustes y ordena ambos signos',()=>{
+test('Costos: aumentos comparan costo total unitario medio por lote y excluyen ajustes, bajadas y costos iguales',()=>{
  const rows=[row('a','2026-05',100),row('a','2026-09',100),row('a','2026-10',120),row('a','2026-11',140,{cant:1000}),row('a','2026-11',10000,{tela:0,promTela:0}),row('a','2026-11',5000,{cant:0}),row('b','2026-05',100),row('b','2026-10',50),row('incompleta','2026-10',500),row('igual','2026-05',100),row('igual','2026-10',100)];
- const v=C.variations(rows,'2026-11');assert.equal(v.rows.length,2);assert.equal(v.rows[0].ref,'b');assert.equal(v.rows[0].delta,-.5);
- const a=v.rows[1];assert.equal(a.before,100);assert.equal(a.after,130);assert.equal(a.change,30);assert.equal(a.delta,.3);assert.equal(a.recentCount,2);assert.equal(a.historicalCount,2);
+ const v=C.variations(rows,'2026-11');assert.equal(v.rows.length,1);assert.equal(v.rows[0].ref,'a');assert.equal(v.comparable,1);
+ const a=v.rows[0];assert.equal(a.before,100);assert.equal(a.after,130);assert.equal(a.change,30);assert.equal(a.delta,.3);assert.equal(a.recentCount,2);assert.equal(a.historicalCount,2);
  assert.equal(C.variations(rows,'2026-11',new Set([a.id])).rows.length,1);
+});
+
+test('Costos: top 5 muestra solo aumentos porcentuales descendentes, aunque haya bajadas mayores',()=>{
+ const rows=[...Array.from({length:7},(_,i)=>[row('r'+i,'2026-05',100),row('r'+i,'2026-10',110+i*10)]).flat(),row('baja','2026-05',100),row('baja','2026-10',1)];
+ const v=C.variations(rows,'2026-11');assert.equal(v.comparable,7);assert.deepEqual(v.rows.map(r=>r.ref),['r6','r5','r4','r3','r2']);
+ assert.ok(v.rows.every(r=>r.delta>0&&r.change>0));
+ assert.deepEqual(C.variations(rows.filter(r=>r.ref==='baja'),'2026-11').rows,[]);
 });

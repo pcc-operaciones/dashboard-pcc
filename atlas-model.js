@@ -80,11 +80,14 @@ function build(input,filterValue={},deps={},costSelection){
  const inv={status:state(input.inv),ready:invReady,rows:inventory,principalRows:principal,units:invReady?inventory.reduce((s,r)=>s+units(r),0):null,principal:invReady?principal.reduce((s,r)=>s+units(r),0):null,age:['u0','u1','u2','u3'].map(k=>invReady?sum(principal,k):null),knownValue:invReady?known:null,missingCostUnits:invReady?missing:null,cutoff:input.inv?.cutoff||'',movements:movementSeries(moves,from,to,'received','shipped','fecha'),records:input.inv?.records||[]};
  inv.agedShare=inv.principal>0?inv.age[3]/inv.principal:null;
  const logReady=ready(input.log),logSupported=!filters.line.length&&!filters.category.length;
- const logRows=logReady?(input.log.stock||[]).filter(r=>!filters.company.length||filters.company.includes(r.company)):[];
- const logAge=logReady?(input.log.age||[]).filter(r=>!filters.company.length||filters.company.includes(r.company)):[];
- const logMoves=logReady?(input.log.moves||[]).filter(r=>!filters.company.length||filters.company.includes(r.company)):[];
+ // Los materiales solo tienen desglose por empresa. Una línea/categoría delimita
+ // su empresa matriz, pero no convierte el total empresarial en un subtotal de línea.
+ const logCompanies=[...new Set(hierarchy.filter(h=>(!filters.company.length||filters.company.includes(h.company))&&(!filters.line.length||filters.line.includes(h.line))&&(!filters.category.length||h.cats.some(c=>filters.category.includes(c)))).map(h=>h.company))];
+ const logRows=logReady?(input.log.stock||[]).filter(r=>logCompanies.includes(r.company)):[];
+ const logAge=logReady?(input.log.age||[]).filter(r=>logCompanies.includes(r.company)):[];
+ const logMoves=logReady?(input.log.moves||[]).filter(r=>logCompanies.includes(r.company)):[];
  const meta=input.log?.meta||{},ageReady=logReady&&input.log.ageReady;
- const log={status:state(input.log),supported:logSupported,ready:logReady&&logSupported,ageReady:ageReady&&logSupported,meta,rows:logRows,ageRows:logAge,ageMessage:input.log?.ageMessage||'',error:input.log?.error||'',total:logReady&&logSupported?sum(logRows,'costTotal'):null,aged:ageReady&&logSupported?sum(logAge,'riskValue'):null,unknown:ageReady&&logSupported?logAge.reduce((s,r)=>s+(r.values?.[4]||0),0):null,warehouses:['MT001','MT002'].map(warehouse=>({warehouse,name:warehouse==='MT001'?'Telas':'Insumos',value:logReady&&logSupported?sum(logRows.filter(r=>r.warehouse===warehouse),'costTotal'):null})),byCompany:['EU','TEX'].map(co=>({company:co,value:sum(logRows.filter(r=>r.company===co),'costTotal')})),movements:movementSeries(logMoves,meta.movimientos_desde||'',meta.movimientos_hasta||'','inCost','outCost','date')};
+ const log={status:state(input.log),supported:logSupported,companies:logCompanies,ready:logReady,ageReady,meta,rows:logRows,ageRows:logAge,ageMessage:input.log?.ageMessage||'',error:input.log?.error||'',total:logReady?sum(logRows,'costTotal'):null,aged:ageReady?sum(logAge,'riskValue'):null,unknown:ageReady?logAge.reduce((s,r)=>s+(r.values?.[4]||0),0):null,warehouses:['MT001','MT002'].map(warehouse=>({warehouse,name:warehouse==='MT001'?'Telas':'Insumos',value:logReady?sum(logRows.filter(r=>r.warehouse===warehouse),'costTotal'):null})),byCompany:['EU','TEX'].filter(co=>logCompanies.includes(co)).map(co=>({company:co,value:sum(logRows.filter(r=>r.company===co),'costTotal')})),movements:movementSeries(logMoves,meta.movimientos_desde||'',meta.movimientos_hasta||'','inCost','outCost','date')};
  return {key,year,months,keys,label:key?input.config.mes+' '+year:'Período no configurado',filters,scoped,ops,cos,inv,log};
 }
 const api={build,cleanFilters,matches,taxonomy,hierarchy,monthsBetween,monthNames};root.PccAtlasModel=api;if(typeof module!=='undefined')module.exports=api;
