@@ -8,8 +8,18 @@
     const records=[...PccFresh.records.values()];
     return {config:window._pccConfig,ops:{status:window._executiveOpsStatus||'loading',mods:allM(),records:records.filter(r=>r.group==='ops')},wip:{status:window._executiveWipStatus||'loading',all:window._WIP_ALL||[]},cos:{status:window._executiveCostStatus||'loading',rows:COSTOS_DATA,records:records.filter(r=>r.group==='cos')},inv:inventory,log:logistics};
   };
-  window.PccExecutiveOpen=function(area){
+  window.PccExecutiveOpen=function(area,costContext){
     if(area==='cos'){
+      if(costContext){
+        _msAniosSel=[...costContext.years];_msPeriodosSel=[...costContext.periods];_msLineasSel=[...costContext.lineas];_msCatsSel=[...costContext.subcats];
+        _poblarMesesDisponibles();
+        for(const [id,values]of [['msAnio',_msAniosSel],['msPerItems',_msPeriodosSel],['msLinea',_msLineasSel],['msCat',_msCatsSel]])document.querySelectorAll('#'+id+' input').forEach(i=>i.checked=values.includes(i.value));
+        g('lblAnio').textContent=_msAniosSel.length?_msAniosSel.join(', '):'Todos';
+        g('lblPer').textContent=_msPeriodosSel.length===1?PccCostModel.monthLabel(_msPeriodosSel[0]):_msPeriodosSel.length?_msPeriodosSel.length+' meses':'Todos los meses';
+        g('lblLinea').textContent=_msLineasSel.length?_msLineasSel.join(', '):'Todas';g('lblCat').textContent=_msCatsSel.length?_msCatsSel.join(', '):'Todas';
+        if(g('chCostRef'))g('chCostRef').value='';
+        showCostosTab('resumen',g('cTab-resumen'));aplicarFiltrosCostos();
+      }else{
       const key=PccExecutiveModel.period(window._pccConfig);
       if(key){
         _msAniosSel=[key.slice(0,4)];_msPeriodosSel=[key];_msLineasSel=[];_msCatsSel=[];
@@ -21,6 +31,7 @@
         g('lblLinea').textContent='Todas';g('lblCat').textContent='Todas';
         if(g('chCostRef'))g('chCostRef').value='';
         showCostosTab('resumen',g('cTab-resumen'));aplicarFiltrosCostos();
+      }
       }
     }
     if(area==='inv'){try{g('iframe-inventario').contentWindow.glClear();}catch{}}

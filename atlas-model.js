@@ -1,5 +1,6 @@
 (function(root){
 'use strict';
+const C=root.PccCostModel||(typeof require==='function'?require('./cost-model.js'):null);
 const finite=n=>typeof n==='number'&&Number.isFinite(n);
 const norm=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();
 const company=s=>norm(s).includes('TEX')?'TEX':norm(s)==='EU'?'EU':'';
@@ -49,16 +50,18 @@ function monthsBetween(from,to){
 function movementSeries(rows,from,to,entryKey,exitKey,dateKey){
  const keys=monthsBetween(from,to);return {keys,labels:keys.map(key=>monthNames[+key.slice(5)-1]+(key.slice(0,4)!==to.slice(0,4)?' '+key.slice(0,4):'')+((key===from.slice(0,7)&&from.slice(8)!=='01')||(key===to.slice(0,7)&&+to.slice(8)!==new Date(Date.UTC(+to.slice(0,4),+to.slice(5,7),0)).getUTCDate())?'*':'')),received:keys.map(k=>sum(rows.filter(r=>String(r[dateKey]).slice(0,7)===k),entryKey)),shipped:keys.map(k=>sum(rows.filter(r=>String(r[dateKey]).slice(0,7)===k),exitKey)),from,to};
 }
-function build(input,filterValue={},deps={}){
+function build(input,filterValue={},deps={},costSelection){
  const filters=cleanFilters(filterValue),key=deps.period?.(input.config)||null,year=key?.slice(0,4),monthCount=key?+key.slice(5):0,months=monthNames.slice(0,monthCount),keys=months.map((_,i)=>year+'-'+String(i+1).padStart(2,'0'));
  const scoped=filters.company.length===1||!!(filters.line.length||filters.category.length),match=r=>matches(r,filters);
  const ready=s=>s?.status==='ready',state=s=>s?.status||'loading';
  const rawCosts=ready(input.cos)?input.cos.rows||[]:[];
  const identities=new Map();
- const costs=rawCosts.map(r=>{const tax=taxonomy(company(r.empresa),r.subcat||r.linea),identity=JSON.stringify([tax.company,r.fecha,r.ref,r.lote??null]),occurrence=identities.get(identity)||0;identities.set(identity,occurrence+1);return {...r,...tax,id:'cost-'+encodeURIComponent(identity)+'-'+occurrence,sourceCategory:r.subcat||''};}).filter(match);
- const selected=key?costs.filter(r=>r.fecha===key):[],validRent=selected.filter(r=>finite(r.rent));
- const costReady=ready(input.cos)&&!!key;
- const cos={status:state(input.cos),ready:costReady,count:costReady?selected.length:null,rent:costReady?mean(selected,'rent'):null,ccu:costReady?mean(selected,'ccu'):null,margin:costReady?mean(selected,'margen'):null,negative:costReady&&validRent.length?validRent.filter(r=>r.rent<0):[],negativeCount:costReady&&validRent.length?validRent.filter(r=>r.rent<0).length:null,rows:selected,monthly:keys.map(k=>{const rs=costs.filter(r=>r.fecha===k);return {rent:mean(rs,'rent'),ccu:mean(rs,'ccu'),margin:mean(rs,'margen')};}),records:input.cos?.records||[]};
+ const costs=rawCosts.map(r=>{const tax=C.classify(r),identity=JSON.stringify([tax.company,r.fecha,r.ref,r.lote??null]),occurrence=identities.get(identity)||0;identities.set(identity,occurrence+1);return {...r,...tax,id:'cost-'+encodeURIComponent(identity)+'-'+occurrence,sourceCategory:r.subcat||''};}).filter(match);
+ const costPeriod=C.period(rawCosts,costSelection,deps.now?.()||new Date()),selected=costs.filter(r=>C.inPeriod(r,costPeriod)),validRent=selected.filter(r=>finite(r.rent));
+ const costReady=ready(input.cos),costSummary=C.summary(selected),refs=C.references(selected);
+ const lineMap={EU:'EU',TEXSION:'TEX',YETRO:'YETRO','TWO&TWO':'TWOTWO'};
+ const nativeLines=filters.line.length?filters.line.map(line=>lineMap[line]):filters.company.length===1?filters.company[0]==='EU'?['EU','YETRO','TWOTWO']:['TEX']:[];
+ const cos={status:state(input.cos),ready:costReady,period:costPeriod,count:costReady?costSummary.count:null,rent:costReady?costSummary.rent:null,ccu:costReady?costSummary.ccu:null,margin:costReady?costSummary.margin:null,profit:costReady?costSummary.profit:null,units:costReady?costSummary.units:null,negative:costReady&&validRent.length?validRent.filter(r=>r.rent<0):[],negativeCount:costReady&&validRent.length?validRent.filter(r=>r.rent<0).length:null,rows:selected,references:refs,rankings:C.rankings(refs),variation:C.variations(costs,costPeriod.anchor,new Set(refs.map(r=>r.id))),nativeFilters:{years:costPeriod.years,periods:costPeriod.periods,lineas:nativeLines,subcats:filters.category.length?[...new Set(costs.map(r=>r.sourceCategory))]:[]},monthly:costPeriod.keys.map(k=>{const rs=selected.filter(r=>r.fecha===k);return {rent:mean(rs,'rent'),ccu:mean(rs,'ccu'),margin:mean(rs,'margen')};}),records:input.cos?.records||[]};
  const wipReady=ready(input.wip),wipUnsupported=filters.category.some(x=>hierarchy[0].cats.includes(x));
  const allLots=wipReady?(input.wip.all||[]).map(r=>({...r,...taxonomy(r.empresa,r.empresa==='TEX'?r.mundo:r.clasificacion)})).filter(match):[];
  const lots=allLots.filter(r=>r.estado&&!['ENTREGADO','CANCELADO'].includes(r.estado)&&r.cant>0);

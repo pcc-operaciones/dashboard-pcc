@@ -16,7 +16,8 @@
 <script src="data-quality.js"></script>
 <link rel="stylesheet" href="data-quality.css">
 <script src="executive-model.js?v=2.4"></script>
-<script src="atlas-model.js?v=1.1"></script>
+<script src="cost-model.js?v=1.0"></script>
+<script src="atlas-model.js?v=1.2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;}
@@ -278,7 +279,7 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
     @page { margin:1.2cm; size:A4 landscape; }
   }</style>
 <link rel="stylesheet" href="executive.css?v=2.1">
-<link rel="stylesheet" href="atlas.css?v=1.4">
+<link rel="stylesheet" href="atlas.css?v=1.5">
 </head>
 <body data-gerencia="gg">
 <div class="wrap">
@@ -2181,7 +2182,7 @@ let modFilt='todos', estFilt='todos';
 // ═══════════════════════════════════════════════════
 async function fetchSheet(sid, sheet, range, meta={}) {
   const key = window._apiKey || API_KEY_DEFAULT;
-  const url = `${BASE}/${sid}/values/${encodeURIComponent(sheet+'!'+range)}?key=${key}&_=${Date.now()}`;
+  const url = `${BASE}/${sid}/values/${encodeURIComponent(sheet+'!'+range)}?key=${key}&_=${Date.now()}${sheet==='Costos Unificados'?'&valueRenderOption=UNFORMATTED_VALUE':''}`;
   return PccData.load(sheet + ' · ' + sid.slice(-6), async () => {
     const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(20000) });
     if (!r.ok) { const e=await r.json(); throw new Error(e.error?.message||r.status); }
@@ -6172,7 +6173,7 @@ async function loadCostos() {
   if(window._executiveCostStatus==='loading')return;
   window._executiveCostStatus='loading';window.PccExecutive?.refresh();
   try {
-    const rows = await fetchSheet(COSTOS_ID, 'Costos Unificados', 'A1:DZ10000');
+    const rows = await fetchSheet(COSTOS_ID, 'Costos Unificados', 'A:DZ');
     if (!rows || rows.length < 2) { window._executiveCostStatus='empty';console.warn('Costos: sin datos'); return; }
 
     // Normalizar header: quitar tildes, mayúsculas, espacios extra
@@ -6307,13 +6308,13 @@ async function loadCostos() {
       if (e === 'EU') {
         // Subclasificar EU por LINEA_NEGOCIO
         if (v.includes('YETRO')) return 'YETRO';
-        if (v.includes('TWO') || v.includes('TWOTWO')) return 'TWOTWO';
+        if (v.includes('TWO') || v === 'TYT') return 'TWOTWO';
         return 'EU';
       }
       if (e.includes('TEX') || e.includes('TEXSION')) return 'TEX';
       // Fallback por LINEA_NEGOCIO
       if (v.includes('YETRO')) return 'YETRO';
-      if (v.includes('TWO') || v.includes('TWOTWO')) return 'TWOTWO';
+      if (v.includes('TWO') || v === 'TYT') return 'TWOTWO';
       if (v.includes('EU') || v.includes('ESPIRITU') || v.includes('URBANO') || v.includes('MODA')) return 'EU';
       if (v.includes('TEX') || v.includes('LAXO') || v.includes('DISNEY') || v.includes('EVA') || v.includes('DOT')) return 'TEX';
       return 'EU';
@@ -6326,16 +6327,16 @@ async function loadCostos() {
         iAnio    >= 0 ? r[iAnio]    : null,
         iMes     >= 0 ? r[iMes]     : null
       );
-      const rent   = iUtil  >= 0 ? pP(r[iUtil])  : null;
-      const ccu    = iCCU   >= 0 ? pP(r[iCCU])   : null;
-      const pv     = iPV         >= 0 ? pN(r[iPV])         : null;
-      const vtaAlm = iVtaAlmacen >= 0 ? pN(r[iVtaAlmacen]) : null;
-      const ct     = iCT    >= 0 ? pN(r[iCT])    : null;
-      const cant   = iCant  >= 0 ? pN(r[iCant])  : null;
-      const undM   = iUndM  >= 0 ? pN(r[iUndM])  : null;
-      // UTILIDAD EU = margen por unidad (viene como número nativo — usar parseFloat, no pN)
-      const utilEUraw = iUtilEU >= 0 && r[iUtilEU] != null ? parseFloat(r[iUtilEU]) : null;
-      const utilD     = iUtilD  >= 0 ? pN(r[iUtilD]) : null;
+      const rent   = iUtil  >= 0 ? PccCostModel.percent(r[iUtil])  : null;
+      const ccu    = iCCU   >= 0 ? PccCostModel.percent(r[iCCU])   : null;
+      const pv     = iPV         >= 0 ? PccCostModel.number(r[iPV])         : null;
+      const vtaAlm = iVtaAlmacen >= 0 ? PccCostModel.number(r[iVtaAlmacen]) : null;
+      const ct     = iCT    >= 0 ? PccCostModel.number(r[iCT])    : null;
+      const cant   = iCant  >= 0 ? PccCostModel.number(r[iCant])  : null;
+      const undM   = iUndM  >= 0 ? PccCostModel.number(r[iUndM])  : null;
+      // UTILIDAD EU = margen por unidad; conservar decimales nativos y exportados.
+      const utilEUraw = iUtilEU >= 0 && r[iUtilEU] != null ? PccCostModel.number(r[iUtilEU]) : null;
+      const utilD     = iUtilD  >= 0 ? PccCostModel.number(r[iUtilD]) : null;
       const margen    = utilEUraw !== null && !isNaN(utilEUraw) ? utilEUraw
         : utilD !== null ? utilD
         : (pv !== null && ct !== null && pv > 0) ? pv - ct : null;
@@ -6347,28 +6348,27 @@ async function loadCostos() {
         desc:   iDesc  >= 0 ? String(r[iDesc] ||'').trim() : '',
         fecha,
         sourceCostedAt:r[iSourceCosted],
-        linea:  normEmpresa(empresa, lineaN),
+        linea:  PccCostModel.classify({empresa,linea:normEmpresa(empresa,lineaN),subcat:lineaN}).nativeLine,
         empresa,
         subcat: iSubcat >= 0 ? String(r[iSubcat]||'').trim() : '',
         cant: cant||0, undM: cant||undM||0, pv, vtaAlm, ct, rent, ccu, margen,
-        utilPesos: iUtilEU >= 0 && r[iUtilEU] != null && (cant||0) > 0
-          ? (parseFloat(r[iUtilEU]) || 0) * (cant||0) : null,
+        utilPesos: Number.isFinite(utilEUraw) && (cant||0) > 0 ? utilEUraw*cant : null,
         resp:    iResp    >= 0 ? normResp(String(r[iResp]||'').trim()) : '',
-        metaCCU: iMetaCCU >= 0 ? pP(r[iMetaCCU]) : null,
-        metaEU:  iMetaEU  >= 0 ? pP(r[iMetaEU])  : null,
-        sam:     iSam     >= 0 ? pN(r[iSam]) : null,
+        metaCCU: iMetaCCU >= 0 ? PccCostModel.percent(r[iMetaCCU]) : null,
+        metaEU:  iMetaEU  >= 0 ? PccCostModel.percent(r[iMetaEU])  : null,
+        sam:     iSam     >= 0 ? PccCostModel.number(r[iSam]) : null,
         // Costos detallados por lote
-        lote:     iLote    >= 0 ? pN(r[iLote])     : null,
+        lote:     iLote    >= 0 ? PccCostModel.number(r[iLote])     : null,
         // PROMEDIO TELA: metros/unidad → rango válido 0.01–10
         // Fallback 1: TELA ($/und) / PRECIO MT. TELA ($/mt) = mt/und  (100% exacto según datos)
         // Fallback 2: queda null
         promTela: (() => {
-          const v = iPromTela >= 0 ? pN(r[iPromTela]) : null;
+          const v = iPromTela >= 0 ? PccCostModel.number(r[iPromTela]) : null;
           if (v !== null && v > 0 && v <= 10) return v;
           // fallback: TELA / PRECIO MT. TELA
           if (iPrecioMT >= 0 && iTela >= 0) {
-            const tela     = pN(r[iTela]);
-            const precioMT = pN(r[iPrecioMT]);
+            const tela     = PccCostModel.number(r[iTela]);
+            const precioMT = PccCostModel.number(r[iPrecioMT]);
             if (tela !== null && precioMT > 0) {
               const calc = tela / precioMT;
               if (calc > 0 && calc <= 10) return +calc.toFixed(6);
@@ -6379,12 +6379,12 @@ async function loadCostos() {
         // TELA: $/unidad → rango válido $100–$100.000
         // Si viene fuera de rango, intentar TOTAL TELA / CANTIDAD
         tela: (() => {
-          const v = iTela >= 0 ? pN(r[iTela]) : null;
+          const v = iTela >= 0 ? PccCostModel.number(r[iTela]) : null;
           if (v !== null && v >= 100 && v <= 100000) return v;
           // fallback: TOTAL TELA / CANTIDAD
           if (iTotalTela >= 0 && iCant >= 0) {
-            const total = pN(r[iTotalTela]);
-            const cant  = pN(r[iCant]);
+            const total = PccCostModel.number(r[iTotalTela]);
+            const cant  = PccCostModel.number(r[iCant]);
             if (total !== null && cant > 0) {
               const calc = total / cant;
               if (calc >= 100 && calc <= 100000) return calc;
@@ -6392,11 +6392,11 @@ async function loadCostos() {
           }
           return null;
         })(),
-        conf:     iConf    >= 0 ? pN(r[iConf])     : null, // confección / unidad
-        corte:    iCorte   >= 0 ? pN(r[iCorte])    : null, // corte / unidad
-        lav:      iLav     >= 0 ? pN(r[iLav])      : null, // lavandería / unidad
-        pres:     iPres    >= 0 ? pN(r[iPres])      : null, // presentación / unidad
-        insumos:  iInsumos >= 0 ? pN(r[iInsumos])  : null, // total insumos del lote
+        conf:     iConf    >= 0 ? PccCostModel.number(r[iConf])     : null, // confección / unidad
+        corte:    iCorte   >= 0 ? PccCostModel.number(r[iCorte])    : null, // corte / unidad
+        lav:      iLav     >= 0 ? PccCostModel.number(r[iLav])      : null, // lavandería / unidad
+        pres:     iPres    >= 0 ? PccCostModel.number(r[iPres])      : null, // presentación / unidad
+        insumos:  iInsumos >= 0 ? PccCostModel.number(r[iInsumos])  : null, // total insumos del lote
       };
     }).filter(r => r.fecha);
 
@@ -6789,7 +6789,6 @@ function renderCostosGrafico() {
 function renderCostosResumen() {
   if (!COSTOS_DATA.length) return;
   const datos = _filtrarCostos();
-  if (!datos.length) return;
 
   // ── KPIs ──
   const withRent  = datos.filter(r => r.rent !== null);
@@ -6798,11 +6797,8 @@ function renderCostosResumen() {
   const withUtil  = datos.filter(r => r.utilPesos !== null);
   const withUnds  = datos
 
-  const avgRent   = withRent.length  ? withRent.reduce((a,r)  => a + r.rent, 0)   / withRent.length  : null;
-  const avgCCU    = withCCU.length   ? withCCU.reduce((a,r)   => a + r.ccu,  0)   / withCCU.length   : null;
-  const avgMargen = withMrg.length   ? withMrg.reduce((a,r)   => a + r.margen,0)  / withMrg.length   : null;
-  const totUnds   = withUnds.reduce((a,r) => a + (r.undM || 0), 0);
-  const sumUtil   = withUtil.reduce((a,r) => a + r.utilPesos, 0);
+  const costSummary=PccCostModel.summary(datos);
+  const avgRent=costSummary.rent,avgCCU=costSummary.ccu,avgMargen=costSummary.margin,totUnds=costSummary.units,sumUtil=costSummary.profit;
 
   const fPct = v => v !== null ? (v * 100).toFixed(1) + '%' : '—';
   const fCOP = v => v !== null ? '$' + Math.round(v).toLocaleString('es-CO') : '—';
@@ -6865,31 +6861,11 @@ function renderCostosResumen() {
   // ── Top N / Bottom N ──
   const metrica = _topMetric === 'ccu' ? 'ccu' : _topMetric === 'utilPesos' ? 'utilPesos' : 'rent';
 
-  // Agrupar por referencia
-  const refMap = {};
-  datos.forEach(r => {
-    const key = r.ref || r.desc || '—';
-    if (!refMap[key]) refMap[key] = { ref:r.ref, desc:r.desc, linea:r.linea, subcat:r.subcat, cant:0, utilPesos:0, rents:[], ccus:[], margens:[] };
-    const m = refMap[key];
-    m.cant      += r.cant || 0;
-    m.utilPesos += r.utilPesos || 0;
-    if (r.rent   !== null) m.rents.push(r.rent);
-    if (r.ccu    !== null) m.ccus.push(r.ccu);
-    if (r.margen !== null) m.margens.push(r.margen);
-  });
-  const avgArr = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
-  const refsAgrupadas = Object.values(refMap).map(m => ({
-    ref: m.ref, desc: m.desc, linea: m.linea, subcat: m.subcat,
-    cant: m.cant, utilPesos: m.utilPesos || null,
-    rent: avgArr(m.rents), ccu: avgArr(m.ccus), margen: avgArr(m.margens),
-  })).filter(r => {
-    if (metrica === 'utilPesos') return r.utilPesos !== null && r.utilPesos !== undefined;
-    return r[metrica] !== null;
-  });
+  const refsAgrupadas=PccCostModel.references(datos).filter(r=>metrica==='utilPesos'?r.utilPesos!==null:r[metrica]!==null);
 
   const N    = Math.max(1, Math.min(50, parseInt(_topN) || 5));
-  const topN = [...refsAgrupadas].sort((a,b) => (b[metrica]||0) - (a[metrica]||0)).slice(0, N);
-  const botN = [...refsAgrupadas].sort((a,b) => (a[metrica]||0) - (b[metrica]||0)).slice(0, N);
+  const topN = [...refsAgrupadas].sort((a,b) => (b[metrica]||0) - (a[metrica]||0) || a.id.localeCompare(b.id)).slice(0, N);
+  const botN = [...refsAgrupadas].sort((a,b) => (a[metrica]||0) - (b[metrica]||0) || a.id.localeCompare(b.id)).slice(0, N);
 
   const filaTb = (r, colorCls) => {
     const rentPct = r.rent !== null ? (r.rent*100).toFixed(1)+'%' : '—';
@@ -10009,8 +9985,8 @@ function exportTablaPDF(tableId, titulo) {
 
 <div id="page-logistica" style="display:none;position:fixed;inset:0;top:86px;z-index:10;"><iframe id="iframe-logistica" src="logistica.html?v=2.2" style="width:100%;height:100%;border:none;display:block;" title="Logística"></iframe></div>
 
-<script src="executive-adapter.js?v=2.2"></script>
+<script src="executive-adapter.js?v=2.3"></script>
 <script src="executive.js?v=2.3"></script>
-<script src="atlas.js?v=1.2"></script>
+<script src="atlas.js?v=1.3"></script>
 </body>
 </html>

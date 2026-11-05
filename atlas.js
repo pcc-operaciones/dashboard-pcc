@@ -11,15 +11,15 @@ for(const child of [...page.children]){
  else management.append(child);
 }
 page.replaceChildren(root,management,legacy);
-root.innerHTML='<div class="ax-app"><main class="ax-main"><div class="ax-heading"><div><span class="ax-eyebrow">DIRECCIÓN DE LA EMPRESA · PCC</span><h1 tabindex="-1">Gerencia General</h1><p class="ax-heading-note">Resultados clave y evolución de la empresa</p></div><button type="button" class="ax-source" data-sources>Fechas y fuentes ↗</button></div><div class="ax-global-filters" aria-label="Filtros de Gerencia General" data-filters></div><p class="ax-filter-scope" data-scope aria-live="polite"></p><div class="ax-area-grid" data-areas></div><footer class="ax-footer"><span>Clic en un KPI o gráfico para ampliar · Escape para volver</span><span data-period></span></footer></main></div><dialog class="ax-dialog" aria-labelledby="atlas-dialog-title"><div class="ax-modal-head"><div><span class="ax-modal-eyebrow" data-modal-area></span><h2 id="atlas-dialog-title"></h2></div><button type="button" class="ax-close" data-close aria-label="Cerrar vista ampliada">×</button></div><p class="ax-modal-scope" data-modal-scope></p><div class="ax-modal-kpis" data-modal-kpis></div><div class="ax-modal-controls"><label>Vista<select data-view aria-label="Vista ampliada"></select></label><label data-order-label>Orden<select data-order aria-label="Orden de los estados"><option value="flow">Orden del flujo</option><option value="volume">Mayor volumen</option></select></label><label data-material-label>Materiales<select data-material aria-label="Materiales"><option value="all">Telas + insumos</option><option value="MT001">Telas</option><option value="MT002">Insumos</option></select></label></div><div class="ax-enlarged" data-enlarged></div><div class="ax-large-legend" data-large-legend></div><p class="ax-modal-note" data-note></p></dialog>';
+root.innerHTML='<div class="ax-app"><main class="ax-main"><div class="ax-heading"><div><span class="ax-eyebrow">DIRECCIÓN DE LA EMPRESA · PCC</span><h1 tabindex="-1">Gerencia General</h1><p class="ax-heading-note">Resultados clave y evolución de la empresa</p></div><button type="button" class="ax-source" data-sources>Fechas y fuentes ↗</button></div><div class="ax-global-filters" aria-label="Filtros de Gerencia General" data-filters></div><p class="ax-filter-scope" data-scope aria-live="polite"></p><div class="ax-area-grid" data-areas></div><footer class="ax-footer"><span>Clic en un KPI o gráfico para ampliar · Escape para volver</span><span data-period></span></footer></main></div><dialog class="ax-dialog" aria-labelledby="atlas-dialog-title"><div class="ax-modal-head"><div><span class="ax-modal-eyebrow" data-modal-area></span><h2 id="atlas-dialog-title"></h2></div><button type="button" class="ax-close" data-close aria-label="Cerrar vista ampliada">×</button></div><p class="ax-modal-scope" data-modal-scope></p><div class="atlas-cost-period" data-cost-period hidden></div><div class="ax-modal-kpis" data-modal-kpis></div><div class="ax-modal-controls"><label>Vista<select data-view aria-label="Vista ampliada"></select></label><label data-order-label>Orden<select data-order aria-label="Orden de los estados"><option value="flow">Orden del flujo</option><option value="volume">Mayor volumen</option></select></label><label data-material-label>Materiales<select data-material aria-label="Materiales"><option value="all">Telas + insumos</option><option value="MT001">Telas</option><option value="MT002">Insumos</option></select></label></div><div class="ax-enlarged" data-enlarged></div><div class="ax-large-legend" data-large-legend></div><p class="ax-modal-note" data-note></p></dialog>';
 const $=s=>root.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const finite=Number.isFinite,integer=new Intl.NumberFormat('es-CO',{maximumFractionDigits:0}),decimal=new Intl.NumberFormat('es-CO',{maximumFractionDigits:1}),precise=new Intl.NumberFormat('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2});
 const num=v=>finite(v)?integer.format(v):'—',pct=v=>finite(v)?decimal.format(v*100)+'%':'—',cash=v=>finite(v)?'$ '+integer.format(v):'—',money=v=>finite(v)?'$ '+decimal.format(v/1e6)+' M':'—',exact=v=>finite(v)?'$ '+precise.format(v):'—';
 const colors=['#6b8fd4','#17b6a2','#cc9748','#9a6cd0','#239bb5'];
 const areaNames={ops:'Operaciones PCC',cos:'Costos',inv:'Inventario PT',log:'Logística',sales:'Ventas',people:'Talento Humano'};
-const views={ops:[['stages','Unidades mensuales por etapa'],['wip','Producto en proceso por estado'],['performance','Eficiencia y cumplimiento'],['lots','Lotes en proceso']],cos:[['cost','Rentabilidad y CCU sin IVA'],['margin','Margen promedio mensual'],['negative','Costeos negativos']],inv:[['invflow','Recibidas vs. despachadas'],['invage','Antigüedad del inventario principal'],['invvalue','Costo y cobertura de valoración']],log:[['logflow','Entradas y salidas mensuales'],['stock','Existencias de telas e insumos'],['logage','Antigüedad estimada FIFO'],['company','Existencias por empresa']],sales:[['sales','Venta real frente a meta']],people:[['people','Evolución del ausentismo']]};
+const views={ops:[['stages','Unidades mensuales por etapa'],['wip','Producto en proceso por estado'],['performance','Eficiencia y cumplimiento']],cos:[['cost','Rentabilidad y CCU sin IVA'],['margin','Margen promedio mensual'],['negative','Costeos negativos'],['ranking','10 mayores y 10 menores rentabilidades'],['variation','5 mayores variaciones del costo total']],inv:[['invflow','Recibidas vs. despachadas'],['invage','Antigüedad del inventario principal'],['invvalue','Costo y cobertura de valoración']],log:[['logflow','Entradas y salidas mensuales'],['stock','Existencias de telas e insumos'],['logage','Antigüedad estimada FIFO'],['company','Existencias por empresa']],sales:[['sales','Venta real frente a meta']],people:[['people','Evolución del ausentismo']]};
 const defaults={ops:'stages',cos:'cost',inv:'invflow',log:'logflow',sales:'sales',people:'people'};
-let filters={},v,source,renderTimer,area='ops',view='stages',order='flow',material='all',recordId=null,detailPage=0,returnFocus=null;
+let filters={},costSelection,costRefId=null,v,source,renderTimer,area='ops',view='stages',order='flow',material='all',recordId=null,detailPage=0,returnFocus=null;
 const charts=new Set(),dialog=$('dialog');let largeChart=null;const detailCharts=new Set();
 try{filters=M.cleanFilters(JSON.parse(localStorage.getItem('pcc.atlas.filters.v1')||'{}'));}catch{filters=M.cleanFilters();}
 function remember(){try{localStorage.setItem('pcc.atlas.filters.v1',JSON.stringify(filters));}catch{/* El filtro sigue funcionando aunque el navegador no pueda conservarlo. */}}
@@ -30,7 +30,7 @@ function freshness(records){return records?.length?PccFresh.summary(records).sta
 function status(id){
  if(id==='sales'||id==='people')return 'En construcción';
  if(id==='ops')return (v.label+' · '+(sourceState(v.ops.status)||freshness(v.ops.records)))+(v.ops.wipStatus==='error'?' · WIP no disponible':'');
- if(id==='cos')return v.label+' · '+(sourceState(v.cos.status)||freshness(v.cos.records));
+ if(id==='cos')return v.cos.period.label+' · '+(sourceState(v.cos.status)||freshness(v.cos.records));
  if(id==='inv')return sourceState(v.inv.status)||'Corte '+date(v.inv.cutoff)+' · '+freshness(v.inv.records);
  return sourceState(v.log.status)||'Corte '+date(v.log.meta.corte_inventario)+' · valores SIESA';
 }
@@ -55,13 +55,13 @@ function drawFilters(){
  $('[data-filters]').innerHTML=menu('company','Empresa',['EU','TEX'].map(x=>option('company',x)).join(''))+menu('line','Línea',allowed.map(h=>option('line',h.line)).join(''))+menu('category','Categoría',groups.map(h=>'<span class="ax-filter-group">'+esc(h.line)+'</span>'+h.cats.map(x=>option('category',x)).join('')).join(''))+'<button type="button" class="ax-clear-filters" data-clear>Limpiar filtros</button>';
  if(opened)$('[data-menu="'+opened+'"]').open=true;
  if(focused){const input=[...root.querySelectorAll('[data-filter]')].find(n=>n.dataset.filter===focused.key&&n.value===focused.value);input?.focus({preventScroll:true});}
- $('[data-scope]').innerHTML='<span class="atlas-current-scope" title="'+esc(scopeText())+'">'+esc(scopeText())+'</span><span>Operaciones y Costos: '+esc(v.label)+' · inventarios: corte de cada fuente</span>';
+ $('[data-scope]').innerHTML='<span class="atlas-current-scope" title="'+esc(scopeText())+'">'+esc(scopeText())+'</span><span>Operaciones: '+esc(v.label)+' · Costos: '+esc(v.cos.period.label)+' · inventarios: corte de cada fuente</span>';
 }
 function descriptor(target,selectedMaterial='all'){
  const percent=a=>a.map(n=>finite(n)?n*100:null),series=(name,values,color,dash=false)=>({name,values,color,dash});
  if(target==='stages')return {available:v.ops.wipReady&&!!v.key,labels:v.months,unit:'Unidades',series:v.ops.stages.map((s,i)=>series(s.name,s.values,colors[i],i===3))};
- if(target==='cost')return {available:v.cos.ready,labels:v.months,unit:'Porcentaje',percent:true,series:[series('Rentabilidad',percent(v.cos.monthly.map(r=>r.rent)),colors[3]),series('CCU sin IVA',percent(v.cos.monthly.map(r=>r.ccu)),colors[1],true)]};
- if(target==='margin')return {available:v.cos.ready,labels:v.months,unit:'Pesos por unidad',series:[series('Margen promedio',v.cos.monthly.map(r=>r.margin),colors[1])]};
+ if(target==='cost')return {available:v.cos.ready,labels:v.cos.period.labels,unit:'Porcentaje',percent:true,series:[series('Rentabilidad',percent(v.cos.monthly.map(r=>r.rent)),colors[3]),series('CCU sin IVA',percent(v.cos.monthly.map(r=>r.ccu)),colors[1],true)]};
+ if(target==='margin')return {available:v.cos.ready,labels:v.cos.period.labels,unit:'Pesos por unidad',series:[series('Margen promedio',v.cos.monthly.map(r=>r.margin),colors[1])]};
  if(target==='invflow')return {available:v.inv.ready&&!!v.inv.movements.keys.length,labels:v.inv.movements.labels,unit:'Unidades',bars:true,series:[series('Recibidas EOP',v.inv.movements.received,colors[1]),series('Despachadas RM',v.inv.movements.shipped,colors[0])]};
  if(target==='logflow'){
   const rows=(source.log?.moves||[]).filter(r=>(!filters.company.length||filters.company.includes(r.company))&&(selectedMaterial==='all'||r.warehouse===selectedMaterial));
@@ -75,7 +75,7 @@ function unavailable(id,target){
  if(id==='ops'&&target==='performance'&&!v.ops.performanceSupported)return 'Este indicador no dispone del desglose seleccionado';
  if(id==='log'&&!v.log.supported)return 'Sin desglose por línea o categoría de producto terminado';
  const state=id==='ops'&&target!=='performance'?v.ops.wipStatus:v[id]?.status;
- return sourceState(state)||(!v.key&&['stages','cost','margin','negative','performance'].includes(target)?'Período no configurado':'Sin registros para el alcance seleccionado');
+ return sourceState(state)||(!v.key&&['stages','performance'].includes(target)?'Período no configurado':'Sin registros para el alcance seleccionado');
 }
 const empty=text=>'<div class="ax-empty-chart">'+esc(text)+'</div>';
 function legendHTML(setting){const short={'Planeación':'Plan.','Confección':'Conf.','Tintorería':'Tint.','Presentación':'Pres.'};return setting.series.map(s=>'<span class="ax-key" title="'+esc(s.name)+'" style="--key:'+s.color+'">'+esc(short[s.name]||s.name)+'</span>').join('');}
@@ -94,7 +94,7 @@ function drawChart(host,setting,large=false){
 }
 function renderCards(){
  const captions={ops:'Etapas independientes · WIP completo al ampliar',cos:'Promedios por registro · no es margen real de ventas',inv:'*Mes parcial · EOP recibidas / RM despachadas',log:'*Mes parcial · edad FIFO estimada',sales:'Venta al consumidor · fuente por integrar',people:'Incapacidades y recobros en el detalle'};
- const links={ops:[['wip','Estados del WIP'],['performance','Eficiencia y cumplimiento']],cos:[['margin','Margen mensual'],['negative','Costeos negativos']],inv:[['invage','Antigüedad'],['invvalue','Costo y cobertura']],log:[['stock','Telas e insumos'],['logage','Edad FIFO'],['company','Por empresa']],sales:[['sales','Ver alcance comercial']],people:[['people','Ver alcance de Talento Humano']]};
+ const links={ops:[['wip','Estados del WIP'],['performance','Eficiencia y cumplimiento']],cos:[['margin','Margen mensual'],['negative','Costeos negativos'],['ranking','10 mayores y 10 menores rentabilidades'],['variation','5 mayores variaciones del costo total']],inv:[['invage','Antigüedad'],['invvalue','Costo y cobertura']],log:[['stock','Telas e insumos'],['logage','Edad FIFO'],['company','Por empresa']],sales:[['sales','Ver alcance comercial']],people:[['people','Ver alcance de Talento Humano']]};
  $('[data-areas]').innerHTML=Object.keys(areaNames).map(id=>{
   const future=['sales','people'].includes(id);let content='';
   if(id==='ops'){
@@ -103,14 +103,14 @@ function renderCards(){
    content+=action(id,'wip','<span class="ax-chart-title">En proceso · 3 estados<span aria-hidden="true">↗</span></span>'+(v.ops.wipReady&&top.length?'<span class="ax-wip-preview">'+top.map(r=>'<span class="ax-bar-row"><span class="ax-bar-label"><span title="'+esc(r.name)+'">'+esc(r.name)+'</span><strong>'+num(r.units)+'</strong></span><span class="ax-track"><span class="ax-fill" style="width:'+r.units/max*100+'%"></span></span></span>').join('')+'</span>':empty(unavailable('ops','wip'))),'ax-chart-button','Ampliar producto en proceso por estado');
   }else if(future)content='<div class="ax-reserved"><strong>'+esc(views[id][0][1])+'</strong><span>Fuente por integrar · indicadores propuestos</span></div>';
   else content=chartButton(id,defaults[id],{cos:'Rentabilidad y CCU sin IVA · %',inv:'Recibidas vs. despachadas · unidades',log:'Entradas vs. salidas · $ millones'}[id],168);
-  return '<article class="ax-tile ax-area-card '+(future?'ax-future-tile':'')+'" data-area="'+id+'" aria-label="'+areaNames[id]+'">'+action(id,defaults[id],'<span><h3>'+areaNames[id]+'</h3><span class="ax-sub">'+esc(status(id))+'</span></span><span class="ax-expand" aria-hidden="true">↗</span>','ax-area-heading','Ampliar '+areaNames[id])+'<div class="ax-visible-kpis">'+statMarkup(id)+'</div><div class="ax-area-charts">'+content+'</div><span class="ax-card-caption">'+esc(captions[id])+'</span><div class="ax-tile-foot">'+links[id].map(s=>action(id,s[0],esc(s[1])+' ↗','ax-detail-link','Ampliar '+s[1])).join('')+'</div></article>';
+  return '<article class="ax-tile ax-area-card '+(future?'ax-future-tile':'')+'" data-area="'+id+'" aria-label="'+areaNames[id]+'">'+action(id,defaults[id],'<span><h3>'+areaNames[id]+'</h3><span class="ax-sub">'+esc(status(id))+'</span></span><span class="ax-expand" aria-hidden="true">↗</span>','ax-area-heading','Ampliar '+areaNames[id])+'<div class="ax-visible-kpis">'+statMarkup(id)+'</div><div class="ax-area-charts">'+content+'</div><span class="ax-card-caption">'+esc(captions[id])+'</span>'+(id==='cos'?costInsights():'')+'<div class="ax-tile-foot">'+links[id].map(s=>action(id,s[0],esc(s[1])+' ↗','ax-detail-link','Ampliar '+s[1])).join('')+'</div></article>';
  }).join('');
  root.querySelectorAll('[data-chart]').forEach(host=>drawChart(host,descriptor(host.dataset.chart)));
 }
 function destroyCharts(largeOnly=false){for(const chart of [...charts])if(!largeOnly||detailCharts.has(chart)){chart.destroy();charts.delete(chart);}detailCharts.clear();largeChart=null;}
 function note(target){
  const invRange=v.inv.movements.from&&v.inv.movements.to?date(v.inv.movements.from)+' a '+date(v.inv.movements.to):'Ventana de movimientos no verificada';
- return {stages:'Unidades según la fecha de cumplimiento de cada etapa. Una prenda puede participar en varias etapas: no se suman como producción total.',wip:'Estado actual de cada lote. El volumen muestra dónde revisar; no demuestra por sí solo un cuello de botella. Clic en un estado para consultar sus lotes.',lots:'Lotes activos del alcance seleccionado; excluye entregados y cancelados.',performance:'Mismas fórmulas del área: eficiencia ponderada por tiempos, excluye Servicios; cumplimiento = producción / meta. Las fuentes no disponibles se excluyen del cálculo.',cost:'Promedios aritméticos por registro válido. No equivalen al margen real de ventas ni a la utilidad empresarial.',margin:'Promedio aritmético del margen en pesos por unidad por registro válido de cada mes.',negative:v.label+' · '+num(v.cos.negativeCount)+' registros negativos de '+num(v.cos.count)+' registros del alcance. Se conservan los lotes distintos de una misma referencia.',invflow:invRange+'. Recepciones EOP y despachos RM; devoluciones, compras y ajustes son conceptos separados. *Meses parciales según la ventana de la fuente.',invage:'Inventario principal: '+num(v.inv.principal)+' unidades. Mayores a 90 días: '+num(v.inv.age[3])+' ('+pct(v.inv.agedShare)+'). Todas las bodegas: '+num(v.inv.units)+' unidades.',invvalue:'Costo conocido al corte '+date(v.inv.cutoff)+'. '+num(v.inv.missingCostUnits)+' unidades sin costo en el alcance.',logflow:'Movimientos SIESA: '+date(v.log.meta.movimientos_desde)+' a '+date(v.log.meta.movimientos_hasta)+'. *Meses parciales. El selector de materiales afecta este gráfico.',stock:'Existencias de telas e insumos al '+date(v.log.meta.corte_inventario)+'. Se presenta valor; no se suman cantidades de unidades físicas diferentes.',logage:'Estimación FIFO al '+date(v.log.meta.corte_inventario)+'. Edad indeterminada separada del saldo mayor a 90 días; no equivale a obsolescencia contable.',company:'Existencias de materiales por empresa, al corte de Logística.',sales:'Venta al consumidor, ambas empresas, líneas y tiendas. Fuente comercial pendiente de integrar.',people:'Personal al corte, ausentismo, vacantes y rotación. Cierres y reglas pendientes de validar; incapacidades y recobros en el detalle.'}[target]||'';
+ return {stages:'Unidades según la fecha de cumplimiento de cada etapa. Una prenda puede participar en varias etapas: no se suman como producción total.',wip:'Estado actual de cada lote. El volumen muestra dónde revisar; no demuestra por sí solo un cuello de botella. Clic en un estado para consultar sus lotes.',lots:'Lotes activos del alcance seleccionado; excluye entregados y cancelados.',performance:'Mismas fórmulas del área: eficiencia ponderada por tiempos, excluye Servicios; cumplimiento = producción / meta. Las fuentes no disponibles se excluyen del cálculo.',ranking:'Referencias ordenadas por rentabilidad promedio por registro. La cifra en $ suma la utilidad de costeo (UTILIDAD EU × cantidad). Las dos listas pueden coincidir cuando hay menos de 20 referencias; no se suman porcentajes ni representan utilidad real de ventas.',variation:'Costo total por unidad, incluidos todos sus componentes. Promedio aritmético de lotes recientes (mes de referencia y anterior) frente a los seis meses previos. Mismas reglas de lotes válidos de Alertas: cantidad positiva y exclusión de ajustes sin tela. Orden por magnitud del cambio; el signo distingue subidas y bajadas. El histórico conserva contexto fuera del año seleccionado.',cost:'Promedios aritméticos por registro válido. No equivalen al margen real de ventas ni a la utilidad empresarial.',margin:'Promedio aritmético del margen en pesos por unidad por registro válido de cada mes.',negative:v.cos.period.label+' · '+num(v.cos.negativeCount)+' registros negativos de '+num(v.cos.count)+' registros del alcance. Se conservan los lotes distintos de una misma referencia.',invflow:invRange+'. Recepciones EOP y despachos RM; devoluciones, compras y ajustes son conceptos separados. *Meses parciales según la ventana de la fuente.',invage:'Inventario principal: '+num(v.inv.principal)+' unidades. Mayores a 90 días: '+num(v.inv.age[3])+' ('+pct(v.inv.agedShare)+'). Todas las bodegas: '+num(v.inv.units)+' unidades.',invvalue:'Costo conocido al corte '+date(v.inv.cutoff)+'. '+num(v.inv.missingCostUnits)+' unidades sin costo en el alcance.',logflow:'Movimientos SIESA: '+date(v.log.meta.movimientos_desde)+' a '+date(v.log.meta.movimientos_hasta)+'. *Meses parciales. El selector de materiales afecta este gráfico.',stock:'Existencias de telas e insumos al '+date(v.log.meta.corte_inventario)+'. Se presenta valor; no se suman cantidades de unidades físicas diferentes.',logage:'Estimación FIFO al '+date(v.log.meta.corte_inventario)+'. Edad indeterminada separada del saldo mayor a 90 días; no equivale a obsolescencia contable.',company:'Existencias de materiales por empresa, al corte de Logística.',sales:'Venta al consumidor, ambas empresas, líneas y tiendas. Fuente comercial pendiente de integrar.',people:'Personal al corte, ausentismo, vacantes y rotación. Cierres y reglas pendientes de validar; incapacidades y recobros en el detalle.'}[target]||'';
 }
 function table(headers,rows,renderRow){
  if(!rows.length)return empty('Sin registros para el alcance seleccionado');
@@ -118,6 +118,40 @@ function table(headers,rows,renderRow){
  return '<div class="ax-record-scroll"><table class="ax-record-table"><thead><tr>'+headers.map(h=>'<th scope="col">'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+shown.map(renderRow).join('')+'</tbody></table></div><div class="atlas-pagination"><span>'+num(start+1)+'–'+num(start+shown.length)+' de '+num(rows.length)+' registros</span><button type="button" data-page="-1" '+(!detailPage?'disabled':'')+'>Anterior</button><button type="button" data-page="1" '+(start+50>=rows.length?'disabled':'')+'>Siguiente</button></div>';
 }
 function seriesButtons(config){return config.series.map((s,i)=>'<button type="button" class="ax-series-button" style="--key:'+s.color+'" data-series="'+i+'" aria-pressed="true">'+esc(s.name)+'</button>').join('');}
+function costInsights(){
+ const r=v.cos.rankings,variation=v.cos.variation;
+ return '<div class="atlas-cost-insights">'+action('cos','ranking','<span>10 mayor rentabilidad</span><strong>'+money(v.cos.ready?r.top.profit:null)+'</strong>','atlas-cost-insight','Ver referencias con mayor rentabilidad y su utilidad acumulada')+action('cos','ranking','<span>10 menor rentabilidad</span><strong>'+money(v.cos.ready?r.bottom.profit:null)+'</strong>','atlas-cost-insight','Ver referencias con menor rentabilidad y su utilidad acumulada')+action('cos','variation','<span>Δ costo total · top 5</span><strong>'+num(v.cos.ready?variation.rows.length:null)+' <small>referencias</small></strong>','atlas-cost-insight','Ver las cinco referencias con mayor variación del costo total')+'</div>';
+}
+function drawCostPeriod(){
+ const host=$('[data-cost-period]');host.hidden=area!=='cos';if(host.hidden)return;
+ const p=v.cos.period,opened=host.querySelector('.ax-filter-menu[open]')?.dataset.costMenu;
+ const focused=document.activeElement?.dataset.costFilter?{key:document.activeElement.dataset.costFilter,value:document.activeElement.value}:null;
+ const menu=(key,title,label,values)=>'<details class="ax-filter-menu" data-cost-menu="'+key+'"><summary>'+title+': <strong>'+esc(label)+'</strong><span aria-hidden="true">⌄</span></summary><div class="ax-filter-options"><button type="button" class="ax-filter-all" data-cost-all="'+key+'">'+(key==='years'?'Todos los años':'Todos los meses')+'</button>'+values.map(value=>'<label><input type="checkbox" data-cost-filter="'+key+'" value="'+value+'" '+(p[key].includes(value)?'checked':'')+'><span>'+esc(key==='years'?value:PccCostModel.monthLabel(value))+'</span></label>').join('')+'</div></details>';
+ host.innerHTML=menu('years','Año',p.years.length?p.years.join(', '):'Todos',p.yearsAvailable)+menu('periods','Meses',p.periods.length===1?PccCostModel.monthLabel(p.periods[0]):p.periods.length?p.periods.length+' seleccionados':'Todos',p.periodsAvailable)+'<button type="button" class="ax-detail-link" data-cost-all="reset">Año en curso</button><button type="button" class="atlas-cost-compare" data-cost-compare '+(!v.cos.ready||!v.cos.count?'disabled':'')+'>Ver mismo alcance en Costos ↗</button>';
+ if(opened)host.querySelector('[data-cost-menu="'+opened+'"]').open=true;
+ if(focused)[...host.querySelectorAll('[data-cost-filter]')].find(n=>n.dataset.costFilter===focused.key&&n.value===focused.value)?.focus({preventScroll:true});
+}
+function costReferenceButton(r){return '<button type="button" class="ax-ref-link" data-cost-ref="'+esc(r.id)+'" title="'+esc(r.desc+' · '+r.company+' / '+r.line)+'">'+esc(r.ref)+' ↗</button>';}
+function drawCostRanking(host){
+ if(!v.cos.ready){host.innerHTML=empty(unavailable('cos','ranking'));return;}
+ host.innerHTML='<div class="atlas-ranking-grid">'+[['top','Mayor rentabilidad'],['bottom','Menor rentabilidad']].map(([key,title])=>{
+  const block=v.cos.rankings[key];
+  return '<section class="atlas-ranking-panel"><div class="atlas-ranking-heading"><h3>'+title+'</h3><span>'+num(block.rows.length)+' referencias</span></div><strong class="atlas-ranking-total">'+cash(block.profit)+'</strong><p class="ax-sub">'+(block.missingProfit?'Subtotal conocido · '+num(block.missingProfit)+' registros sin utilidad':'Utilidad de costeo acumulada')+'</p>'+(block.rows.length?'<div class="ax-record-scroll"><table class="atlas-cost-table"><thead><tr><th scope="col">Referencia</th><th scope="col">Rentabilidad</th><th scope="col">Utilidad $</th></tr></thead><tbody>'+block.rows.map(r=>'<tr><th scope="row">'+costReferenceButton(r)+'</th><td>'+pct(r.rent)+'</td><td>'+cash(r.utilPesos)+'</td></tr>').join('')+'</tbody></table></div>':empty('Sin referencias con rentabilidad válida.'))+'</section>';
+ }).join('')+'</div>';
+}
+const windowText=keys=>keys.map(PccCostModel.monthLabel).join(' · ');
+function drawCostVariation(host){
+ if(!v.cos.ready){host.innerHTML=empty(unavailable('cos','variation'));return;}
+ const data=v.cos.variation;
+ host.innerHTML='<div class="atlas-variation-scope"><p><strong>Reciente:</strong> '+esc(windowText(data.recent))+'</p><p><strong>Histórico:</strong> '+esc(PccCostModel.monthLabel(data.historical[0])+' — '+PccCostModel.monthLabel(data.historical.at(-1)))+'</p></div>'+(data.rows.length?'<div class="ax-record-scroll"><table class="atlas-cost-table atlas-variation-table"><thead><tr>'+['Referencia / línea','Costo histórico / ud.','Costo reciente / ud.','Δ $ / ud.','Δ %'].map(h=>'<th scope="col">'+h+'</th>').join('')+'</tr></thead><tbody>'+data.rows.map(r=>'<tr><th scope="row">'+costReferenceButton(r)+'<small>'+esc(r.company+' / '+r.line)+'</small></th><td>'+exact(r.before)+'</td><td>'+exact(r.after)+'</td><td>'+exact(r.change)+'</td><td class="'+(r.delta>0?'ax-negative-value':'atlas-cost-decrease')+'">'+(r.delta>0?'+':'')+pct(r.delta)+'</td></tr>').join('')+'</tbody></table></div>':empty('No hay variaciones con lotes válidos en ambas ventanas para este alcance.'));
+}
+function drawCostReference(host){
+ const r=(view==='variation'?v.cos.variation.rows:v.cos.references).find(r=>r.id===costRefId);
+ if(!r){costRefId=null;host.innerHTML=empty('La referencia ya no pertenece al alcance seleccionado.');return;}
+ const rows=view==='variation'?[...r.historicalRows,...r.recentRows]:r.rows;
+ $('#atlas-dialog-title').textContent='Referencia '+r.ref+' · '+r.company+' / '+r.line;
+ host.innerHTML='<button type="button" class="ax-detail-link" data-cost-back>← Volver al resumen de referencias</button><div class="ax-record-summary"><strong>'+esc(r.desc)+'</strong><span>'+num(rows.length)+' registros · '+(view==='variation'?'Lotes de las dos ventanas de comparación':esc(v.cos.period.label))+'</span></div>'+table(['Período','Lote','Unidades','Costo total / ud.','Rentabilidad','Utilidad $'],[...rows].sort((a,b)=>a.fecha.localeCompare(b.fecha)),r=>'<tr><th scope="row">'+esc(PccCostModel.monthLabel(r.fecha))+'</th><td>'+esc(r.lote??'—')+'</td><td>'+num(r.cant)+'</td><td>'+exact(r.ct)+'</td><td>'+pct(r.rent)+'</td><td>'+cash(r.utilPesos)+'</td></tr>');
+}
 function stageTable(config){
  const total=values=>values.some(finite)?values.reduce((sum,n)=>sum+(finite(n)?n:0),0):null;
  return '<div class="atlas-stage-data"><table class="atlas-stage-table"><caption>Unidades por etapa · '+esc(v.label)+'</caption><thead><tr><th scope="col">Etapa</th>'+config.labels.map(label=>'<th scope="col">'+esc(label)+'</th>').join('')+'<th scope="col">Total etapa</th></tr></thead><tbody>'+config.series.map((s,i)=>'<tr data-stage-row="'+i+'"><th scope="row"><span class="ax-key" style="--key:'+s.color+'">'+esc(s.name)+'</span></th>'+s.values.map(n=>'<td>'+num(n)+'</td>').join('')+'<td><strong>'+num(total(s.values))+'</strong></td></tr>').join('')+'</tbody></table></div>';
@@ -138,7 +172,7 @@ function drawPerformance(host){
 }
 function negatives(){
  const rows=[...v.cos.negative].sort((a,b)=>a.rent-b.rent);
- return '<div class="ax-record-summary"><strong>'+num(v.cos.negativeCount)+' registros negativos</strong><span>'+num(new Set(rows.map(r=>r.ref)).size)+' referencias · '+esc(v.label)+'</span></div>'+table(['Empresa / línea','Referencia / descripción','Lote','Unidades','Precio venta / ud.','Costo / ud.','Rentabilidad','Margen / ud.'],rows,r=>'<tr><td>'+esc(r.company)+'<small>'+esc(r.line)+'</small></td><td><button type="button" class="ax-ref-link" data-record="'+r.id+'">'+esc(r.ref)+' ↗</button><small>'+esc(r.desc)+'</small></td><td>'+esc(r.lote??'—')+'</td><td>'+num(r.cant)+'</td><td>'+exact(r.pv)+'</td><td>'+exact(r.ct)+'</td><td class="ax-negative-value">'+pct(r.rent)+'</td><td class="ax-negative-value">'+exact(r.margen)+'</td></tr>');
+ return '<div class="ax-record-summary"><strong>'+num(v.cos.negativeCount)+' registros negativos</strong><span>'+num(new Set(rows.map(r=>r.ref)).size)+' referencias · '+esc(v.cos.period.label)+'</span></div>'+table(['Empresa / línea','Referencia / descripción','Lote','Unidades','Precio venta / ud.','Costo / ud.','Rentabilidad','Margen / ud.'],rows,r=>'<tr><td>'+esc(r.company)+'<small>'+esc(r.line)+'</small></td><td><button type="button" class="ax-ref-link" data-record="'+r.id+'">'+esc(r.ref)+' ↗</button><small>'+esc(r.desc)+'</small></td><td>'+esc(r.lote??'—')+'</td><td>'+num(r.cant)+'</td><td>'+exact(r.pv)+'</td><td>'+exact(r.ct)+'</td><td class="ax-negative-value">'+pct(r.rent)+'</td><td class="ax-negative-value">'+exact(r.margen)+'</td></tr>');
 }
 function drawAgeDonut(host){
  const parts=[{name:'Hasta 90 días',value:v.log.ageRows.reduce((s,r)=>s+r.values.slice(0,3).reduce((a,b)=>a+b,0),0),color:colors[1]},{name:'Más de 90 días',value:v.log.aged,color:colors[2]},{name:'Edad indeterminada',value:v.log.unknown,color:'#8ba2b3'}];
@@ -161,21 +195,23 @@ function drawDetail(){
  if(!dialog.open)return;destroyCharts(true);const host=$('[data-enlarged]');$('[data-large-legend]').replaceChildren();
  dialog.dataset.detailArea=area;dialog.dataset.detailView=view;
  $('[data-modal-area]').textContent=area==='sources'?'PCC · Gerencia General':areaNames[area]+' · vista ampliada';
- $('#atlas-dialog-title').textContent=area==='sources'?'Fechas y fuentes':views[area].find(s=>s[0]===view)[1];
- $('[data-modal-scope]').textContent=scopeText();
- $('[data-modal-kpis]').hidden=area==='sources'||view==='negative'||view==='performance'||view==='stages';
+ $('#atlas-dialog-title').textContent=area==='sources'?'Fechas y fuentes':(view==='lots'?'Lotes · '+stateFilter:views[area].find(s=>s[0]===view)[1]);
+ $('[data-modal-scope]').textContent=scopeText()+(area==='cos'&&v.cos.rows.length?' · Líneas incluidas: '+[...new Set(v.cos.rows.map(r=>r.line))].join(', '):'');
+ drawCostPeriod();
+ $('[data-modal-kpis]').hidden=area==='sources'||view==='negative'||view==='performance'||view==='stages'||(area==='cos'&&(['ranking','variation'].includes(view)||costRefId!==null));
  $('[data-modal-kpis]').innerHTML=area==='sources'?'':stats(area).map(s=>'<div><span>'+esc(s[0])+'</span><strong>'+esc(s[1])+'</strong><small>'+esc(s[2])+'</small></div>').join('');
  $('.ax-modal-controls').hidden=area==='sources';
- $('[data-view]').innerHTML=area==='sources'?'':views[area].map(s=>'<option value="'+s[0]+'">'+esc(s[1])+'</option>').join('');$('[data-view]').value=view;
+ $('[data-view]').innerHTML=area==='sources'?'':views[area].map(s=>'<option value="'+s[0]+'">'+esc(s[1])+'</option>').join('');$('[data-view]').value=view==='lots'?'wip':view;
  $('[data-order-label]').hidden=view!=='wip';$('[data-material-label]').hidden=view!=='logflow';
  $('[data-order]').value=order;$('[data-material]').value=material;
  $('[data-note]').textContent=area==='sources'?'Cada fuente conserva su fecha y alcance. Las fallas y los datos parciales permanecen identificados.':note(view);
  if(area==='sources'){host.innerHTML=sourceDetails();return;}
+ if(area==='cos'&&costRefId!==null){drawCostReference(host);return;}
  if(recordId!==null){
   const row=v.cos.negative.find(r=>r.id===recordId);
   if(!row){recordId=null;}else{
    $('#atlas-dialog-title').textContent='Referencia '+row.ref+' · lote '+(row.lote??'—');
-   host.innerHTML='<button type="button" class="ax-detail-link" data-back>← Volver a los registros negativos</button><div class="ax-record-summary"><strong>'+esc(row.desc)+'</strong><span>'+esc(row.company+' · '+row.line+' · '+row.sourceCategory+' · '+v.label)+'</span></div><dl class="ax-record-detail">'+[['Referencia',row.ref],['Lote',row.lote??'—'],['Unidades',num(row.cant)],['Precio de venta / unidad',exact(row.pv)],['Costo / unidad',exact(row.ct)],['Margen / unidad',exact(row.margen)],['Rentabilidad',pct(row.rent)],['CCU sin IVA',pct(row.ccu)]].map(([k,val])=>'<div><dt>'+esc(k)+'</dt><dd>'+esc(val)+'</dd></div>').join('')+'</dl>';return;
+   host.innerHTML='<button type="button" class="ax-detail-link" data-back>← Volver a los registros negativos</button><div class="ax-record-summary"><strong>'+esc(row.desc)+'</strong><span>'+esc(row.company+' · '+row.line+' · '+row.sourceCategory+' · '+v.cos.period.label)+'</span></div><dl class="ax-record-detail">'+[['Referencia',row.ref],['Lote',row.lote??'—'],['Unidades',num(row.cant)],['Precio de venta / unidad',exact(row.pv)],['Costo / unidad',exact(row.ct)],['Margen / unidad',exact(row.margen)],['Rentabilidad',pct(row.rent)],['CCU sin IVA',pct(row.ccu)]].map(([k,val])=>'<div><dt>'+esc(k)+'</dt><dd>'+esc(val)+'</dd></div>').join('')+'</dl>';return;
   }
  }
  const config=descriptor(view,material);
@@ -186,16 +222,18 @@ function drawDetail(){
   return;
  }
  if(config){host.innerHTML='<div class="atlas-large-chart"></div>';drawChart(host.firstElementChild,config,true);if(largeChart){$('[data-large-legend]').innerHTML=config.series.map((s,i)=>'<button type="button" class="ax-series-button" style="--key:'+s.color+'" data-series="'+i+'" aria-pressed="true">'+esc(s.name)+'</button>').join('');host.insertAdjacentHTML('beforeend','<details class="atlas-chart-data"><summary>Ver datos del gráfico</summary>'+table(['Período',...config.series.map(s=>s.name)],config.labels.map((label,i)=>({label,index:i})),r=>'<tr><th scope="row">'+esc(r.label)+'</th>'+config.series.map(s=>'<td>'+esc(config.percent?finite(s.values[r.index])?decimal.format(s.values[r.index])+'%':'—':num(s.values[r.index]))+'</td>').join('')+'</tr>')+'</details>');}return;}
+ if(view==='ranking'){drawCostRanking(host);return;}
+ if(view==='variation'){drawCostVariation(host);return;}
  if(view==='negative'){host.innerHTML=v.cos.ready?negatives():empty(unavailable('cos',view));return;}
  if(['wip','lots'].includes(view)&&!v.ops.wipReady||view==='performance'&&(!v.ops.ready||!v.ops.performanceSupported)){host.innerHTML=empty(unavailable('ops',view));return;}
  if(['invage','invvalue'].includes(view)&&!v.inv.ready){host.innerHTML=empty(unavailable('inv',view));return;}
  if(['stock','logage','company'].includes(view)&&(!v.log.ready||view==='logage'&&!v.log.ageReady)){host.innerHTML=empty(v.log.ageMessage||unavailable('log',view));return;}
  if(view==='wip'){
   const rows=order==='volume'?[...v.ops.states].sort((a,b)=>b.units-a.units):v.ops.states;
-  host.innerHTML=rows.length?bars(rows.map(r=>({name:r.name,value:r.units,label:num(r.units),sub:num(r.lots)+' lotes',color:r.name==='NO CONFORME'?'#cc9748':colors[1]})),true)+action('ops','lots','Ver todos los lotes ↗','ax-detail-link','Ver todos los lotes en proceso'):empty('Sin lotes en el alcance seleccionado');
+  host.innerHTML=rows.length?bars(rows.map(r=>({name:r.name,value:r.units,label:num(r.units),sub:num(r.lots)+' lotes',color:r.name==='NO CONFORME'?'#cc9748':colors[1]})),true):empty('Sin lotes en el alcance seleccionado');
  }else if(view==='lots'){
   const rows=stateFilter?v.ops.lots.filter(r=>r.estado===stateFilter):v.ops.lots;
-  host.innerHTML='<div class="ax-record-summary"><strong>'+esc(stateFilter||'Lotes en proceso')+'</strong><span>'+num(rows.length)+' lotes · '+num(rows.reduce((s,r)=>s+r.cant,0))+' unidades</span></div>'+table(['Empresa / línea','Orden de corte','Referencia','Producto','Estado','Unidades'],rows,r=>'<tr><td>'+esc(r.company+' / '+r.line)+'</td><td>'+esc(r.ordenCorte)+'</td><td>'+esc(r.refSap)+'</td><td>'+esc(r.producto)+'</td><td>'+esc(r.estado)+'</td><td>'+num(r.cant)+'</td></tr>');
+  host.innerHTML='<button type="button" class="ax-detail-link" data-wip-back>← Volver a los estados</button><div class="ax-record-summary"><strong>'+esc(stateFilter)+'</strong><span>'+num(rows.length)+' lotes · '+num(rows.reduce((s,r)=>s+r.cant,0))+' unidades</span></div>'+table(['Empresa / línea','Orden de corte','Referencia','Producto','Estado','Unidades'],rows,r=>'<tr><td>'+esc(r.company+' / '+r.line)+'</td><td>'+esc(r.ordenCorte)+'</td><td>'+esc(r.refSap)+'</td><td>'+esc(r.producto)+'</td><td>'+esc(r.estado)+'</td><td>'+num(r.cant)+'</td></tr>');
  }else if(view==='performance')drawPerformance(host);
  else if(view==='invage')host.innerHTML=bars(v.inv.age.map((val,i)=>({name:['0–30 días','31–60 días','61–90 días','Más de 90 días'][i],value:val,label:num(val),sub:'unidades',color:[colors[1],colors[4],colors[0],colors[2]][i]})));
  else if(view==='invvalue')host.innerHTML='<div class="ax-value-detail"><span>Costo conocido del inventario PT</span><strong>'+exact(v.inv.knownValue)+'</strong><p>'+num(v.inv.units)+' unidades en todas las bodegas · '+num(v.inv.missingCostUnits)+' unidades sin costo.</p><p>'+(v.inv.missingCostUnits?'Valoración parcial: faltan costos para completar el total.':'Todas las unidades del alcance tienen costo conocido.')+'</p></div>';
@@ -206,20 +244,25 @@ function drawDetail(){
 }
 let stateFilter='';
 function open(id,target,trigger){
- area=id;view=target;recordId=null;detailPage=0;stateFilter='';returnFocus=trigger||document.activeElement;
+ area=id;view=target;recordId=null;costRefId=null;detailPage=0;stateFilter='';returnFocus=trigger||document.activeElement;
  if(!dialog.open)dialog.showModal();document.body.classList.add('atlas-modal-open');drawDetail();
 }
 function render(){
- renderTimer=null;source=PccExecutiveSource();v=M.build(source,filters,{period:PccExecutiveModel.period,ops:PccData.ops});filters=v.filters;
- fitBoard();destroyCharts();drawFilters();renderCards();$('[data-period]').textContent='Cada área mantiene su corte · '+v.label;
+ renderTimer=null;source=PccExecutiveSource();v=M.build(source,filters,{period:PccExecutiveModel.period,ops:PccData.ops},costSelection);filters=v.filters;costSelection={years:v.cos.period.years,periods:v.cos.period.periods};
+ fitBoard();destroyCharts();drawFilters();renderCards();$('[data-period]').textContent='Operaciones: '+v.label+' · Costos: '+v.cos.period.label;
  if(document.body.dataset.gerencia==='gg')document.getElementById('liveLbl').textContent=[v.ops,v.cos,v.inv,v.log].filter(s=>s.status==='ready').length+' áreas conectadas';
  if(dialog.open)drawDetail();
 }
 function refresh(){if(!renderTimer)renderTimer=setTimeout(render,40);}
 function fitBoard(){if(!page.hidden)root.style.setProperty('--atlas-top',Math.max(0,page.getBoundingClientRect().top+window.scrollY)+'px');}
-function changeFilters(){filters=M.cleanFilters(filters);recordId=null;detailPage=0;remember();render();}
+function changeFilters(){filters=M.cleanFilters(filters);recordId=null;costRefId=null;detailPage=0;remember();render();}
 root.addEventListener('click',event=>{
  const close=event.target.closest('[data-close]');if(close){dialog.close();return;}
+ if(event.target.closest('[data-cost-compare]')){const context=v.cos.nativeFilters;dialog.close();PccExecutiveOpen('cos',context);return;}
+ const costAll=event.target.closest('[data-cost-all]');if(costAll){if(costAll.dataset.costAll==='reset')costSelection=undefined;else costSelection[costAll.dataset.costAll]=[];costRefId=null;recordId=null;detailPage=0;render();return;}
+ const costRef=event.target.closest('[data-cost-ref]');if(costRef){costRefId=costRef.dataset.costRef;detailPage=0;drawDetail();return;}
+ if(event.target.closest('[data-cost-back]')){costRefId=null;detailPage=0;drawDetail();return;}
+ if(event.target.closest('[data-wip-back]')){view='wip';stateFilter='';detailPage=0;drawDetail();return;}
  const sourceButton=event.target.closest('[data-sources]');if(sourceButton){open('sources','sources',sourceButton);return;}
  const clear=event.target.closest('[data-clear]'),all=event.target.closest('[data-all]');if(clear||all){if(clear)filters=M.cleanFilters();else filters[all.dataset.all]=[];changeFilters();return;}
  const record=event.target.closest('[data-record]');if(record){recordId=record.dataset.record;drawDetail();return;}
@@ -234,7 +277,8 @@ root.addEventListener('click',event=>{
 root.addEventListener('change',event=>{
  const input=event.target;
  if(input.dataset.filter){const key=input.dataset.filter;filters[key]=input.checked?[...filters[key],input.value]:filters[key].filter(x=>x!==input.value);changeFilters();}
- else if(input.matches('[data-view]')){view=input.value;recordId=null;stateFilter='';detailPage=0;drawDetail();}
+ else if(input.dataset.costFilter){const key=input.dataset.costFilter;costSelection[key]=input.checked?[...costSelection[key],input.value]:costSelection[key].filter(x=>x!==input.value);costRefId=null;recordId=null;detailPage=0;render();}
+ else if(input.matches('[data-view]')){view=input.value;recordId=null;costRefId=null;stateFilter='';detailPage=0;drawDetail();}
  else if(input.matches('[data-order]')){order=input.value;drawDetail();}
  else if(input.matches('[data-material]')){material=input.value;drawDetail();}
 });
