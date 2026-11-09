@@ -14,7 +14,7 @@
 <script src="source-freshness.js"></script>
 <link rel="stylesheet" href="source-freshness.css">
 <script src="data-quality.js"></script>
-<script src="inventory-history-model.js?v=2.9"></script>
+<script src="inventory-history-model.js?v=3.0"></script>
 <script src="inventory-retail-model.js?v=2.9"></script>
 <link rel="stylesheet" href="inventory-history.css?v=2.9">
 <link rel="stylesheet" href="data-quality.css">
@@ -374,7 +374,7 @@ canvas{max-width:100%;}
 <details id="cost-scope" class="coverage-scope" style="margin:8px 20px"><summary>Valoración con costo del ERP · ver criterio</summary><p></p><ul></ul></details>
 <!-- ═══════════ TAB 1: RESUMEN ═══════════ -->
 <div class="page active" id="page-resumen">
-<details class="coverage-scope"><summary>Rotación y días: solo primeras · excluye Segundas y Cobros</summary><p>Alcance de rotación y días de inventario: existencias y despachos RM de primeras, según los filtros seleccionados. Excluye PT002, TI005 y TI006 (Segundas) y PT003 (Cobros).</p><p>Días de inventario = existencias al corte ÷ (despachos RM del período ÷ días calendario del período).</p><p class="coverage-period"></p><p>Cada barra usa las existencias y el período exportado de su propio corte. Se muestra el último corte guardado de cada mes; solo es cierre mensual si corresponde al último día del mes. Sin corte o sin despachos, no se dibuja una barra. Los filtros de línea y categoría usan la clasificación disponible actualmente.</p></details>
+<details class="coverage-scope"><summary>Rotación y días: solo primeras · excluye Segundas y Cobros</summary><p>Alcance de rotación y días de inventario: existencias y despachos RM de primeras, según los filtros seleccionados. Excluye PT002, TI005 y TI006 (Segundas) y PT003 (Cobros).</p><p>Días de inventario = existencias al corte ÷ (despachos RM del período ÷ días calendario del período).</p><p class="coverage-period"></p><p>Cada barra usa las existencias y el período exportado de su propio corte. Se muestra el último corte guardado de cada mes con su fecha real; solo es cierre exacto si corresponde al último día del mes. Sin corte o sin despachos, no se dibuja una barra. Los filtros de línea y categoría usan la clasificación disponible actualmente.</p></details>
 
   <!-- HERO KPIs -->
   <div style="margin-bottom:4px"><span class="sec-header">Resumen general</span></div>
@@ -458,12 +458,12 @@ canvas{max-width:100%;}
   <section id="inventory-monthly" class="inventory-monthly" aria-labelledby="inventory-monthly-title">
     <h2 id="inventory-monthly-title">Inventario mensual</h2>
     <p>Existencias y costo conocido · todas las bodegas, incluidas Segundas y Cobros · respeta los filtros seleccionados.</p>
-    <p id="inventory-monthly-status" role="status">Consultando cierres conservados…</p>
+    <p id="inventory-monthly-status" role="status">Consultando cortes conservados…</p>
   <div class="inventory-monthly-grid" id="inventory-monthly-grid">
       <article><h3>Unidades al corte</h3><div class="inventory-monthly-chart"><canvas id="inventory-monthly-units" role="img" aria-label="Unidades actuales y en cada cierre mensual"></canvas></div></article>
       <article><h3>Valor del inventario en pesos (COP)</h3><div class="inventory-monthly-chart"><canvas id="inventory-monthly-value" role="img" aria-label="Valor conocido actual y en cada cierre mensual"></canvas></div></article>
     </div>
-    <details id="inventory-monthly-detail"><summary>Ver cifras y fechas de corte</summary><div class="tw"><table><thead><tr><th>Mes</th><th>Tipo de corte</th><th>Fecha</th><th>Unidades</th><th>Valor conocido (COP)</th><th>Unidades sin costo</th></tr></thead><tbody id="inventory-monthly-rows"></tbody></table></div><p>Solo es cierre mensual un corte conservado del último día del mes. Si falta, se muestra “Sin cierre”; no se reemplaza por otra fecha. El corte actual puede estar en curso. Los valores parciales excluyen unidades sin costo. Línea y categoría usan la clasificación disponible actualmente. Se muestran hasta 12 meses.</p></details>
+    <details id="inventory-monthly-detail"><summary>Ver cifras y fechas de corte</summary><div class="tw"><table><thead><tr><th>Mes</th><th>Tipo de corte</th><th>Fecha</th><th>Unidades</th><th>Valor conocido (COP)</th><th>Unidades sin costo</th></tr></thead><tbody id="inventory-monthly-rows"></tbody></table></div><p>Al comenzar un mes nuevo, el último cargue conservado del mes anterior queda como corte final disponible, con su fecha real. Solo es cierre exacto si el corte fue el último día del mes. Los valores parciales excluyen unidades sin costo. Línea y categoría usan la clasificación disponible actualmente. Se muestran hasta 12 meses.</p></details>
   </section>
 
   <!-- FILA 1: Antigüedad + Rotación por mes + Rupturas -->
@@ -565,7 +565,7 @@ canvas{max-width:100%;}
         <article><h3>Unidades despachadas</h3><div class="inventory-monthly-chart"><canvas id="chart4" role="img" aria-label="Despachos mensuales en unidades"></canvas></div></article>
         <article><h3>Costo de despachos (COP)</h3><div class="inventory-monthly-chart"><canvas id="chart4-money" role="img" aria-label="Costo mensual de los despachos en pesos"></canvas></div></article>
       </div>
-      <details><summary>Ver cifras y fechas de cierre</summary><div class="tw"><table><thead><tr><th>Mes</th><th>Corte</th><th>Estado</th><th>Obsolescencia</th><th>Despachos (uds)</th><th>Costo de despachos (COP)</th></tr></thead><tbody id="performance-rows"></tbody></table></div><p>Un cierre requiere el corte del último día del mes. Mes sin cierre o movimientos incompletos: sin dato. Los pesos corresponden al costo de las salidas RM del ERP; no son ventas. Los filtros de línea y categoría usan la clasificación disponible actualmente.</p></details>
+      <details><summary>Ver cifras y fechas de corte</summary><div class="tw"><table><thead><tr><th>Mes</th><th>Corte</th><th>Estado</th><th>Obsolescencia</th><th>Despachos (uds)</th><th>Costo de despachos (COP)</th></tr></thead><tbody id="performance-rows"></tbody></table></div><p>Cada mes terminado usa su último corte conservado y muestra la fecha real. Solo es cierre exacto cuando corresponde al último día del mes. Los movimientos se cuentan hasta el corte; si están incompletos, no se muestra valor. Los pesos son costos de salidas RM del ERP, no ventas. Los filtros de línea y categoría usan la clasificación disponible actualmente.</p></details>
     </div>
 
     <div class="chart-card abc-card">
@@ -700,7 +700,7 @@ canvas{max-width:100%;}
 
 <!-- ═══════════ TAB 3: ROTACIÓN ═══════════ -->
 <div class="page" id="page-rotacion">
-<details class="coverage-scope"><summary>Rotación y días: solo primeras · excluye Segundas y Cobros</summary><p>Alcance de rotación y días de inventario: existencias y despachos RM de primeras, según los filtros seleccionados. Excluye PT002, TI005 y TI006 (Segundas) y PT003 (Cobros).</p><p>Días de inventario = existencias al corte ÷ (despachos RM del período ÷ días calendario del período).</p><p class="coverage-period"></p><p>Cada barra usa las existencias y el período exportado de su propio corte. Se muestra el último corte guardado de cada mes; solo es cierre mensual si corresponde al último día del mes. Sin corte o sin despachos, no se dibuja una barra. Los filtros de línea y categoría usan la clasificación disponible actualmente.</p></details>
+<details class="coverage-scope"><summary>Rotación y días: solo primeras · excluye Segundas y Cobros</summary><p>Alcance de rotación y días de inventario: existencias y despachos RM de primeras, según los filtros seleccionados. Excluye PT002, TI005 y TI006 (Segundas) y PT003 (Cobros).</p><p>Días de inventario = existencias al corte ÷ (despachos RM del período ÷ días calendario del período).</p><p class="coverage-period"></p><p>Cada barra usa las existencias y el período exportado de su propio corte. Se muestra el último corte guardado de cada mes con su fecha real; solo es cierre exacto si corresponde al último día del mes. Sin corte o sin despachos, no se dibuja una barra. Los filtros de línea y categoría usan la clasificación disponible actualmente.</p></details>
 
   <div class="frow" style="margin-bottom:10px">
     <!-- filtros globales en filter-bar -->
@@ -3945,7 +3945,7 @@ cargarTodo();
 window.PccExecutiveInventory=()=>({status:inventarioCargando?'loading':document.getElementById('inv-load-error')?'error':INV_DATA.length?'ready':'empty',rows:INV_DATA,records:[...PccFresh.records.values()]});
 </script>
 <script src="inventory-history-view.js?v=2.9"></script>
-<script src="inventory-monthly.js?v=2.9"></script>
-<script src="inventory-performance.js?v=2.9"></script>
+<script src="inventory-monthly.js?v=3.0"></script>
+<script src="inventory-performance.js?v=3.0"></script>
 </body>
 </html>

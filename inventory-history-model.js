@@ -69,15 +69,15 @@ function monthlyCuts(cuts,cutoff,count=6){
  for(const cut of cuts.filter(c=>c.cutoff<=cutoff).sort((a,b)=>a.cutoff.localeCompare(b.cutoff)))latest.set(cut.cutoff.slice(0,7),cut);
  return [...latest.values()].slice(-count);
 }
-// Monthly inventory requires an actual month-end snapshot, never an arbitrary last load.
+// Once a month has ended, its last preserved load is its final available cut.
 function inventoryMonthlyCuts(cuts,cutoff,count=12){
  const available=cuts.filter(c=>c.cutoff<=cutoff).sort((a,b)=>a.cutoff.localeCompare(b.cutoff));
  const currentMonth=cutoff.slice(0,7),first=available[0]?.cutoff.slice(0,7)||currentMonth;
  const months=[];for(let month=first;month<=currentMonth;month=nextDay(endOfMonth(month)).slice(0,7))months.push(month);
  return months.slice(-count).map(month=>{
-  const current=month===currentMonth,end=endOfMonth(month),date=current?cutoff:end;
-  const cut=available.find(c=>c.cutoff===date)||null;
-  return {month,cutoff:cut?.cutoff||(current?cutoff:null),current,closed:date===end&&!!cut,cut};
+  const current=month===currentMonth,end=endOfMonth(month);
+  const cut=available.filter(c=>c.cutoff.slice(0,7)===month).at(-1)||null;
+  return {month,cutoff:cut?.cutoff||(current?cutoff:null),current,closed:!!cut&&(!current||cut.cutoff===end),calendarEnd:cut?.cutoff===end,cut};
  });
 }
 function inventoryMonthlyValues(points,predicate=()=>true){
