@@ -228,19 +228,19 @@ La tabla de existencias al corte utiliza el mismo componente de filtros de Por r
 ## Importes completos y evolución mensual (v2.7)
 
 - Los importes en pesos se presentan completos, con separadores colombianos y hasta dos decimales; se eliminan las abreviaciones K/M en Inventario, Operaciones y los rangos/gráficos monetarios de Costos. Se amplía el espacio de tarjetas y del gráfico por bodega para mantenerlos legibles.
-- Resumen general agrega dos gráficos y una tabla desplegable: unidades y valor conocido en COP, con el corte actual y hasta 12 meses de cierres conservados. El corte actual coincide con las existencias de las tarjetas.
-- Un cierre requiere un inventario completo publicado con fecha del último día calendario del mes. Una carga intermedia nunca sustituye un cierre; los meses sin ese corte se identifican y quedan sin barra. El mes actual tiene un solo punto, incluso si ya corresponde a cierre.
-- Cada cierre utiliza sus propias unidades y costos archivados, verificados por hash. Un corte sin costos no aparece como valor cero; la valoración parcial se identifica y muestra las unidades sin costo en el detalle.
+- Resumen general agrega dos gráficos y una tabla desplegable: unidades y valor conocido en COP, con el corte actual y hasta 12 meses de cortes finales disponibles. El corte actual coincide con las existencias de las tarjetas.
+- En las gráficas mensuales, el último cargue conservado de cada mes terminado queda como corte final disponible y conserva su fecha real. Se distingue del cierre exacto, que exige fecha del último día calendario. Un mes sin ningún corte queda vacío. El mes actual tiene un solo punto.
+- Cada corte utiliza sus propias unidades y costos archivados, verificados por hash. Un corte sin costos no aparece como valor cero; la valoración parcial se identifica y muestra las unidades sin costo en el detalle.
 - Ambos gráficos incluyen todas las bodegas, incluidas Segundas y Cobros, y respetan los filtros globales. Para línea/categoría se utiliza la clasificación actual disponible, indicándolo en el detalle. Esto no cambia las exclusiones de primeras usadas para rotación y días de inventario.
-- No requiere cambios en Apps Script ni pasos adicionales del operador. Si no se puede leer el histórico, permanece visible el corte actual y se informa la falta de cierres consultables.
-- Validación: pruebas de cierres exactos, años bisiestos, meses faltantes, límites de período, filtros, valoración parcial y formato COP; revisión visual con datos reales y escenarios locales de varios meses (no publicados).
+- No requiere cambios en Apps Script ni pasos adicionales del operador. Si no se puede leer el histórico, permanece visible el corte actual y se informa la falta de cortes consultables.
+- Validación: pruebas de cortes finales disponibles y cierres exactos, años bisiestos, meses faltantes, límites de período, filtros, valoración parcial y formato COP.
 
 
 ## Cierres de obsolescencia y despachos (v2.8)
 
 - Publicación versión 4 incorpora métricas por corte. Reconstruye las existentes desde sus cuatro archivos archivados, usando el FIFO del cliente con fecha explícita y los costos de inventario propios del lote. Guarda el derivado verificado `metricas-mensuales-v1.json`; conserva los originales. No requiere nuevas cargas ni digitación.
 - Obsolescencia = costo conocido de primeras con más de 90 días / costo conocido de primeras. La antigüedad histórica conserva la metodología FIFO y las limitaciones del período exportado; no se presenta como una medición física independiente. Sin costo o cobertura verificable queda sin dato.
-- Rotación mensual del Resumen muestra despachos RM (unidades y costo de salidas del ERP) del mes de cada corte. Excluye PT002, PT003, TI005 y TI006. Los importes no equivalen a ventas. Solo usa cierres del último día calendario y el corte actual; un mes sin cierre queda vacío. Cada serie conserva hasta seis meses.
+- Rotación mensual del Resumen muestra despachos RM (unidades y costo de salidas del ERP) hasta la fecha real del último corte guardado de cada mes. Excluye PT002, PT003, TI005 y TI006. Los importes no equivalen a ventas. Un mes sin corte queda vacío. Cada serie conserva hasta seis meses.
 - Las barras destacan el mes del corte actual, no el de mayor cantidad. Etiquetas permanentes, importes COP completos y tabla desplegable con fechas. Las consultas tardías no pueden reemplazar resultados de filtros más recientes.
 - ABC agrega unidades y costo conocido por clase, con etiquetas completas y acceso por botón al detalle. Mantiene el criterio de clasificación y las exclusiones vigentes.
 - Migración reanudable por lote: el índice público anterior sigue disponible hasta completar y verificar la nueva publicación. El activador de la cuenta propietaria realiza la migración; no se modifica su periodicidad.

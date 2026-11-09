@@ -6,7 +6,7 @@ const num=n=>Number.isFinite(n)?n.toLocaleString('es-CO',{maximumFractionDigits:
 const date=d=>d?d.split('-').reverse().join('/'):'—';
 const month=m=>new Date(m+'-15T12:00:00Z').toLocaleDateString('es-CO',{month:'short',year:'numeric',timeZone:'UTC'});
 let request=0,charts=[];
-const type=p=>p.current?(p.closed?'Cierre y actual':'Actual · en curso'):p.closed?'Cierre mensual':'Sin cierre';
+const type=p=>p.current?(p.calendarEnd?'Cierre y actual':'Actual · en curso'):p.calendarEnd?'Cierre exacto':p.closed?'Último corte del mes':'Sin corte';
 function clear(){charts.forEach(c=>c.destroy());charts=[];$('inventory-monthly-rows').replaceChildren();}
 function draw(points){
  clear();
@@ -46,16 +46,16 @@ async function render(){
  const taxonomy=new Map(INV_DATA.map(r=>[JSON.stringify([r.empresa,r.ref]),r.lineaReal]));
  const predicate=r=>glFilterReal({bodega:r.warehouse,lineaReal:taxonomy.get(JSON.stringify([r.company,r.ref]))||REF_MAP[r.ref]?.linea||clasificarRef(r.ref,r.company,''),desc:r.description||DESC_MAP[r.ref]||''});
  const currentPoint={month:cutoff.slice(0,7),cutoff,current:true,closed:false,rows:current};
- $('inventory-monthly-status').textContent='Consultando cierres conservados…';
+ $('inventory-monthly-status').textContent='Consultando cortes conservados…';
  // The current point remains available even if the historical service fails.
  draw(M.inventoryMonthlyValues([currentPoint],predicate));
  try{
   const selected=await PccInventoryHistoryView.inventorySeries(cutoff);if(token!==request)return;
   const points=M.inventoryMonthlyValues(selected.map(p=>p.current?{...p,rows:current}:p),predicate);
   draw(points);
-  const closed=points.filter(p=>p.closed).length,missing=points.filter(p=>!p.current&&!p.closed).length,partial=points.some(p=>p.totals?.missingCostUnits>0);
-  $('inventory-monthly-status').textContent=(closed?closed+(closed===1?' cierre mensual conservado.':' cierres mensuales conservados.'):'Aún no hay cierres de mes conservados; se muestra el corte actual.')+(missing?' '+missing+(missing===1?' mes sin corte de cierre.':' meses sin corte de cierre.'):'')+(partial?' * Valor parcial: excluye unidades sin costo; “—” indica que no hay valoración informada.':'');
- }catch(err){if(token===request)$('inventory-monthly-status').textContent='Cierres no disponibles. Se muestra únicamente el corte actual verificado; pulse Actualizar para reintentar.';}
+  const closed=points.filter(p=>!p.current&&p.closed).length,missing=points.filter(p=>!p.current&&!p.closed).length,partial=points.some(p=>p.totals?.missingCostUnits>0);
+  $('inventory-monthly-status').textContent=(closed?closed+(closed===1?' mes con corte final conservado.':' meses con corte final conservado.'):'Aún no hay cortes finales conservados; se muestra el corte actual.')+(missing?' '+missing+(missing===1?' mes sin corte.':' meses sin corte.'):'')+(partial?' * Valor parcial: excluye unidades sin costo; “—” indica que no hay valoración informada.':'');
+ }catch(err){if(token===request)$('inventory-monthly-status').textContent='Cortes no disponibles. Se muestra únicamente el corte actual verificado; pulse Actualizar para reintentar.';}
 }
 window.PccInventoryMonthly={render};
 })();

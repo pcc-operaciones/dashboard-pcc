@@ -25,9 +25,9 @@ test('obsolescencia usa costos y antigüedad del corte, con exclusiones y filtro
  const v=M.performanceAtCut({performance:{aging}});assert.equal(v.obsolescence,57.099999999999994);assert.equal(v.agingMissing,2);
  assert.equal(M.performanceAtCut({performance:{aging}},r=>r.company==='TEX').obsolescence,null);
 });
-test('serie mensual solo usa fin de mes, no sustituye un cierre ausente ni resalta el máximo',()=>{
+test('serie mensual usa el último corte de cada mes y distingue el cierre exacto',()=>{
  const points=M.inventoryMonthlyCuts([{cutoff:'2026-08-29'},{cutoff:'2026-09-30'},{cutoff:'2026-10-07'}],'2026-10-07',6);
- assert.equal(points[0].cut,null);assert.equal(points[1].closed,true);assert.equal(points[1].current,false);assert.equal(points[2].current,true);
+ assert.equal(points[0].cutoff,'2026-08-29');assert.equal(points[0].calendarEnd,false);assert.equal(points[0].closed,true);assert.equal(points[1].calendarEnd,true);assert.equal(points[1].current,false);assert.equal(points[2].current,true);
 });
 test('métricas derivadas usan fecha y archivos propios y se reutilizan sin recalcular',()=>{
  const b={...batch(),inventory:[]},load={id:'load',folderId:'folder'},saved=new Map();let called=0;

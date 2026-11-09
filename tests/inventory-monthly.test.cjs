@@ -1,9 +1,9 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const M=require('../inventory-history-model.js'),money=require('../money-format.js').format;
 const cuts=dates=>dates.map(cutoff=>({cutoff}));
-test('mensual conserva cierres exactos y no sustituye cargas intermedias ni futuras',()=>{
- const p=M.inventoryMonthlyCuts(cuts(['2026-09-17','2026-09-30','2026-10-29','2026-11-20','2026-11-30']),'2026-11-20');
- assert.deepEqual(p.map(x=>[x.cutoff,x.closed,x.current]),[['2026-09-30',true,false],[null,false,false],['2026-11-20',false,true]]);
+test('mensual usa el último cargue de cada mes cerrado y conserva su fecha real',()=>{
+ const p=M.inventoryMonthlyCuts(cuts(['2026-09-17','2026-09-30','2026-10-08','2026-10-26','2026-11-05','2026-11-30']),'2026-11-05');
+ assert.deepEqual(p.map(x=>[x.cutoff,x.closed,x.calendarEnd,x.current]),[['2026-09-30',true,true,false],['2026-10-26',true,false,false],['2026-11-05',false,false,true]]);
 });
 test('cierre actual aparece una vez, soporta año bisiesto, vacíos y límite de 12 meses',()=>{
  assert.deepEqual(M.inventoryMonthlyCuts(cuts(['2024-01-31','2024-02-29']),'2024-02-29').map(p=>p.closed),[true,true]);
