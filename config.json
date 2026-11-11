@@ -2,17 +2,17 @@
   "vigencia": {
     "maxDiasSinActualizar": { "ops": 2, "cos": 7, "inv": 1 }
   },
-  "mes": "Octubre",
+  "mes": "Noviembre",
   "año": "2026",
 
   "ids": {
-    "TEX":   "1tZW3Jmfcu4TMEM_wLdm8-4m98dgzRISNOSC2fKRuFBs",
-    "EU":    "1ReSQiU4PsIs6vu3Ow0qqH_aDY1a_a8A4QDP-881jwjc",
+    "TEX":   "1_vb4MPWI_K6g854NE4PKZpBLUWZPQD1rYs_ooIJmC1M",
+    "EU":    "1fL8HTICNRA085qwqr3vlwFDeC1zEzovOt7RQLhShBf8",
     "MODA":  "1JN9BA3hVHVT8EMIXbJw8Q5QMNEOcxNVnF0LqoY13Al0",
-    "CORTE": "1bfHrbAJcWjzeItkMOPryaXO5G01XJG8Eq3Q5N-vodpA",
-    "PRES":  "1Tl7gXO2j7ZIrd62wrCCG0oz6ZQDO8NxoDGwdfh5rk5o",
-    "SERV":  "1a65Yd33ZLUNENPom0FHizW7r3zJlEOm6AIbZE9G8OaQ",
-    "PREU": "1bla8SSJHgrWegUBFPHUJjg3hvnX6qxvu8ZfE4dteloM"
+    "CORTE": "1tfSNxLECO7mCzLjhy38cfKqauyoFMe226sXzqkZEFbA",
+    "PRES":  "1BkYTfgVE8pQB_Ujcykw12XNxS1b3m26rApLz1-PMSJY",
+    "SERV":  "1Ejab-X0RPYbw_SyugL2Ei9psYxXiDWMN5JhM1YjDryo",
+    "PREU": "1p8Bk7nDA_mgUNREe6Bx3yb1iPWuz4GdsikP85wTdG7Q"
   },
 
   "rangos": {
