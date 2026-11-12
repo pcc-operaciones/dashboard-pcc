@@ -79,6 +79,10 @@ function build(input,filterValue={},deps={},costSelection){
  const range=input.inv?.period||{},from=range.from||range.start||'',to=range.to||range.end||'';
  const inv={status:state(input.inv),ready:invReady,rows:inventory,principalRows:principal,units:invReady?inventory.reduce((s,r)=>s+units(r),0):null,principal:invReady?principal.reduce((s,r)=>s+units(r),0):null,age:['u0','u1','u2','u3'].map(k=>invReady?sum(principal,k):null),knownValue:invReady?known:null,missingCostUnits:invReady?missing:null,cutoff:input.inv?.cutoff||'',movements:movementSeries(moves,from,to,'received','shipped','fecha'),records:input.inv?.records||[]};
  inv.agedShare=inv.principal>0?inv.age[3]/inv.principal:null;
+ const pendingOps=input.inv?.pendingOps;
+ inv.pendingOpsStatus=state(pendingOps);
+ inv.pendingOps=ready(pendingOps)?pendingOps.rows||[]:[];
+ inv.pendingUnits=ready(pendingOps)?sum(inv.pendingOps,'porRecibir'):null;
  const logReady=ready(input.log),logSupported=!filters.line.length&&!filters.category.length;
  // Los materiales solo tienen desglose por empresa. Una línea/categoría delimita
  // su empresa matriz, pero no convierte el total empresarial en un subtotal de línea.

@@ -75,6 +75,7 @@ test('fallo de la fuente principal oculta indicadores y permite reintentar',asyn
  const page=element(),notes=new Map();
  const context={window:{parent:{}},inventoryLoadCount:0,inventoryNeedsRender:false,inventoryOpsPromise:null,BASE:'https://example.test',API_KEY:'test',KPI_ID:'kpi',PccInventoryLoader:{current:async()=>{throw Error('HTTP 503');}},inventarioCargando:false,RUTA_LINEA:{},DESC_MAP:{},STOCK_MIN_LINEA:new Map(),REFS_EU_LINEA:new Set(),
   INV_DATA:[{ref:'vieja'}],MOV_DATA:[{}],LINEA_EU_ID:'linea',INV_SHEET_ID:'inventario',
+  OP_NO_RECIBIDA:{},OP_NO_RECIBIDA_LIST:[],pendingInventoryOpsStatus:'loading',
   fetchSheet:async(id)=>{if(id==='inventario')throw Error('HTTP 503');return [['REF']];},
   mapCols:()=>()=>-1,normStr:String,console:{log(){},warn(){}},setTimeout(){},
   PccData:{note:(k,v)=>notes.set(k,v)},document:{body:{dataset:{}},getElementById:id=>(elements[id]??=element()),querySelectorAll:()=>[page],querySelector:()=>element(),createElement:()=>element()}};
