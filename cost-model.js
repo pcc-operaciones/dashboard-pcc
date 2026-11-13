@@ -56,6 +56,49 @@ function rankings(groups,n=10){
 }
 function shiftMonth(key,offset){const d=new Date(Date.UTC(+key.slice(0,4),+key.slice(5)-1+offset,1));return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');}
 function windows(anchor){return {recent:[shiftMonth(anchor,-1),anchor],historical:Array.from({length:6},(_,i)=>shiftMonth(anchor,i-7))};}
+const components=[
+ ['tela','Telas'],['insumos','Insumos'],['corte','Corte'],['conf','Confección'],
+ ['lav','Lavandería'],['bordado','Bordado / estampado'],['pres','Presentación']
+];
+function unitCost(row,key){
+ if(key==='tela'&&row.telaRegistrada===0)return 0;
+ const value=row[key];
+ if(key==='insumos'){
+  if(finite(value)&&row.cant>0)return value/row.cant;
+  if(finite(row.insumosConf)&&finite(row.insumosPres))return row.insumosConf+row.insumosPres;
+  return null;
+ }
+ if(!finite(value))return null;
+ return value;
+}
+function compareComponents(historical,recent){
+ return components.map(([key,label])=>{
+  const average=rows=>mean(rows.map(row=>({value:unitCost(row,key)})),'value');
+  const before=average(historical),after=average(recent);
+  const change=finite(before)&&finite(after)?Math.round((after-before)*100)/100:null;
+  return {key,label,before,after,change};
+ });
+}
+function operationKey(company,ref,order){
+ const match=String(order??'').trim().match(/^(?:OP-)?0*(\d+)(?:\.0+)?$/i);
+ return match&&ref?JSON.stringify([company,norm(ref),match[1]]):null;
+}
+function traceIndex(lots){
+ const index=new Map();
+ for(const lot of lots){
+  const key=operationKey(lot.empresa,lot.refSap,lot.ordenCorte);
+  if(key)index.set(key,index.has(key)?null:lot);
+ }
+ return index;
+}
+function providers(row,index){
+ const key=operationKey(classify(row).company,row.ref,row.lote);
+ const trace=key?index.get(key)?.traza:null;
+ const roles=[['Corte',trace?.corte?.resp],['Confección',row.taller||trace?.confeccion?.resp],
+  ['Lavandería / tintorería',trace?.tintoreria?.resp],['Bordado',trace?.bordado?.resp],
+  ['Presentación',trace?.presentacion?.resp]];
+ return roles.filter(([,name])=>name).map(([label,name])=>({label,name}));
+}
 function variations(rows,anchor,allowedIds){
  const window=windows(anchor),groups=references(rows.filter(r=>(r.cant||0)>0&&!(r.tela===0&&r.promTela===0)&&finite(r.ct)&&r.ct>0));
  const entries=groups.filter(g=>!allowedIds||allowedIds.has(g.id)).flatMap(g=>{
@@ -64,8 +107,8 @@ function variations(rows,anchor,allowedIds){
   const before=mean(historical,'ct'),after=mean(recent,'ct'),change=after-before,delta=change/Math.abs(before);
   return delta>1e-12?[{...g,before,after,change,delta,recentCount:recent.length,historicalCount:historical.length,recentRows:recent,historicalRows:historical}]:[];
  }).sort((a,b)=>b.delta-a.delta||a.id.localeCompare(b.id));
- return {anchor,...window,rows:entries.slice(0,5),comparable:entries.length};
+ return {anchor,...window,rows:entries.slice(0,5).map(row=>({...row,components:compareComponents(row.historicalRows,row.recentRows)})),comparable:entries.length};
 }
-const api={summary,period,inPeriod,classify,references,rankings,variations,windows,monthLabel,number,percent};
+const api={summary,period,inPeriod,classify,references,rankings,variations,windows,monthLabel,number,percent,providers,traceIndex};
 root.PccCostModel=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

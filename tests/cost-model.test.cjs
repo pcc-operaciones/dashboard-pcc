@@ -60,3 +60,24 @@ test('Costos: top 5 muestra solo aumentos porcentuales descendentes, aunque haya
  assert.ok(v.rows.every(r=>r.delta>0&&r.change>0));
  assert.deepEqual(C.variations(rows.filter(r=>r.ref==='baja'),'2026-11').rows,[]);
 });
+
+test('Costos: los insumos totales se convierten a costo unitario y la falta de histórico queda sin comparación',()=>{
+ const historical=row('a','2026-09',100,{cant:20,tela:50,insumos:200,corte:5,conf:null});
+ const recent=row('a','2026-11',150,{cant:10,tela:90,insumos:150,corte:4,conf:9});
+ const [top]=C.variations([historical,recent],'2026-11').rows;
+ const get=key=>top.components.find(component=>component.key===key);
+ assert.deepEqual(get('insumos'),{key:'insumos',label:'Insumos',before:10,after:15,change:5});
+ assert.equal(get('tela').change,40);
+ assert.equal(get('corte').change,-1);
+ assert.equal(get('conf').change,null);
+});
+
+test('Costos: vincula responsables solo con empresa, referencia y OP inequívocas',()=>{
+ const trace={empresa:'EU',refSap:'A',ordenCorte:'OP-0000042',traza:{corte:{resp:'Corte registrado'},confeccion:{resp:'Taller en traza'}}};
+ const cost={empresa:'EU',ref:'a',lote:42,taller:'Taller en costeo'};
+ assert.deepEqual(C.providers(cost,C.traceIndex([trace])),[
+  {label:'Corte',name:'Corte registrado'},{label:'Confección',name:'Taller en costeo'}
+ ]);
+ assert.deepEqual(C.providers({...cost,taller:''},C.traceIndex([trace,{...trace}])),[]);
+ assert.deepEqual(C.providers({...cost,empresa:'TEX',taller:''},C.traceIndex([trace])),[]);
+});

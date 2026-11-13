@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<script src="dashboard-print.js?v=1"></script>
 <script src="money-format.js?v=2.8"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inventario — Producto Terminado</title>
@@ -301,7 +302,7 @@ canvas{max-width:100%;}
   <div class="tb-right">
     <div class="live-pill"><div class="live-dot"></div><span class="live-lbl" id="inv-live-label">Sin consultar</span></div>
     <span class="date-lbl" id="fechaCorte">—</span>
-    <button class="btn-ref" onclick="exportarPDF('resumen')" style="background:var(--navy);color:#fff;border-color:var(--navy)">📄 PDF</button>
+    <button class="btn-ref" onclick="PccPrintInventory()" style="background:var(--navy);color:#fff;border-color:var(--navy)">📄 PDF</button>
     <button class="btn-ref" onclick="cargarTodo()">↻ Actualizar</button>
   </div>
 </div>
@@ -1831,7 +1832,10 @@ function renderResumen(){
   document.getElementById('k-dias-trend').textContent=(cobertura===null?(PERIODO_MOV.days?'Sin despachos':'Período sin verificar'):cobertura>90?'▲ Exceso':'▼ OK');
   document.getElementById('k-dias-trend').className='hero-trend '+(cobertura>90?'dn':'up');
   document.getElementById('k-obsol').textContent=obsolPct;
-  document.getElementById('k-obsol-val').textContent=fmtM(rC)+' en riesgo'+(inv.some(r=>r.missingCostUnits)?' · costo conocido':'');
+  const agedCost=document.getElementById('k-obsol-val');
+  const agePartial=inv.some(r=>r.u3>0&&r.missingCostUnits>0);
+  agedCost.textContent=fmtM(rC)+' de inventario +90 días'+(agePartial?' · parcial':'');
+  agedCost.title=new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP'}).format(rC)+' · primeras';
   document.getElementById('k-obsol-meta').textContent='Meta ≤5%';
   document.getElementById('k-rupturas').textContent=rupturaPct;
   document.getElementById('k-rupturas-meta').textContent='Meta ≤5% · EU Línea';
@@ -2698,7 +2702,7 @@ function showTab(tab,btn){
   document.getElementById('page-'+tab).classList.add('active');
   btn.classList.add('active');
   document.body.dataset.inventoryView=tab;
-  document.querySelectorAll('.tb-right .btn-ref').forEach(b=>{b.hidden=tab==='historico';});
+  document.querySelectorAll('.tb-right .btn-ref:not([onclick="PccPrintInventory()"])').forEach(b=>{b.hidden=tab==='historico';});
   // Ocultar filtro global en Abastecimiento
   const fb = document.getElementById('filter-bar');
   if(fb) fb.classList.toggle('hidden', tab==='abastecimiento'||tab==='opnorecibida'||tab==='historico');
@@ -3757,6 +3761,12 @@ function exportarExcelModal(tipo){
 }
 
 // ── PDF: EXPORTAR PESTAÑA COMPLETA ──
+function PccPrintInventory(){
+  const active=document.querySelector('.page.active');
+  const tab=document.querySelector('.nav-btn.active')?.textContent.trim()||'Resumen';
+  const scope=active?.id==='page-historico'?'Corte y filtros del histórico seleccionado':document.getElementById('fechaCorte')?.textContent;
+  return PccPrintView(active,'Inventario PT / '+tab,scope);
+}
 async function exportarPDF(tab){
   if(!window.jspdf){alert('Librería PDF no disponible.');return;}
   const {jsPDF} = window.jspdf;

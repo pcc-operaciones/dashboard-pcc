@@ -50,6 +50,47 @@ function monthsBetween(from,to){
 function movementSeries(rows,from,to,entryKey,exitKey,dateKey){
  const keys=monthsBetween(from,to);return {keys,labels:keys.map(key=>monthNames[+key.slice(5)-1]+(key.slice(0,4)!==to.slice(0,4)?' '+key.slice(0,4):'')+((key===from.slice(0,7)&&from.slice(8)!=='01')||(key===to.slice(0,7)&&+to.slice(8)!==new Date(Date.UTC(+to.slice(0,4),+to.slice(5,7),0)).getUTCDate())?'*':'')),received:keys.map(k=>sum(rows.filter(r=>String(r[dateKey]).slice(0,7)===k),entryKey)),shipped:keys.map(k=>sum(rows.filter(r=>String(r[dateKey]).slice(0,7)===k),exitKey)),from,to};
 }
+const activeStates={
+ PLANEACION:['programacion','ini'], CORTE:['corte','ini'], CORTADO:['corte','fin'],
+ BORDADO:['bordado','ini'], BORDADO_CONFECCIONADO:['bordado','fin'],
+ CONFECCION:['confeccion','ini'], CONFECCIONADO:['confeccion','fin'],
+ TINTORERIA:['tintoreria','ini'], PRESENTACION:['presentacion','ini']
+};
+const dayFormat=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Bogota',year:'numeric',month:'2-digit',day:'2-digit'});
+const bogotaDay=now=>dayFormat.format(now);
+function daysSince(from,to){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(from||'')||from>to)return null;
+ const start=new Date(from);
+ if(!finite(+start)||start.toISOString().slice(0,10)!==from)return null;
+ return Math.round((new Date(to)-start)/86400000);
+}
+function lotAge(lot,today=bogotaDay(new Date())){
+ const state=activeStates[norm(lot.estado).replace(/ /g,'_')];
+ const date=lot.stateSince||(state?lot.traza?.[state[0]]?.[state[1]]:null);
+ const start=lot.traza?.programacion?.ini||lot.fProgD;
+ const stateDays=daysSince(date,today),processDays=daysSince(start,today);
+ return {stateSince:stateDays===null?null:date,stateDays,processSince:processDays===null?null:start,processDays};
+}
+function inventoryConsolidated({inv,log,ops}){
+ const pt=inv.rows;
+ const groups=[
+  ['Inventario PT','Primeras',pt.filter(r=>!r.esSeg&&!r.esCobros)],
+  ['Inventario PT','Segundas',pt.filter(r=>r.esSeg)],
+  ['Inventario PT','Cobros',pt.filter(r=>!r.esSeg&&r.esCobros)]
+ ].map(([area,section,rows])=>({area,section,cutoff:inv.cutoff,value:inv.ready?sum(rows,'knownValue'):null,
+  status:inv.ready?(rows.some(r=>!finite(r.knownValue)||r.missingCostUnits>0)?'Costo conocido parcial':'Costo ERP'):inv.status}));
+ const logisticsSections=[['MT001','Telas'],['MT002','Insumos']];
+ const additional=log.rows.filter(r=>!logisticsSections.some(([code])=>code===r.warehouse));
+ for(const [warehouse,section] of logisticsSections){
+  groups.push({area:'Logística',section,cutoff:log.meta.corte_inventario,value:log.ready?sum(log.rows.filter(r=>r.warehouse===warehouse),'costTotal'):null,
+   status:log.ready?log.companies.join(' + ')+' · total por empresa':log.status});
+ }
+ if(additional.length)groups.push({area:'Logística',section:'Otras bodegas',cutoff:log.meta.corte_inventario,value:sum(additional,'costTotal'),status:'Costo SIESA'});
+ const valued=groups.filter(row=>finite(row.value));
+ const partial=valued.length<groups.length||groups.some(row=>row.status==='Costo conocido parcial');
+ groups.push({area:'Operaciones PCC',section:'Producto en proceso (WIP)',cutoff:'',value:null,units:ops.wipUnits,status:ops.wipReady?'Sin valoración en la fuente':ops.wipStatus});
+ return {rows:groups,total:valued.length?sum(valued,'value'):null,partial};
+}
 function build(input,filterValue={},deps={},costSelection){
  const filters=cleanFilters(filterValue),key=deps.period?.(input.config)||null,year=key?.slice(0,4),monthCount=key?+key.slice(5):0,months=monthNames.slice(0,monthCount),keys=months.map((_,i)=>year+'-'+String(i+1).padStart(2,'0'));
  const scoped=filters.company.length===1||!!(filters.line.length||filters.category.length),match=r=>matches(r,filters);
@@ -64,10 +105,14 @@ function build(input,filterValue={},deps={},costSelection){
  const cos={status:state(input.cos),ready:costReady,period:costPeriod,count:costReady?costSummary.count:null,rent:costReady?costSummary.rent:null,ccu:costReady?costSummary.ccu:null,margin:costReady?costSummary.margin:null,profit:costReady?costSummary.profit:null,units:costReady?costSummary.units:null,negative:costReady&&validRent.length?validRent.filter(r=>r.rent<0):[],negativeCount:costReady&&validRent.length?validRent.filter(r=>r.rent<0).length:null,rows:selected,references:refs,rankings:C.rankings(refs),variation:C.variations(costs,costPeriod.anchor,new Set(refs.map(r=>r.id))),nativeFilters:{years:costPeriod.years,periods:costPeriod.periods,lineas:nativeLines,subcats:filters.category.length?[...new Set(costs.map(r=>r.sourceCategory))]:[]},monthly:costPeriod.keys.map(k=>{const rs=selected.filter(r=>r.fecha===k);return {rent:mean(rs,'rent'),ccu:mean(rs,'ccu'),margin:mean(rs,'margen')};}),records:input.cos?.records||[]};
  const wipReady=ready(input.wip),wipUnsupported=filters.category.some(x=>hierarchy[0].cats.includes(x));
  const allLots=wipReady?(input.wip.all||[]).map(r=>({...r,...taxonomy(r.empresa,r.empresa==='TEX'?r.mundo:r.clasificacion)})).filter(match):[];
- const lots=allLots.filter(r=>r.estado&&!['ENTREGADO','CANCELADO'].includes(r.estado)&&r.cant>0);
+ const today=bogotaDay(deps.now?.()||new Date());
+ const lots=allLots.filter(r=>r.estado&&!['ENTREGADO','CANCELADO'].includes(r.estado)&&r.cant>0).map(r=>({...r,...lotAge(r,today)}));
  const states=[...new Set(lots.map(r=>r.estado))].sort((a,b)=>(stateOrder.indexOf(a)<0?99:stateOrder.indexOf(a))-(stateOrder.indexOf(b)<0?99:stateOrder.indexOf(b))).map(name=>{const rows=lots.filter(r=>r.estado===name);return {name,lots:rows.length,units:sum(rows,'cant')};});
  const ops={status:state(input.ops),wipStatus:state(input.wip),ready:ready(input.ops)&&!!key,wipReady:wipReady&&!wipUnsupported,performanceSupported:!scoped,wipSupported:!wipUnsupported,lots,wipUnits:wipReady&&!wipUnsupported?sum(lots,'cant'):null,states,stages:stageNames.map((name,i)=>({name,values:keys.map(k=>wipReady&&!wipUnsupported?sum(allLots.filter(r=>r[stageFields[i]]===k),'cant'):null)})),efficiency:ready(input.ops)&&key&&!scoped?deps.ops?.(input.ops.mods||[],'ef')??null:null,compliance:ready(input.ops)&&key&&!scoped?deps.ops?.(input.ops.mods||[],'cumpl')??null:null,records:input.ops?.records||[]};
  ops.performance=performanceDetail(input.ops?.mods||[],key,ops.ready&&ops.performanceSupported,deps.ops);
+ ops.agedLots=lots.filter(lot=>lot.processDays>90).sort((a,b)=>b.processDays-a.processDays);
+ ops.undatedUnits=ops.wipReady?sum(lots.filter(lot=>lot.processDays===null),'cant'):null;
+ ops.agedUnits=ops.wipReady&&(!lots.length||ops.undatedUnits<ops.wipUnits)?sum(ops.agedLots,'cant'):null;
  const invReady=ready(input.inv);
  const inventory=invReady?(input.inv.rows||[]).map(r=>({...r,...taxonomy(company(r.empresa),r.lineaReal||r.linea,r.desc,true)})).filter(match):[];
  const principal=inventory.filter(r=>!r.esSeg&&!r.esCobros);
@@ -79,6 +124,9 @@ function build(input,filterValue={},deps={},costSelection){
  const range=input.inv?.period||{},from=range.from||range.start||'',to=range.to||range.end||'';
  const inv={status:state(input.inv),ready:invReady,rows:inventory,principalRows:principal,units:invReady?inventory.reduce((s,r)=>s+units(r),0):null,principal:invReady?principal.reduce((s,r)=>s+units(r),0):null,age:['u0','u1','u2','u3'].map(k=>invReady?sum(principal,k):null),knownValue:invReady?known:null,missingCostUnits:invReady?missing:null,cutoff:input.inv?.cutoff||'',movements:movementSeries(moves,from,to,'received','shipped','fecha'),records:input.inv?.records||[]};
  inv.agedShare=inv.principal>0?inv.age[3]/inv.principal:null;
+ const valuedAge=principal.filter(r=>finite(r.c3));
+ inv.agedValue=invReady&&(!principal.length||valuedAge.length)?sum(valuedAge,'c3'):null;
+ inv.agedMissingUnits=invReady?sum(principal.filter(r=>r.missingCostUnits>0||!finite(r.c3)),'u3'):null;
  const pendingOps=input.inv?.pendingOps;
  inv.pendingOpsStatus=state(pendingOps);
  inv.pendingOps=ready(pendingOps)?pendingOps.rows||[]:[];
@@ -92,7 +140,7 @@ function build(input,filterValue={},deps={},costSelection){
  const logMoves=logReady?(input.log.moves||[]).filter(r=>logCompanies.includes(r.company)):[];
  const meta=input.log?.meta||{},ageReady=logReady&&input.log.ageReady;
  const log={status:state(input.log),supported:logSupported,companies:logCompanies,ready:logReady,ageReady,meta,rows:logRows,ageRows:logAge,ageMessage:input.log?.ageMessage||'',error:input.log?.error||'',total:logReady?sum(logRows,'costTotal'):null,aged:ageReady?sum(logAge,'riskValue'):null,unknown:ageReady?logAge.reduce((s,r)=>s+(r.values?.[4]||0),0):null,warehouses:['MT001','MT002'].map(warehouse=>({warehouse,name:warehouse==='MT001'?'Telas':'Insumos',value:logReady?sum(logRows.filter(r=>r.warehouse===warehouse),'costTotal'):null})),byCompany:['EU','TEX'].filter(co=>logCompanies.includes(co)).map(co=>({company:co,value:sum(logRows.filter(r=>r.company===co),'costTotal')})),movements:movementSeries(logMoves,meta.movimientos_desde||'',meta.movimientos_hasta||'','inCost','outCost','date')};
- return {key,year,months,keys,label:key?input.config.mes+' '+year:'Período no configurado',filters,scoped,ops,cos,inv,log};
+ return {key,year,months,keys,label:key?input.config.mes+' '+year:'Período no configurado',filters,scoped,ops,cos,inv,log,inventory:inventoryConsolidated({inv,log,ops})};
 }
-const api={build,cleanFilters,matches,taxonomy,hierarchy,monthsBetween,monthNames};root.PccAtlasModel=api;if(typeof module!=='undefined')module.exports=api;
+const api={build,cleanFilters,matches,taxonomy,hierarchy,monthsBetween,monthNames,lotAge};root.PccAtlasModel=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

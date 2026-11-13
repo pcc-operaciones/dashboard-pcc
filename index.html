@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script src="money-format.js?v=2.7"></script>
+<script src="dashboard-print.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -16,8 +17,8 @@
 <script src="data-quality.js"></script>
 <link rel="stylesheet" href="data-quality.css">
 <script src="executive-model.js?v=2.4"></script>
-<script src="cost-model.js?v=1.1"></script>
-<script src="atlas-model.js?v=1.4"></script>
+<script src="cost-model.js?v=1.2"></script>
+<script src="atlas-model.js?v=1.5"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;}
@@ -278,8 +279,8 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
     .modal-overlay { display:none !important; }
     @page { margin:1.2cm; size:A4 landscape; }
   }</style>
-<link rel="stylesheet" href="executive.css?v=2.1">
-<link rel="stylesheet" href="atlas.css?v=1.6">
+<link rel="stylesheet" href="executive.css?v=2.2">
+<link rel="stylesheet" href="atlas.css?v=1.7">
 </head>
 <body data-gerencia="gg">
 <div class="wrap">
@@ -305,10 +306,10 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
 <button class="gg-nav-button" id="gBtn-gg" onclick="switchGerencia('gg',this)">Gerencia General</button>
 <button class="gg-nav-button" id="gBtn-ops" onclick="switchGerencia('ops',this)">Operaciones PCC</button>
 <button class="gg-nav-button" id="gBtn-cos" onclick="switchGerencia('cos',this)">Costos</button>
-<button class="gg-nav-button" id="gBtn-inv" onclick="switchGerencia('inv',this)">📦 Inventario PT</button><button class="gg-nav-button" id="gBtn-log" onclick="switchGerencia('log',this)">Logística</button></nav><div class="gg-header-actions"><span id="gUpdTs"></span><div class="live-pill"><div class="live-lbl" id="liveLbl">Consultando áreas</div></div><button class="btn-ref" id="btnRef" onclick="doUpdate()">↻ Actualizar</button></div></div>
+<button class="gg-nav-button" id="gBtn-inv" onclick="switchGerencia('inv',this)">📦 Inventario PT</button><button class="gg-nav-button" id="gBtn-log" onclick="switchGerencia('log',this)">Logística</button><button class="gg-nav-button" id="gBtn-stock" onclick="switchGerencia('stock',this)">Inventario consolidado</button></nav><div class="gg-header-actions"><span id="gUpdTs"></span><div class="live-pill"><div class="live-lbl" id="liveLbl">Consultando áreas</div></div><button class="btn-ref" type="button" onclick="exportarPDFTab()" title="Guardar la pestaña actual como PDF">PDF</button><button class="btn-ref" id="btnRef" onclick="doUpdate()">↻ Actualizar</button></div></div>
 <main id="page-general" aria-label="Gerencia General"></main>
 
-<div class="nav">
+<div class="nav" id="nav-operaciones">
   <button class="nav-btn active" onclick="showPage('area',this)">Área General</button>
   <button class="nav-btn" onclick="showPage('modulos',this)">Por Módulo</button>
   <button class="nav-btn" onclick="showPage('diario',this)">Seguimiento Diario</button>
@@ -713,6 +714,11 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
       <div class="kpi-val" style="font-size:20px" id="wip-uds-dia">—</div>
       <div class="kpi-sub" id="wip-uds-dia-lbl">todos los grupos</div>
     </div>
+    <button type="button" class="kpi-card c-teal pcc-kpi-button" onclick="abrirModalWipEstado(null)">
+      <span class="kpi-lbl">WIP de más de 90 días</span>
+      <strong class="kpi-val" id="wip-aged-units">—</strong>
+      <span class="kpi-sub" id="wip-aged-scope">Unidades desde programación</span>
+    </button>
   </div>
 
   <!-- Filtros -->
@@ -1038,6 +1044,7 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
         <div class="modal-hdr-title" id="wipModalTitulo">Lotes en estado</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px" id="wipModalSub"></div>
       </div>
+      <button type="button" class="btn-pdf" onclick="PccPrintView(g('wipModalBody'),g('wipModalTitulo').textContent,g('wipModalSub').textContent)">PDF</button>
       <button class="modal-close" onclick="cerrarModalWip()">✕</button>
     </div>
 
@@ -1115,7 +1122,7 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
                 <th data-col="estado" style="min-width:110px">Estado <span class="wf-ico">▾</span></th>
                 <th data-col="resp" style="min-width:110px">Responsable <span class="wf-ico">▾</span></th>
                 <th data-col="uds" style="text-align:right;min-width:55px">Uds <span class="wf-ico">▾</span></th>
-                <th data-col="dias" style="text-align:right;min-width:80px">Días <span class="wf-ico">▾</span></th>
+                <th>En estado desde</th><th data-col="dias" style="text-align:right;min-width:80px">Días en estado <span class="wf-ico">▾</span></th><th>Días en proceso</th>
               </tr>
             </thead>
             <tbody id="tbWipLotes"></tbody>
@@ -1687,7 +1694,7 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
         <div class="tw">
           <table>
             <thead><tr>
-              <th>Referencia</th><th>Línea</th>
+              <th>Referencia</th><th>Descripción</th><th>Línea</th>
               <th style="text-align:right;">Unidades</th>
               <th style="text-align:right;">Rentabilidad</th>
               <th style="text-align:right;">CCU sin IVA</th>
@@ -3422,7 +3429,7 @@ function renderDiag() {
   loadCostos();
 
   // ── Restaurar gerencia desde localStorage ──
-  const _gerSaved = ['gg','ops','cos','inv','log'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'gg';
+  const _gerSaved = ['gg','ops','cos','inv','log','stock'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'gg';
   switchGerencia(_gerSaved, null, true);
 
   // ── Actualización automática: 7:00 AM y 1:00 PM ──
@@ -4254,13 +4261,13 @@ async function loadWip() {
     };
 
     const parseDate = s => {
-      if (!s || s.trim()==='' || s.includes('1899')) return null;
-      const parts = s.split('/');
-      if (parts.length === 3) {
-        const [d,m,y] = parts;
-        return new Date(parseInt(y), parseInt(m)-1, parseInt(d));
-      }
-      return null;
+      const text=String(s??'').trim();
+      const iso=text.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T)/);
+      const local=text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if(!iso&&!local)return null;
+      const [y,m,d]=(iso?iso.slice(1):[local[3],local[2],local[1]]).map(Number);
+      const date=new Date(y,m-1,d);
+      return y>=2000&&date.getFullYear()===y&&date.getMonth()===m-1&&date.getDate()===d?date:null;
     };
 
     const mesKey  = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` : null;
@@ -4301,6 +4308,7 @@ async function loadWip() {
 
         // Sprint 0 — ID único del lote
         ordenCorte: (r[c('ORDEN DE CORTE')]||'').trim(),
+        stateSince: diaKey(parseDate(r[c('F_INICIO_ESTADO')]||r[c('FECHA INICIO ESTADO')]||r[c('FECHA ESTADO')])),
 
         // mes keys para anual/mensual (gráfico histórico — sin cambios)
         fProg:  mesKey(dProgFin),  fCorte: mesKey(dCorteFin),
@@ -4467,6 +4475,10 @@ function renderWip() {
   // Sprint 5 — KPIs de tiempo promedio por etapa
   renderKpisEtapaWip();
 
+  const dated=datos.map(r=>({units:r.cant,days:PccAtlasModel.lotAge(r).processDays})).filter(r=>r.days!==null);
+  const aged=dated.filter(r=>r.days>90);
+  g('wip-aged-units').textContent=dated.length||!datos.length?aged.reduce((sum,r)=>sum+r.units,0).toLocaleString('es-CO'):'—';
+  g('wip-aged-scope').textContent=aged.length+' OP desde programación'+(datos.length>dated.length?' · '+(datos.length-dated.length)+' sin fecha':'');
   const totalLotes = datos.length;
   const totalUds   = datos.reduce((a,r)=>a+r.cant,0);
   const euD = datos.filter(r=>r.empresa==='EU');
@@ -5141,11 +5153,11 @@ let _wipLotesActuales = [];
 let _wipEstadoActual  = '';
 
 function abrirModalWipEstado(estado) {
-  _wipEstadoActual = estado;
+  _wipEstadoActual = estado||'';
 
   // Filtrar lotes respetando filtros activos de empresa/cliente
   const lotes = WIP_DATA.filter(r => {
-    if (r.estado !== estado) return false;
+    if(estado?r.estado!==estado:!(PccAtlasModel.lotAge(r).processDays>90))return false;
     if (wipFiltEmpresa !== 'TODAS' && r.empresa !== wipFiltEmpresa) return false;
     if (wipFiltCliente !== 'TODAS' && getClienteWip(r) !== wipFiltCliente) return false;
     return true;
@@ -5156,7 +5168,7 @@ function abrirModalWipEstado(estado) {
   // Header del modal
   const color = WIP_ESTADO_COLOR[estado] || 'var(--teal)';
   g('wipModalColor').style.background = color;
-  g('wipModalTitulo').textContent = `Lotes en estado: ${estado}`;
+  g('wipModalTitulo').textContent = estado?`Lotes en estado: ${estado}`:'OP con más de 90 días en proceso';
 
   const totalUds = lotes.reduce((a,r)=>a+r.cant,0);
   const euCnt = lotes.filter(r=>r.empresa==='EU').length;
@@ -5165,13 +5177,8 @@ function abrirModalWipEstado(estado) {
     `${lotes.length} lotes · ${totalUds.toLocaleString('es-CO')} uds · EU: ${euCnt} · TEX: ${texCnt}`;
 
   // KPIs
-  const hoy = new Date();
-  const diasEnEstado = lotes.map(r => {
-    const etapaKey = _etapaDeEstado(estado);
-    const ini = etapaKey && r.traza?.[etapaKey]?.ini;
-    if (!ini) return null;
-    return Math.floor((hoy - new Date(ini)) / 86400000);
-  }).filter(d => d !== null);
+  const diasEnEstado = lotes.map(_diasEnEstadoLote).filter(d=>d!==null);
+  lotes.sort((a,b)=>(PccAtlasModel.lotAge(b).processDays??-1)-(PccAtlasModel.lotAge(a).processDays??-1));
 
   const diasProm = diasEnEstado.length
     ? Math.round(diasEnEstado.reduce((a,b)=>a+b,0) / diasEnEstado.length) : null;
@@ -5210,23 +5217,8 @@ function abrirModalWipEstado(estado) {
   g('modalWipLotes').classList.add('open');
 }
 
-// Mapea estado WIP → clave del objeto traza para calcular días en estado
-function _etapaDeEstado(estado) {
-  const map = {
-    'PLANEACION':'programacion','CORTE':'corte','ESTAMPADO':'corte',
-    'BORDADO':'bordado','CORTADO':'corte','CONFECCION':'confeccion',
-    'CONFECCIONADO':'confeccion','TINTORERIA':'tintoreria',
-    'PRESENTACION':'presentacion','PRESENTACION POR INSUMOS':'presentacion',
-    'RETENIDO/INSUMOS':'programacion',
-  };
-  return map[estado] || null;
-}
-
 function _diasEnEstadoLote(lote) {
-  const etapaKey = _etapaDeEstado(lote.estado);
-  const ini = etapaKey && lote.traza?.[etapaKey]?.ini;
-  if (!ini) return null;
-  return Math.floor((new Date() - new Date(ini)) / 86400000);
+  return PccAtlasModel.lotAge(lote).stateDays;
 }
 
 // Devuelve el responsable de la etapa activa de un lote (la que mapea a su estado actual)
@@ -5249,13 +5241,14 @@ function _renderTablaWip(lotes) {
 
   if (!lotes.length) {
     g('tbWipLotes').innerHTML =
-      `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px">
+      `<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">
         Sin resultados para este filtro</td></tr>`;
     return;
   }
 
   g('tbWipLotes').innerHTML = lotes.map(r => {
-    const dias        = _diasEnEstadoLote(r);
+    const edad        = PccAtlasModel.lotAge(r);
+    const dias        = edad.stateDays;
     const diasCls     = dias===null?'muted':dias>=10?'bad':dias>=5?'warn':'good';
     const diasTxt     = dias !== null ? `${dias} d` : '—';
     const cliente     = getClienteWip(r) || r.clasificacion || '—';
@@ -5289,7 +5282,9 @@ function _renderTablaWip(lotes) {
                : `<span style="color:#CBD5E1">—</span>`}
       </td>
       <td style="text-align:right;font-weight:600">${r.cant.toLocaleString('es-CO')}</td>
+      <td>${edad.stateSince?.split('-').reverse().join('/')??'—'}</td>
       <td style="text-align:right" class="${diasCls}"><strong>${diasTxt}</strong></td>
+      <td style="text-align:right">${edad.processDays??'—'}</td>
     </tr>`;
   }).join('');
 }
@@ -5973,11 +5968,12 @@ function switchGerenciaArea(ger, btn, silencioso) {
 
 
 function switchGerencia(ger,btn,silencioso){
-  ger=['gg','ops','cos','inv','log'].includes(ger)?ger:'gg';
+  ger=['gg','ops','cos','inv','log','stock'].includes(ger)?ger:'gg';
   document.body.dataset.gerencia=ger;
   const general=document.getElementById('page-general');if(general)general.hidden=ger!=='gg';
-  if(ger==='gg'){
-    _gerenciaActiva='gg';PccFresh.show('gg');
+  const stock=document.getElementById('page-stock');if(stock)stock.hidden=ger!=='stock';
+  if(ger==='gg'||ger==='stock'){
+    _gerenciaActiva=ger;PccFresh.show('gg');
     const inv=document.getElementById('page-inventario');if(inv)inv.style.display='none';
     const log=document.getElementById('page-logistica');if(log)log.style.display='none';
     document.getElementById('gUpdTs').textContent='';
@@ -5985,12 +5981,12 @@ function switchGerencia(ger,btn,silencioso){
     window.PccExecutive?.refresh();
   }else switchGerenciaArea(ger,btn,silencioso);
   if(ger==='inv')document.getElementById('iframe-inventario')?.contentWindow?.PccInventoryActivate?.();
-  for(const id of ['gg','ops','cos','inv','log']){
+  for(const id of ['gg','ops','cos','inv','log','stock']){
     const b=document.getElementById('gBtn-'+id);if(b){b.removeAttribute('style');if(id===ger)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}
   }
   if(location.hash!=='#'+ger)history.pushState(null,'','#'+ger);
   if(ger==='inv'||ger==='log')requestAnimationFrame(()=>{document.getElementById(ger==='inv'?'page-inventario':'page-logistica').style.top=document.getElementById('gerencia-bar').getBoundingClientRect().bottom+'px';});
-  if(!silencioso&&ger==='gg')general?.querySelector('h1')?.focus({preventScroll:true});
+  if(!silencioso&&(ger==='gg'||ger==='stock'))(ger==='gg'?general:stock)?.querySelector('h1')?.focus({preventScroll:true});
 }
 window.addEventListener('resize',()=>{const ger=document.body.dataset.gerencia;if(ger==='inv'||ger==='log')document.getElementById(ger==='inv'?'page-inventario':'page-logistica').style.top=document.getElementById('gerencia-bar').getBoundingClientRect().bottom+'px';});
 
@@ -6004,6 +6000,9 @@ async function doUpdate() {
   try {
     if(_gerenciaActiva==='gg'){
       await Promise.allSettled([loadAll(),loadAlertas(),loadWip(),loadCalidad(),loadCostos(),g('iframe-inventario')?.contentWindow?.cargarTodo?.(),g('iframe-logistica')?.contentWindow?.refresh?.()]);
+      window.PccExecutive?.refresh();
+    } else if(_gerenciaActiva==='stock'){
+      await Promise.allSettled([loadWip(),g('iframe-inventario')?.contentWindow?.cargarTodo?.(),g('iframe-logistica')?.contentWindow?.refresh?.()]);
       window.PccExecutive?.refresh();
     } else if(_gerenciaActiva==='log'){
       await g('iframe-logistica')?.contentWindow?.refresh?.();
@@ -6224,6 +6223,11 @@ async function loadCostos() {
     const iSam        = col('SAM');
     // ── Campos de costos detallados por lote (nuevos) ──
     const iLote    = col('LOTE');
+    const iTaller = hdr.indexOf('TALLER');
+    const iBordado = hdr.indexOf('BORDADO/ESTAMPADO');
+    const iBordadoAlterno = hdr.indexOf('BORDADO O ESTAMPADO');
+    const iInsumosConf = hdr.indexOf('TOTAL INSUMOS CONFECCION');
+    const iInsumosPres = hdr.indexOf('TOTAL INSUMOS PRESENTACION');
     const iPromTela= col('PROMEDIO TELA');
     const iPrecioMT= col('PRECIO MT. TELA','PRECIO MT TELA','PRECIO TELA');  // $/metro
     const iTela    = col('TELA');
@@ -6396,7 +6400,12 @@ async function loadCostos() {
         corte:    iCorte   >= 0 ? PccCostModel.number(r[iCorte])    : null, // corte / unidad
         lav:      iLav     >= 0 ? PccCostModel.number(r[iLav])      : null, // lavandería / unidad
         pres:     iPres    >= 0 ? PccCostModel.number(r[iPres])      : null, // presentación / unidad
-        insumos:  iInsumos >= 0 ? PccCostModel.number(r[iInsumos])  : null, // total insumos del lote
+        taller: String(r[iTaller]??'').trim(),
+        telaRegistrada: PccCostModel.number(r[iTela]),
+        bordado: PccCostModel.number(r[iBordado])??PccCostModel.number(r[iBordadoAlterno]),
+        insumos: PccCostModel.number(r[iInsumos]), // total del lote
+        insumosConf: PccCostModel.number(r[iInsumosConf]), // costo por unidad
+        insumosPres: PccCostModel.number(r[iInsumosPres]), // costo por unidad
       };
     }).filter(r => r.fecha);
 
@@ -7567,7 +7576,7 @@ function openProdDescModal(desc) {
   const refMap = {};
   datos.forEach(r => {
     const k = r.ref||'—';
-    if (!refMap[k]) refMap[k] = {ref:r.ref,linea:r.linea,cant:0,rents:[],ccus:[],utils:[]};
+    if (!refMap[k]) refMap[k] = {ref:r.ref,desc:r.desc,linea:r.linea,cant:0,rents:[],ccus:[],utils:[]};
     refMap[k].cant += r.cant||0;
     if (r.rent!==null) refMap[k].rents.push(r.rent);
     if (r.ccu !==null) refMap[k].ccus.push(r.ccu);
@@ -7585,6 +7594,7 @@ function openProdDescModal(desc) {
     const sumUr = r.utils.length ? r.utils.reduce((a,b)=>a+b,0) : null;
     return `<tr>
       <td style="font-weight:600;">${r.ref||'—'}</td>
+      <td></td>
       <td>${lnBdg(r.linea)}</td>
       <td style="text-align:right;">${Math.round(r.cant).toLocaleString('es-CO')}</td>
       <td class="${semaforo(avgRr)}" style="font-weight:600;text-align:right;">${fP(avgRr)}</td>
@@ -7592,8 +7602,9 @@ function openProdDescModal(desc) {
       <td class="${sumUr!==null?(sumUr>=0?'good':'bad'):''}" style="text-align:right;">${fCO(sumUr)}</td>
       <td class="muted" style="text-align:right;">${fCO(avg(r.rents))}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="7" class="muted" style="text-align:center;padding:12px;">Sin datos</td></tr>';
+  }).join('') || '<tr><td colspan="8" class="muted" style="text-align:center;padding:12px;">Sin datos</td></tr>';
 
+  document.querySelectorAll('#prodDescModalBody tr').forEach((row,i)=>{if(refs[i])row.cells[1].textContent=refs[i].desc||'—';});
   const modal = document.getElementById('prodDescModal');
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
@@ -9744,57 +9755,26 @@ function _buildGraficoTabla(labels, datasets) {
 //  EXPORTAR PDF POR PESTAÑA  (corregido)
 // ════════════════════════════════════════════════════
 function exportarPDFTab() {
-  const gerencia = _gerenciaActiva || 'ops';
-
-  // Limpiar clases previas
-  document.querySelectorAll('.print-target').forEach(p => p.classList.remove('print-target'));
-
-  if (gerencia === 'cos') {
-    // Costos: buscar cPane visible
-    const allPanes = document.querySelectorAll('#page-costos [id^="cPane-"]');
-    let activeCPane = null;
-    allPanes.forEach(p => {
-      const st = window.getComputedStyle(p);
-      if (st.display !== 'none') activeCPane = p;
-    });
-    if (!activeCPane) { alert('No hay pestaña de costos activa.'); return; }
-
-    const tabBtn   = document.querySelector('#costos-nav .tbtn.active');
-    const tabName  = tabBtn ? tabBtn.textContent.trim() : 'Costos';
-
-    document.getElementById('page-costos').classList.add('print-target');
-    activeCPane.classList.add('print-target');
-
-    const titleOrig = document.title;
-    document.title = 'Costos — ' + tabName;
-    window.print();
-    document.title = titleOrig;
-
-  } else {
-    // Operaciones: buscar página con clase .active que no sea page-costos
-    const pages = document.querySelectorAll('.page:not(#page-costos)');
-    let activePage = null;
-    pages.forEach(p => { if (p.classList.contains('active')) activePage = p; });
-    if (!activePage) {
-      // fallback: la primera visible por display
-      pages.forEach(p => { if (!activePage && window.getComputedStyle(p).display !== 'none') activePage = p; });
-    }
-
-    const navBtn  = document.querySelector('.nav .nav-btn.active');
-    const pageName = navBtn ? navBtn.textContent.trim() : 'Operaciones';
-
-    if (activePage) activePage.classList.add('print-target');
-
-    const titleOrig = document.title;
-    document.title  = 'Operaciones — ' + pageName;
-    window.print();
-    document.title  = titleOrig;
+  const area=_gerenciaActiva;
+  if(area==='inv')return g('iframe-inventario')?.contentWindow?.PccPrintInventory?.();
+  if(area==='log'){
+    const frame=g('iframe-logistica')?.contentDocument;
+    const active=frame?.querySelector('.page.active');
+    const section=frame?.querySelector('.area-btn.active')?.textContent.trim();
+    const title=active?.querySelector('h1,h2')?.textContent.trim()||section;
+    return PccPrintView(active,'Logística'+(title?' / '+title:''),frame?.getElementById('headerCut')?.textContent);
   }
-
-  // Limpiar después de imprimir
-  setTimeout(() => {
-    document.querySelectorAll('.print-target').forEach(p => p.classList.remove('print-target'));
-  }, 800);
+  if(area==='gg')return PccAtlas.print();
+  if(area==='stock')return PccPrintView(g('page-stock'),'Inventario consolidado');
+  if(area==='cos'){
+    const pane=g('cPane-'+_costosTabActiva);
+    const name=document.querySelector('#costos-nav .tbtn.active')?.textContent.trim()||'Resumen';
+    const scope=['lblAnio','lblPer','lblLinea','lblCat'].map(id=>g(id)?.textContent.trim()).filter(Boolean).join(' · ');
+    return PccPrintView(pane,'Costos / '+name,scope);
+  }
+  const active=document.querySelector('.page.active:not(#page-costos)');
+  const name=document.querySelector('.nav .nav-btn.active')?.textContent.trim()||'Resumen';
+  return PccPrintView(active,'Operaciones PCC / '+name,[window._pccConfig?.mes,window._pccConfig?.año].filter(Boolean).join(' '));
 }
 
 // ── Exportar Top/Bottom (tablas fragmentadas en head/body/foot) ──
@@ -9972,11 +9952,12 @@ function exportTablaPDF(tableId, titulo) {
   setTimeout(() => { win.print(); win.close(); }, 500);
 }
 </script>
+<section id="page-stock" hidden aria-labelledby="stock-title"></section>
 <!-- ══ INVENTARIO PT ══ -->
 <div id="page-inventario" style="display:none;position:fixed;inset:0;top:86px;z-index:10;">
   <iframe
     id="iframe-inventario"
-    src="inventario_pt.html?v=2.11.0"
+    src="inventario_pt.html?v=2.12.0"
     style="width:100%;height:100%;border:none;display:block;"
     allow="same-origin"
     title="Inventario Producto Terminado">
@@ -9987,6 +9968,6 @@ function exportTablaPDF(tableId, titulo) {
 
 <script src="executive-adapter.js?v=2.3"></script>
 <script src="executive.js?v=2.3"></script>
-<script src="atlas.js?v=1.5"></script>
+<script src="atlas.js?v=1.6"></script>
 </body>
 </html>

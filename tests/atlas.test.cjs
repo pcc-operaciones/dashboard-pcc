@@ -10,6 +10,36 @@ test('empresa, línea y categoría filtran métricas y filas del mismo alcance s
 test('categorías dependen de empresa y línea; ignora selecciones inválidas',()=>{assert.deepEqual(M.cleanFilters({company:['TEX','fake'],line:['EU','TEXSION'],category:['EU Moda','LAXO','fake']}),{company:['TEX'],line:['TEXSION'],category:['LAXO']});});
 test('no inventa el desglose de categoría TEX en WIP ni el de producto en Logística',()=>{const v=M.build(base(),{category:['LAXO']},deps);assert.equal(v.ops.wipSupported,false);assert.equal(v.ops.wipUnits,null);assert.ok(v.ops.stages.every(s=>s.values.every(n=>n===null)));assert.equal(v.log.supported,false);assert.equal(v.log.aged,100);assert.equal(v.log.total,500);assert.deepEqual(v.log.companies,['TEX']);assert.equal(v.cos.count,1);});
 test('PT total incluye todas las bodegas y antigüedad usa solo el universo principal',()=>{const v=M.build(base(),{},deps);assert.equal(v.inv.units,102);assert.equal(v.inv.principal,100);assert.equal(v.inv.age[3],40);assert.equal(v.inv.agedShare,.4);assert.equal(v.inv.knownValue,800);assert.equal(v.inv.missingCostUnits,2);});
+test('WIP: distingue días en estado de días en proceso y excluye fechas desconocidas y lotes cerrados',()=>{
+ const source=base();
+ source.wip.all=[
+  {empresa:'EU',estado:'CORTADO',cant:10,traza:{programacion:{ini:'2026-07-01'},corte:{ini:'2026-07-03',fin:'2026-10-20'}}},
+  {empresa:'EU',estado:'CONFECCION',cant:20,traza:{programacion:{ini:'2026-08-07'},confeccion:{ini:'2026-10-30'}}},
+  {empresa:'EU',estado:'COSTEO',cant:30,traza:{presentacion:{ini:'2026-02-30'}}},
+  {empresa:'EU',estado:'ENTREGADO',cant:40,traza:{programacion:{ini:'2026-07-01'}}}
+ ];
+ const {ops}=M.build(source,{},deps);
+ assert.equal(ops.agedUnits,10);
+ assert.equal(ops.lots[1].processDays,90);
+ assert.equal(ops.undatedUnits,30);
+ assert.equal(ops.agedLots[0].stateSince,'2026-10-20');
+ assert.equal(ops.agedLots[0].stateDays,16);
+ assert.equal(ops.lots[2].stateDays,null);
+});
+test('consolidado suma existencias valoradas por sección y mantiene el WIP fuera del valor',()=>{
+ const source=base();
+ source.inv.rows[0].c3=320;
+ source.inv.rows[1].c3=44;
+ const view=M.build(source,{},deps);
+ assert.equal(view.inventory.total,2300);
+ assert.equal(view.inv.agedValue,320);
+ assert.equal(view.inventory.rows.find(row=>row.section==='Producto en proceso (WIP)').value,null);
+ assert.equal(view.inventory.rows.find(row=>row.section==='Producto en proceso (WIP)').units,50);
+ source.log.status='error';
+ const partial=M.build(source,{},deps);
+ assert.equal(partial.inventory.total,800);
+ assert.equal(partial.inventory.rows.find(row=>row.section==='Telas').value,null);
+});
 test('flujos PT conservan ventana parcial y separan EOP/RM de devoluciones',()=>{const v=M.build(base(),{},deps);assert.deepEqual(v.inv.movements.labels,['Jul.*','Ago.','Sep.','Oct.*']);assert.equal(v.inv.movements.received[3],40);assert.equal(v.inv.movements.shipped[3],15);});
 test('Logística conserva empresa, valor monetario y edad indeterminada aparte',()=>{const v=M.build(base(),{company:['TEX']},deps);assert.equal(v.log.total,500);assert.equal(v.log.aged,100);assert.equal(v.log.unknown,100);assert.deepEqual(v.log.warehouses.map(w=>w.value),[0,500]);assert.equal(v.log.movements.received[2],50);});
 test('error, recarga y fuente vacía ocultan datos anteriores; ausencia no es cero',()=>{for(const status of ['error','loading','empty']){const source=base();for(const key of ['ops','wip','cos','inv','log'])source[key].status=status;const v=M.build(source,{},deps);assert.equal(v.ops.efficiency,null);assert.equal(v.ops.wipUnits,null);assert.equal(v.cos.rent,null);assert.equal(v.cos.count,null);assert.equal(v.inv.units,null);assert.equal(v.inv.knownValue,null);assert.equal(v.log.total,null);assert.equal(v.log.aged,null);}});
