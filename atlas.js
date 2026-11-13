@@ -358,8 +358,8 @@ function renderConsolidated(){
   '<div class="ax-consolidated-head"><h2 id="atlas-consolidated-title">Inventario consolidado</h2>'+
   '<button type="button" class="ax-detail-link" data-inventory-detail>Ver detalle ↗</button></div>'+
   '<dl class="ax-consolidated-values"><div class="ax-consolidated-total"><dt>'+(model.partial?'Total valorado parcial':'Total valorado')+
-  '</dt><dd title="'+esc(exact(model.total))+'">'+money(model.total)+'</dd><small>COP</small></div>'+
-  tiles.map(row=>'<div><dt>'+esc(row.section)+'</dt><dd title="'+esc(exact(row.value))+'">'+money(row.value)+
+  '</dt><dd>'+exact(model.total)+'</dd><small>COP</small></div>'+
+  tiles.map(row=>'<div><dt>'+esc(row.section)+'</dt><dd>'+exact(row.value)+
    '</dd><small>'+esc(inventoryStatus(row))+'</small></div>').join('')+'</dl>';
 }
 function consolidatedDetail(){

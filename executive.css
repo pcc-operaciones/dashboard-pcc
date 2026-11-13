@@ -3,14 +3,10 @@
 #page-general[hidden]{display:none;}
 body[data-gerencia=gg] :is(.nav,.page,#loadOv,#errBar,#pcc-freshness){display:none!important}
 #gerencia-bar{height:auto!important;min-height:52px;gap:12px;flex-wrap:wrap;padding:4px 24px!important;}
-#gerencia-bar .gg-navigation{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;flex:1;min-width:0}
+#gerencia-bar .gg-navigation{display:flex;flex-wrap:wrap;gap:4px;}
 #gerencia-bar .gg-nav-button{font:600 13px 'DM Sans',sans-serif;min-height:44px;padding:8px 12px;background:none;border:0;border-bottom:2px solid transparent;color:#CBD8E6;cursor:pointer;}
 #gerencia-bar .gg-nav-button[aria-current=page]{color:#fff;border-bottom-color:#4ECCA3;}
 #gerencia-bar .gg-nav-button:hover{background:#284867;}
-#gerencia-bar .gg-nav-button{text-align:center;line-height:1.2}
-@media(max-width:920px){
- #gerencia-bar .gg-navigation{grid-template-columns:repeat(3,minmax(0,1fr));flex-basis:100%}
-}
 .pcc-kpi-button{color:inherit;font:inherit;text-align:left;cursor:pointer}
 .pcc-kpi-button>*{display:block}
 .pcc-kpi-button:hover{background:#edf7f5}
