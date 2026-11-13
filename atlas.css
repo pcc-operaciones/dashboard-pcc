@@ -423,7 +423,9 @@ body.atlas-modal-open{overflow:hidden}
 #pcc-atlas .ax-consolidated-values dt,#pcc-atlas .ax-consolidated-values small{font-size:11px;color:var(--ax-muted);line-height:1.2}
 #pcc-atlas .ax-consolidated-values dd{font-size:16px;font-weight:700;margin:1px 0;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 #pcc-atlas .ax-consolidated-values small{display:block}
+#pcc-atlas .ax-consolidated-values small strong{color:var(--ax-ink);font-weight:700;white-space:nowrap}
 #pcc-atlas .ax-consolidated-aging .ax-detail-link,
+#pcc-atlas .ax-consolidated-aging small strong,
 #pcc-atlas .ax-aging-value,
 #pcc-atlas .ax-full-bar .ax-aging-value,
 #pcc-atlas .ax-record-summary .ax-aging-value,

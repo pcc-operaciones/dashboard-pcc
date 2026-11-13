@@ -380,6 +380,7 @@ function inventoryStatus(row){
 }
 function renderConsolidated(){
  const model=v.inventory;
+ const share=value=>finite(value)&&model.total>0?'<strong>'+pct(value/model.total)+' del total</strong> · ':'';
  const tiles=[
   {section:'Inventario PT',value:v.inv.knownValue,status:sourceState(v.inv.status)||'Todas las bodegas PT'},
   ...model.rows.filter(row=>row.section!=='Primeras'&&row.section!=='Segundas'&&row.section!=='Cobros')
@@ -388,11 +389,12 @@ function renderConsolidated(){
   '<div class="ax-consolidated-head"><h2 id="atlas-consolidated-title">Inventario consolidado</h2>'+
   '<button type="button" class="ax-detail-link" data-inventory-detail>Ver detalle ↗</button></div>'+
   '<dl class="ax-consolidated-values"><div class="ax-consolidated-total"><dt>'+(model.partial?'Total valorado parcial':'Total valorado')+
-  '</dt><dd>'+exact(model.total)+'</dd><small>COP</small></div>'+
+  '</dt><dd>'+exact(model.total)+'</dd><small>'+share(model.total)+'COP</small></div>'+
   '<div class="ax-consolidated-aging"><dt><button type="button" class="ax-detail-link" data-inventory-detail>Costo de más de 90 días ↗</button></dt>'+
-  '<dd class="ax-aging-value">'+exact(model.agedTotal)+'</dd><small>'+ (finite(model.agedTotal)?'COP · total parcial':'Valoración no disponible')+'</small></div>'+
+  '<dd class="ax-aging-value">'+exact(model.agedTotal)+'</dd><small>'+share(model.agedTotal)+
+   (finite(model.agedTotal)?'COP · total parcial':'Valoración no disponible')+'</small></div>'+
   tiles.map(row=>'<div><dt>'+esc(row.section)+'</dt><dd>'+exact(row.value)+
-   '</dd><small>'+esc(inventoryStatus(row))+'</small></div>').join('')+'</dl>';
+   '</dd><small>'+share(row.value)+esc(inventoryStatus(row))+'</small></div>').join('')+'</dl>';
 }
 function consolidatedDetail(){
  const model=v.inventory;
