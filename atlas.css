@@ -231,6 +231,15 @@ body[data-gerencia=gg] #pcc-data-quality{display:none}
 #pcc-atlas .atlas-cost-table tbody th{font-weight:500;background:none}
 #pcc-atlas .atlas-cost-table .ax-ref-link{font-size:11px;padding:1px 0;min-height:0}
 #pcc-atlas .atlas-cost-table small{display:block;font-weight:400;font-size:10px;color:var(--ax-muted);margin-top:2px}
+#pcc-atlas [data-ranking=top]{--rank-ink:#165b39;--rank-color:#45a36c}
+#pcc-atlas [data-ranking=bottom]{--rank-ink:#8d202b;--rank-color:#d95460}
+#pcc-atlas .atlas-ranking-panel :is(h3,.atlas-ranking-total,.ax-ref-link,tbody td){color:var(--rank-ink)}
+#pcc-atlas .atlas-ranking-panel thead th{background:color-mix(in srgb,var(--rank-color) 10%,white);color:var(--rank-ink)}
+#pcc-atlas .atlas-ranking-panel tbody tr{background:color-mix(in srgb,var(--rank-color) var(--rank-tint),white)}
+#pcc-atlas .atlas-ranking-panel tbody tr:hover td{background:transparent}
+#pcc-atlas .atlas-ranking-panel tbody td:nth-child(2){font-weight:700}
+#pcc-atlas .atlas-ranking-panel .atlas-cost-table th{white-space:normal}
+#pcc-atlas .atlas-ranking-panel .ax-ref-link{overflow-wrap:anywhere;text-align:left}
 #pcc-atlas .atlas-variation-scope{display:flex;flex-wrap:wrap;gap:4px 24px;font-size:11px;color:var(--ax-muted);margin:0 0 10px}
 #pcc-atlas .atlas-variation-scope p{margin:0}
 #pcc-atlas .atlas-cost-decrease{color:#21804a!important}

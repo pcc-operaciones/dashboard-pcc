@@ -178,7 +178,20 @@ function drawCostRanking(host){
  if(!v.cos.ready){host.innerHTML=empty(unavailable('cos','ranking'));return;}
  host.innerHTML='<div class="atlas-ranking-grid">'+[['top','Mayor rentabilidad'],['bottom','Menor rentabilidad']].map(([key,title])=>{
   const block=v.cos.rankings[key];
-  return '<section class="atlas-ranking-panel"><div class="atlas-ranking-heading"><h3>'+title+'</h3><span>'+num(block.rows.length)+' referencias</span></div><strong class="atlas-ranking-total">'+cash(block.profit)+'</strong><p class="ax-sub">'+(block.missingProfit?'Subtotal conocido · '+num(block.missingProfit)+' registros sin utilidad':'Utilidad de costeo acumulada')+'</p>'+(block.rows.length?'<div class="ax-record-scroll"><table class="atlas-cost-table"><thead><tr><th scope="col">Referencia</th><th scope="col">Rentabilidad</th><th scope="col">Utilidad $</th></tr></thead><tbody>'+block.rows.map(r=>'<tr><th scope="row">'+costReferenceButton(r)+costDescription(r)+'</th><td>'+pct(r.rent)+'</td><td>'+cash(r.utilPesos)+'</td></tr>').join('')+'</tbody></table></div>':empty('Sin referencias con rentabilidad válida.'))+'</section>';
+  const first=block.rows[0]?.rent,last=block.rows.at(-1)?.rent;
+  const rows=block.rows.map(r=>{
+   const strength=first===last?1:(r.rent-last)/(first-last);
+   const tint=7+Math.round(17*strength);
+   return '<tr style="--rank-tint:'+tint+'%"><th scope="row">'+costReferenceButton(r)+costDescription(r)+
+    '</th><td>'+pct(r.rent)+'</td><td>'+pct(r.ccu)+'</td><td>'+cash(r.utilPesos)+'</td></tr>';
+  }).join('');
+  const table=rows?'<div class="ax-record-scroll"><table class="atlas-cost-table"><thead><tr>'+
+   '<th scope="col">Referencia</th><th scope="col">Rentabilidad</th><th scope="col">Rent. CCU sin IVA</th><th scope="col">Utilidad $</th>'+
+   '</tr></thead><tbody>'+rows+'</tbody></table></div>':empty('Sin referencias con rentabilidad válida.');
+  const totalLabel=block.missingProfit?'Subtotal conocido · '+num(block.missingProfit)+' registros sin utilidad':'Utilidad de costeo acumulada';
+  return '<section class="atlas-ranking-panel" data-ranking="'+key+'"><div class="atlas-ranking-heading"><h3>'+title+'</h3><span>'+
+   num(block.rows.length)+' referencias</span></div><strong class="atlas-ranking-total">'+cash(block.profit)+'</strong>'+
+   '<p class="ax-sub">'+totalLabel+'</p>'+table+'</section>';
  }).join('')+'</div>';
 }
 const windowText=keys=>keys.map(PccCostModel.monthLabel).join(' · ');
