@@ -81,14 +81,17 @@ function inventoryConsolidated({inv,log,ops}){
   status:inv.ready?(rows.some(r=>!finite(r.knownValue)||r.missingCostUnits>0)?'Costo conocido parcial':'Costo ERP'):inv.status}));
  const logisticsSections=[['MT001','Telas'],['MT002','Insumos']];
  const additional=log.rows.filter(r=>!logisticsSections.some(([code])=>code===r.warehouse));
- for(const [warehouse,section] of logisticsSections){
-  groups.push({area:'Logística',section,cutoff:log.meta.corte_inventario,value:log.ready?sum(log.rows.filter(r=>r.warehouse===warehouse),'costTotal'):null,
-   status:log.ready?log.companies.join(' + ')+' · total por empresa':log.status});
+ const logisticsScope=log.companies.join(' + ')+' · total por empresa'+(log.ready&&log.status!=='ready'?' · último corte validado':'');
+ for(const {name,value} of log.warehouses){
+  groups.push({area:'Logística',section:name,cutoff:log.meta.corte_inventario,value,status:log.ready?logisticsScope:log.status});
  }
- if(additional.length)groups.push({area:'Logística',section:'Otras bodegas',cutoff:log.meta.corte_inventario,value:sum(additional,'costTotal'),status:'Costo SIESA'});
+ if(additional.length)groups.push({area:'Logística',section:'Otras bodegas',cutoff:log.meta.corte_inventario,value:sum(additional,'costTotal'),status:logisticsScope});
  const valued=groups.filter(row=>finite(row.value));
  const partial=valued.length<groups.length||groups.some(row=>row.status==='Costo conocido parcial');
- groups.push({area:'Operaciones PCC',section:'Producto en proceso (WIP)',cutoff:'',value:null,units:ops.wipUnits,status:ops.wipReady?'Sin valoración en la fuente':ops.wipStatus});
+ groups.push(
+  {area:'Operaciones PCC',section:'Producto en proceso (WIP)',cutoff:'',value:null,units:ops.wipUnits,status:'Valoración por integrar'},
+  {area:'Tienda Yetro',section:'Inventario Tienda Yetro',cutoff:'',value:null,status:'Fuente por integrar'}
+ );
  return {rows:groups,total:valued.length?sum(valued,'value'):null,partial};
 }
 function build(input,filterValue={},deps={},costSelection){
@@ -131,15 +134,17 @@ function build(input,filterValue={},deps={},costSelection){
  inv.pendingOpsStatus=state(pendingOps);
  inv.pendingOps=ready(pendingOps)?pendingOps.rows||[]:[];
  inv.pendingUnits=ready(pendingOps)?sum(inv.pendingOps,'porRecibir'):null;
- const logReady=ready(input.log),logSupported=!filters.line.length&&!filters.category.length;
+ const logReady=ready(input.log)||input.log?.stockReady===true,logSupported=!filters.line.length&&!filters.category.length;
  // Los materiales solo tienen desglose por empresa. Una línea/categoría delimita
  // su empresa matriz, pero no convierte el total empresarial en un subtotal de línea.
  const logCompanies=[...new Set(hierarchy.filter(h=>(!filters.company.length||filters.company.includes(h.company))&&(!filters.line.length||filters.line.includes(h.line))&&(!filters.category.length||h.cats.some(c=>filters.category.includes(c)))).map(h=>h.company))];
  const logRows=logReady?(input.log.stock||[]).filter(r=>logCompanies.includes(r.company)):[];
  const logAge=logReady?(input.log.age||[]).filter(r=>logCompanies.includes(r.company)):[];
- const logMoves=logReady?(input.log.moves||[]).filter(r=>logCompanies.includes(r.company)):[];
+ const movementsReady=logReady&&(input.log?.movementsReady??ready(input.log));
+ const logMoves=movementsReady?(input.log.moves||[]).filter(r=>logCompanies.includes(r.company)):[];
  const meta=input.log?.meta||{},ageReady=logReady&&input.log.ageReady;
  const log={status:state(input.log),supported:logSupported,companies:logCompanies,ready:logReady,ageReady,meta,rows:logRows,ageRows:logAge,ageMessage:input.log?.ageMessage||'',error:input.log?.error||'',total:logReady?sum(logRows,'costTotal'):null,aged:ageReady?sum(logAge,'riskValue'):null,unknown:ageReady?logAge.reduce((s,r)=>s+(r.values?.[4]||0),0):null,warehouses:['MT001','MT002'].map(warehouse=>({warehouse,name:warehouse==='MT001'?'Telas':'Insumos',value:logReady?sum(logRows.filter(r=>r.warehouse===warehouse),'costTotal'):null})),byCompany:['EU','TEX'].filter(co=>logCompanies.includes(co)).map(co=>({company:co,value:sum(logRows.filter(r=>r.company===co),'costTotal')})),movements:movementSeries(logMoves,meta.movimientos_desde||'',meta.movimientos_hasta||'','inCost','outCost','date')};
+ log.movementsReady=movementsReady;
  return {key,year,months,keys,label:key?input.config.mes+' '+year:'Período no configurado',filters,scoped,ops,cos,inv,log,inventory:inventoryConsolidated({inv,log,ops})};
 }
 const api={build,cleanFilters,matches,taxonomy,hierarchy,monthsBetween,monthNames,lotAge};root.PccAtlasModel=api;if(typeof module!=='undefined')module.exports=api;

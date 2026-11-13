@@ -3,8 +3,13 @@ const M=window.PccLogisticsModel,$=id=>document.getElementById(id);
 const fmt=new Intl.NumberFormat('es-CO',{maximumFractionDigits:2});
 const compactFmt=new Intl.NumberFormat('es-CO',{notation:'compact',maximumFractionDigits:1});
 const state={stock:[],moves:[],age:[],ageMessage:'Pendiente de publicación FIFO en Apps Script',meta:null};
-let executiveStatus='loading',executiveError='';
-window.PccExecutiveLogistics=()=>({...state,status:executiveStatus,error:executiveError,ageReady:executiveStatus==='ready'&&!state.ageMessage});
+let executiveStatus='loading',executiveError='',validatedStock=null;
+window.PccExecutiveLogistics=()=>{
+  const aligned=!!state.meta&&state.meta===validatedStock?.control;
+  return {...state,stock:validatedStock?.stock||[],meta:validatedStock?.control||null,
+    status:executiveStatus,error:executiveError,stockReady:!!validatedStock,
+    movementsReady:aligned,ageReady:aligned&&!state.ageMessage};
+};
 const notifyExecutive=()=>{try{parent.PccExecutive?.refresh();}catch{}};
 const charts={};
 if(typeof Chart!=='undefined'&&typeof ChartDataLabels!=='undefined')Chart.register(ChartDataLabels);
@@ -638,6 +643,36 @@ async function sheet(sid,name,key,range='A:K'){
   if(!r.ok)throw Error('Sheets '+r.status+' · '+name);
   return (await r.json()).values||[];
 }
+async function readStock(sid,key){
+  const params=new URLSearchParams({key,valueRenderOption:'UNFORMATTED_VALUE',_:String(Date.now())});
+  const names=['LOG_Control','LOG_Existencias'];
+  for(const name of names)params.append('ranges',name+'!A:K');
+  const url='https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(sid)+'/values:batchGet?'+params;
+  const {valueRanges}=await PccInventoryLoader.request(url);
+  if(!Array.isArray(valueRanges)||valueRanges.length!==names.length||
+     names.some((name,i)=>!String(valueRanges[i].range||'').replaceAll("'","").startsWith(name+'!')))
+    throw Error('Respuesta de existencias incompleta');
+  const before=meta(valueRanges[0].values||[]);
+  if(before.estado!=='LISTO')throw Error('La carga de datos está en proceso o requiere revisión');
+  const stock=parseStock(valueRanges[1].values||[]);
+  const after=await readInventoryControl(sid,key,before);
+  if(stock.length!==Number(after.filas_existencias))throw Error('Conteo de existencias no concilia con LOG_Control');
+  return {stock,control:after};
+}
+async function readInventoryControl(sid,key,before){
+  const url='https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(sid)+'/values/LOG_Control!A:K?'+
+    new URLSearchParams({key,valueRenderOption:'UNFORMATTED_VALUE',_:String(Date.now())});
+  const after=meta((await PccInventoryLoader.request(url)).values||[]);
+  if(after.estado!=='LISTO'||before.version!==after.version||before.carga_id!==after.carga_id||
+     before.corte_inventario!==after.corte_inventario)throw Error('La hoja cambió durante la lectura; actualice de nuevo');
+  return after;
+}
+async function readMovements(sid,key,control){
+  const moves=parseMoves(await sheet(sid,'LOG_Movimientos',key));
+  const after=await readInventoryControl(sid,key,control);
+  if(moves.length!==Number(after.filas_movimientos))throw Error('Conteo de movimientos no concilia con LOG_Control');
+  return moves;
+}
 function meta(grid){const m={};for(const r of grid.slice(1)){if(r.length>=2)m[str(r[0])]=str(r[1])}return m}
 function parseStock(grid){
   if(grid[0]?.join('|')!=='empresa|bodega|referencia|descripcion|unidad|existencia|comprometida|disponible|costo_unitario|costo_total')
@@ -690,18 +725,13 @@ async function refresh(){
     const key=parent.PccLogisticsApiKey?.();
     if(!key)throw Error('Abra Logística desde la pestaña del CMI (index.html#log)');
     status('Consultando Google Sheets…','loading');
-    const before=meta(await sheet(sid,'LOG_Control',key));
-    if(before.estado!=='LISTO')throw Error('La carga de datos está en proceso o requiere revisión');
-    const [rawStock,rawMoves]=await Promise.all([sheet(sid,'LOG_Existencias',key),sheet(sid,'LOG_Movimientos',key)]);
-    const after=meta(await sheet(sid,'LOG_Control',key));
-    if(after.estado!=='LISTO'||before.version!==after.version)throw Error('La hoja cambió durante la lectura; actualice de nuevo');
-    const stock=parseStock(rawStock),moves=parseMoves(rawMoves);
-    if(stock.length!==Number(after.filas_existencias)||moves.length!==Number(after.filas_movimientos))
-      throw Error('Conteo de filas no concilia con LOG_Control');
-    const aging=await readStockAge(sid,key,after);
-    state.stock=stock;state.moves=moves;state.age=aging.rows;state.ageMessage=aging.message;
-    state.meta=after;syncMovementRange();fillUnits();fillWarehouseUnits();fillRotationUnits();render();
+    validatedStock=await readStock(sid,key);
+    const {stock,control:after}=validatedStock;
     executiveStatus='ready';notifyExecutive();
+    const [moves,aging]=await Promise.all([readMovements(sid,key,after),readStockAge(sid,key,after)]);
+    Object.assign(state,{stock,moves,age:aging.rows,ageMessage:aging.message,meta:after});
+    syncMovementRange();fillUnits();fillWarehouseUnits();fillRotationUnits();render();
+    notifyExecutive();
     status('Inventario: '+date(after.corte_inventario)+' · Movimientos: '+date(after.movimientos_desde)+' a '+
       date(after.movimientos_hasta)+' · '+num(stock.length)+' posiciones y '+num(moves.length)+' movimientos.');
     window.PccLogisticsOverview?.loadHistory();
@@ -709,6 +739,8 @@ async function refresh(){
   }catch(e){
     executiveStatus='error';executiveError=e.message;
     if(state.meta)status('No se pudo actualizar: '+e.message+'. Siguen visibles las cifras del corte '+state.meta.corte_inventario+'.','stale');
+    else if(validatedStock)status('Existencias verificadas al '+date(validatedStock.control.corte_inventario)+
+      '. Consulta los saldos en Gerencia General. No se completó la carga de Logística: '+e.message+'.','warn');
     else if(/LOG_Control/.test(e.message))status('La hoja de Logística aún no tiene un corte publicado.','warn');
     else status('Logística sin datos publicados: '+e.message,'error');
     console.error('[Logística]',e);

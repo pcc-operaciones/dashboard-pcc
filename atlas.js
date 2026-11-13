@@ -11,7 +11,7 @@ for(const child of [...page.children]){
  else management.append(child);
 }
 page.replaceChildren(root,management,legacy);
-root.innerHTML='<div class="ax-app"><main class="ax-main"><div class="ax-heading"><div><span class="ax-eyebrow">DIRECCIÓN DE LA EMPRESA · PCC</span><h1 tabindex="-1">Gerencia General</h1><p class="ax-heading-note">Resultados clave y evolución de la empresa</p></div><button type="button" class="ax-source" data-sources>Fechas y fuentes ↗</button></div><div class="ax-global-filters" aria-label="Filtros de Gerencia General" data-filters></div><p class="ax-filter-scope" data-scope aria-live="polite"></p><div class="ax-area-grid" data-areas></div><footer class="ax-footer"><span>Clic en un KPI o gráfico para ampliar · Escape para volver</span><span data-period></span></footer></main></div><dialog class="ax-dialog" aria-labelledby="atlas-dialog-title"><div class="ax-modal-head"><div><span class="ax-modal-eyebrow" data-modal-area></span><h2 id="atlas-dialog-title"></h2></div><button type="button" class="ax-source ax-modal-print" data-atlas-print>PDF</button><button type="button" class="ax-close" data-close aria-label="Cerrar vista ampliada">×</button></div><p class="ax-modal-scope" data-modal-scope></p><div class="atlas-cost-period" data-cost-period hidden></div><div class="ax-modal-kpis" data-modal-kpis></div><div class="ax-modal-controls"><label>Vista<select data-view aria-label="Vista ampliada"></select></label><label data-order-label>Orden<select data-order aria-label="Orden de los estados"><option value="flow">Orden del flujo</option><option value="volume">Mayor volumen</option></select></label><label data-material-label>Materiales<select data-material aria-label="Materiales"><option value="all">Telas + insumos</option><option value="MT001">Telas</option><option value="MT002">Insumos</option></select></label></div><div class="ax-enlarged" data-enlarged></div><div class="ax-large-legend" data-large-legend></div><p class="ax-modal-note" data-note></p></dialog>';
+root.innerHTML='<div class="ax-app"><main class="ax-main"><div class="ax-heading"><div><span class="ax-eyebrow">DIRECCIÓN DE LA EMPRESA · PCC</span><h1 tabindex="-1">Gerencia General</h1><p class="ax-heading-note">Resultados clave y evolución de la empresa</p></div><button type="button" class="ax-source" data-sources>Fechas y fuentes ↗</button></div><div class="ax-global-filters" aria-label="Filtros de Gerencia General" data-filters></div><p class="ax-filter-scope" data-scope aria-live="polite"></p><section class="ax-tile ax-consolidated" aria-labelledby="atlas-consolidated-title" data-consolidated></section><div class="ax-area-grid" data-areas></div><footer class="ax-footer"><span>Clic en un KPI o gráfico para ampliar · Escape para volver</span><span data-period></span></footer></main></div><dialog class="ax-dialog" aria-labelledby="atlas-dialog-title"><div class="ax-modal-head"><div><span class="ax-modal-eyebrow" data-modal-area></span><h2 id="atlas-dialog-title"></h2></div><button type="button" class="ax-source ax-modal-print" data-atlas-print>PDF</button><button type="button" class="ax-close" data-close aria-label="Cerrar vista ampliada">×</button></div><p class="ax-modal-scope" data-modal-scope></p><div class="atlas-cost-period" data-cost-period hidden></div><div class="ax-modal-kpis" data-modal-kpis></div><div class="ax-modal-controls"><label>Vista<select data-view aria-label="Vista ampliada"></select></label><label data-order-label>Orden<select data-order aria-label="Orden de los estados"><option value="flow">Orden del flujo</option><option value="volume">Mayor volumen</option></select></label><label data-material-label>Materiales<select data-material aria-label="Materiales"><option value="all">Telas + insumos</option><option value="MT001">Telas</option><option value="MT002">Insumos</option></select></label></div><div class="ax-enlarged" data-enlarged></div><div class="ax-large-legend" data-large-legend></div><p class="ax-modal-note" data-note></p></dialog>';
 const $=s=>root.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const finite=Number.isFinite,integer=new Intl.NumberFormat('es-CO',{maximumFractionDigits:0}),decimal=new Intl.NumberFormat('es-CO',{maximumFractionDigits:1}),precise=new Intl.NumberFormat('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2});
 const num=v=>finite(v)?integer.format(v):'—',pct=v=>finite(v)?decimal.format(v*100)+'%':'—',cash=v=>finite(v)?'$ '+integer.format(v):'—',money=v=>finite(v)?'$ '+decimal.format(v/1e6)+' M':'—',exact=v=>finite(v)?'$ '+precise.format(v):'—';
@@ -20,7 +20,7 @@ const areaNames={ops:'Operaciones PCC',cos:'Costos',inv:'Inventario PT',log:'Log
 const views={ops:[['stages','Unidades mensuales por etapa'],['wip','Producto en proceso por estado'],['wipaged','WIP de más de 90 días'],['performance','Eficiencia y cumplimiento']],cos:[['cost','Rentabilidad y CCU sin IVA'],['margin','Margen promedio mensual'],['negative','Costeos negativos'],['ranking','10 mayores y 10 menores rentabilidades'],['variation','5 mayores aumentos del costo total']],inv:[['invflow','Recibidas vs. despachadas'],['invage','Antigüedad del inventario principal'],['invvalue','Costo y cobertura de valoración'],['invpending','OP No Recibidas']],log:[['logflow','Entradas y salidas mensuales'],['stock','Existencias de telas e insumos'],['logage','Antigüedad estimada FIFO'],['company','Existencias por empresa']],sales:[['sales','Venta real frente a meta']],people:[['people','Evolución del ausentismo']]};
 const defaults={ops:'stages',cos:'cost',inv:'invflow',log:'logflow',sales:'sales',people:'people'};
 let filters={},costSelection,costRefId=null,v,source,renderTimer,area='ops',view='stages',order='flow',material='all',recordId=null,detailPage=0,returnFocus=null;
-const charts=new Set(),dialog=$('dialog'),stockPage=document.getElementById('page-stock');let largeChart=null;const detailCharts=new Set();
+const charts=new Set(),dialog=$('dialog');let largeChart=null;const detailCharts=new Set();
 try{filters=M.cleanFilters(JSON.parse(localStorage.getItem('pcc.atlas.filters.v1')||'{}'));}catch{filters=M.cleanFilters();}
 function remember(){try{localStorage.setItem('pcc.atlas.filters.v1',JSON.stringify(filters));}catch{/* El filtro sigue funcionando aunque el navegador no pueda conservarlo. */}}
 function scopeText(){return [filters.company.length?filters.company.join(' + '):'Todas las empresas',filters.line.length?filters.line.join(' + '):'Todas las líneas',filters.category.length?filters.category.join(' + '):'Todas las categorías'].join(' · ');}
@@ -33,7 +33,7 @@ function status(id){
  if(id==='ops')return (v.label+' · '+(sourceState(v.ops.status)||freshness(v.ops.records)))+(v.ops.wipStatus==='error'?' · WIP no disponible':'');
  if(id==='cos')return v.cos.period.label+' · '+(sourceState(v.cos.status)||freshness(v.cos.records));
  if(id==='inv')return sourceState(v.inv.status)||'Corte '+date(v.inv.cutoff)+' · '+freshness(v.inv.records);
- return sourceState(v.log.status)||'Corte '+date(v.log.meta.corte_inventario)+' · '+v.log.companies.join(' + ')+' · total empresa';
+ return v.log.ready?'Corte '+date(v.log.meta.corte_inventario)+' · '+v.log.companies.join(' + ')+(v.log.status==='ready'?' · total empresa':' · último corte validado'):sourceState(v.log.status);
 }
 function stats(id){
  if(id==='ops')return [['Cumplimiento',pct(v.ops.compliance),v.ops.performanceSupported?'Meta 100%':'Sin desglose del indicador','performance'],['Eficiencia',pct(v.ops.efficiency),v.ops.performanceSupported?'Meta 75%':'Sin desglose del indicador','performance'],['Producto en proceso',num(v.ops.wipUnits),!v.ops.wipSupported?'Categoría TEX no disponible':v.ops.wipReady?num(v.ops.lots.length)+' lotes':sourceState(v.ops.wipStatus),'wip'],['Presentación · '+(v.key?v.months.at(-1):'período'),num(v.ops.wipReady&&v.key?v.ops.stages[4].values.at(-1):null),'Unidades cumplidas','stages'],['WIP de más de 90 días',num(v.ops.agedUnits),num(v.ops.agedLots.length)+' OP · desde programación','wipaged']];
@@ -67,13 +67,14 @@ function descriptor(target,selectedMaterial='all'){
  if(target==='logflow'){
   const rows=(v.log.ready?source.log?.moves||[]:[]).filter(r=>v.log.companies.includes(r.company)&&(selectedMaterial==='all'||r.warehouse===selectedMaterial));
   const keys=v.log.movements.keys;
-  return {available:v.log.ready&&!!keys.length,labels:v.log.movements.labels,unit:'$ millones',series:[series('Entradas',keys.map(k=>rows.filter(r=>r.date.slice(0,7)===k).reduce((s,r)=>s+r.inCost,0)/1e6),colors[1]),series('Salidas',keys.map(k=>rows.filter(r=>r.date.slice(0,7)===k).reduce((s,r)=>s+r.outCost,0)/1e6),colors[0],true)]};
+  return {available:v.log.movementsReady&&!!keys.length,labels:v.log.movements.labels,unit:'$ millones',series:[series('Entradas',keys.map(k=>rows.filter(r=>r.date.slice(0,7)===k).reduce((s,r)=>s+r.inCost,0)/1e6),colors[1]),series('Salidas',keys.map(k=>rows.filter(r=>r.date.slice(0,7)===k).reduce((s,r)=>s+r.outCost,0)/1e6),colors[0],true)]};
  }
  return null;
 }
 function unavailable(id,target){
  if(id==='ops'&&!v.ops.wipSupported&&target!=='performance')return 'Sin desglose de categoría TEX en esta fuente';
  if(id==='ops'&&target==='performance'&&!v.ops.performanceSupported)return 'Este indicador no dispone del desglose seleccionado';
+ if(target==='logflow'&&v.log.ready&&!v.log.movementsReady)return 'Movimientos pendientes de consulta';
  const state=id==='ops'&&target!=='performance'?v.ops.wipStatus:v[id]?.status;
  return sourceState(state)||(!v.key&&['stages','performance'].includes(target)?'Período no configurado':'Sin registros para el alcance seleccionado');
 }
@@ -230,18 +231,20 @@ function sourceDetails(){
 function drawDetail(){
  if(!dialog.open)return;destroyCharts(true);const host=$('[data-enlarged]');$('[data-large-legend]').replaceChildren();
  dialog.dataset.detailArea=area;dialog.dataset.detailView=view;
- $('[data-modal-area]').textContent=area==='sources'?'PCC · Gerencia General':areaNames[area]+' · vista ampliada';
- $('#atlas-dialog-title').textContent=area==='sources'?'Fechas y fuentes':(view==='lots'?'Lotes · '+stateFilter:views[area].find(s=>s[0]===view)[1]);
+ $('[data-modal-area]').textContent=area==='sources'||area==='consolidated'?'PCC · Gerencia General':areaNames[area]+' · vista ampliada';
+ $('#atlas-dialog-title').textContent=area==='consolidated'?'Inventario consolidado':area==='sources'?'Fechas y fuentes':(view==='lots'?'Lotes · '+stateFilter:views[area].find(s=>s[0]===view)[1]);
  $('[data-modal-scope]').textContent=(view==='invpending'?'Total BPT · Todas las empresas':area==='log'?logisticsScope():scopeText())+(area==='cos'&&v.cos.rows.length?' · Líneas incluidas: '+[...new Set(v.cos.rows.map(r=>r.line))].join(', '):'');
  drawCostPeriod();
- $('[data-modal-kpis]').hidden=area==='sources'||view==='negative'||view==='performance'||view==='stages'||view==='invpending'||(area==='cos'&&(['ranking','variation'].includes(view)||costRefId!==null));
- $('[data-modal-kpis]').innerHTML=area==='sources'?'':stats(area).map(s=>'<div><span>'+esc(s[0])+'</span><strong>'+esc(s[1])+'</strong><small>'+esc(s[2])+'</small></div>').join('');
- $('.ax-modal-controls').hidden=area==='sources';
- $('[data-view]').innerHTML=area==='sources'?'':views[area].map(s=>'<option value="'+s[0]+'">'+esc(s[1])+'</option>').join('');$('[data-view]').value=view==='lots'?'wip':view;
+ const standalone=area==='sources'||area==='consolidated';
+ $('[data-modal-kpis]').hidden=standalone||view==='negative'||view==='performance'||view==='stages'||view==='invpending'||(area==='cos'&&(['ranking','variation'].includes(view)||costRefId!==null));
+ $('[data-modal-kpis]').innerHTML=standalone?'':stats(area).map(s=>'<div><span>'+esc(s[0])+'</span><strong>'+esc(s[1])+'</strong><small>'+esc(s[2])+'</small></div>').join('');
+ $('.ax-modal-controls').hidden=standalone;
+ $('[data-view]').innerHTML=standalone?'':views[area].map(s=>'<option value="'+s[0]+'">'+esc(s[1])+'</option>').join('');$('[data-view]').value=view==='lots'?'wip':view;
  $('[data-order-label]').hidden=view!=='wip';$('[data-material-label]').hidden=view!=='logflow';
  $('[data-order]').value=order;$('[data-material]').value=material;
  $('[data-note]').textContent=area==='sources'?'Cada fuente conserva su fecha y alcance. Las fallas y los datos parciales permanecen identificados.':note(view);
  if(area==='sources'){host.innerHTML=sourceDetails();return;}
+ if(area==='consolidated'){host.innerHTML=consolidatedDetail();return;}
  if(area==='cos'&&costRefId!==null){drawCostReference(host);return;}
  if(recordId!==null){
   const row=v.cos.negative.find(r=>r.id===recordId);
@@ -316,6 +319,7 @@ root.addEventListener('click',event=>{
  const costRef=event.target.closest('[data-cost-ref]');if(costRef){costRefId=costRef.dataset.costRef;detailPage=0;drawDetail();return;}
  if(event.target.closest('[data-cost-back]')){costRefId=null;detailPage=0;drawDetail();return;}
  if(event.target.closest('[data-wip-back]')){view='wip';stateFilter='';detailPage=0;drawDetail();return;}
+ const consolidated=event.target.closest('[data-inventory-detail]');if(consolidated){open('consolidated','consolidated',consolidated);return;}
  const sourceButton=event.target.closest('[data-sources]');if(sourceButton){open('sources','sources',sourceButton);return;}
  const clear=event.target.closest('[data-clear]'),all=event.target.closest('[data-all]');if(clear||all){if(clear)filters=M.cleanFilters();else filters[all.dataset.all]=[];changeFilters();return;}
  const record=event.target.closest('[data-record]');if(record){recordId=record.dataset.record;drawDetail();return;}
@@ -340,15 +344,32 @@ document.addEventListener('click',event=>{if(!root.contains(event.target))root.q
 window.addEventListener('hashchange',()=>{if(location.hash!=='#gg'&&dialog.open)dialog.close();requestAnimationFrame(()=>{for(const chart of charts)chart.resize();});});
 window.addEventListener('resize',fitBoard);
 document.fonts?.ready.then(fitBoard);
+function inventoryStatus(row){
+ const pending=sourceState(row.status)||row.status;
+ return pending+(finite(row.units)?' · '+num(row.units)+' unidades':'');
+}
 function renderConsolidated(){
  const model=v.inventory;
- if(document.body.dataset.gerencia==='stock')document.getElementById('liveLbl').textContent='Inventario consolidado';
- stockPage.innerHTML='<header class="pcc-stock-header"><div><h1 id="stock-title" tabindex="-1">Inventario consolidado</h1><p>'+esc(scopeText())+'</p></div><div class="pcc-stock-total"><span>'+ (model.partial?'Total valorado parcial':'Total valorado')+'</span><strong>'+exact(model.total)+'</strong></div></header>'+
-  '<div class="ax-record-scroll"><table class="pcc-stock-table"><thead><tr><th>Área</th><th>Sección</th><th>Corte</th><th>Valor en pesos (COP)</th><th>Alcance</th></tr></thead><tbody>'+
+ const tiles=[
+  {section:'Inventario PT',value:v.inv.knownValue,status:sourceState(v.inv.status)||'Todas las bodegas PT'},
+  ...model.rows.filter(row=>['Telas','Insumos','Otras bodegas','Producto en proceso (WIP)','Inventario Tienda Yetro'].includes(row.section))
+ ];
+ $('[data-consolidated]').innerHTML=
+  '<div class="ax-consolidated-head"><h2 id="atlas-consolidated-title">Inventario consolidado</h2>'+
+  '<button type="button" class="ax-detail-link" data-inventory-detail>Ver detalle ↗</button></div>'+
+  '<dl class="ax-consolidated-values"><div class="ax-consolidated-total"><dt>'+(model.partial?'Total valorado parcial':'Total valorado')+
+  '</dt><dd title="'+esc(exact(model.total))+'">'+money(model.total)+'</dd><small>COP</small></div>'+
+  tiles.map(row=>'<div><dt>'+esc(row.section)+'</dt><dd title="'+esc(exact(row.value))+'">'+money(row.value)+
+   '</dd><small>'+esc(inventoryStatus(row))+'</small></div>').join('')+'</dl>';
+}
+function consolidatedDetail(){
+ const model=v.inventory;
+ return '<div class="ax-record-scroll"><table class="pcc-stock-table"><thead><tr><th>Área</th><th>Sección</th><th>Corte</th><th>Valor en pesos (COP)</th><th>Alcance</th></tr></thead><tbody>'+
   model.rows.map(row=>'<tr><td>'+esc(row.area)+'</td><th scope="row">'+esc(row.section)+'</th><td>'+esc(row.cutoff?date(row.cutoff):'—')+
-   '</td><td>'+exact(row.value)+'</td><td>'+esc(sourceState(row.status)||row.status)+(finite(row.units)?' · '+num(row.units)+' unidades':'')+'</td></tr>').join('')+
-  '</tbody><tfoot><tr><th colspan="3">Total valorado</th><td>'+exact(model.total)+'</td><td>Solo secciones con costo disponible</td></tr></tfoot></table></div>'+
-  '<p class="ax-sub">Cada sección conserva su fecha de corte. Costos, Ventas y Talento Humano no tienen existencias propias integradas.</p>';
+   '</td><td>'+exact(row.value)+'</td><td>'+esc(inventoryStatus(row))+'</td></tr>').join('')+
+  '</tbody><tfoot><tr><th colspan="3">'+(model.partial?'Total valorado parcial':'Total valorado')+'</th><td>'+exact(model.total)+
+  '</td><td>Secciones valoradas en pesos</td></tr></tfoot></table></div>'+
+  '<p class="ax-sub">Cada sección conserva su fecha de corte.</p>';
 }
 async function printAtlas(){
  if(!dialog.open)return PccPrintView(root,'Gerencia General',scopeText());

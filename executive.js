@@ -120,7 +120,7 @@ window.PccExecutive={refresh};
 mount();
 function openLinkedArea(){
  const area=location.hash.slice(1);
- switchGerencia(['gg','ops','cos','inv','log','stock'].includes(area)?area:'gg',null,true);
+ switchGerencia(['gg','ops','cos','inv','log'].includes(area)?area:'gg',null,true);
 }
 openLinkedArea();
 window.addEventListener('hashchange',openLinkedArea);

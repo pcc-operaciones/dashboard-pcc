@@ -39,6 +39,20 @@ test('consolidado suma existencias valoradas por sección y mantiene el WIP fuer
  const partial=M.build(source,{},deps);
  assert.equal(partial.inventory.total,800);
  assert.equal(partial.inventory.rows.find(row=>row.section==='Telas').value,null);
+ assert.equal(view.inventory.rows.find(row=>row.section==='Inventario Tienda Yetro').value,null);
+});
+test('el consolidado conserva el corte validado de Logística aunque fallen movimientos o recarga',()=>{
+ const source=base();
+ source.log.stockReady=true;
+ source.log.movementsReady=false;
+ source.log.ageReady=false;
+ source.log.status='error';
+ const view=M.build(source,{},deps);
+ assert.equal(view.inventory.total,2300);
+ assert.equal(view.inventory.rows.find(row=>row.section==='Telas').value,1000);
+ assert.match(view.inventory.rows.find(row=>row.section==='Telas').status,/último corte validado/);
+ assert.equal(view.log.movementsReady,false);
+ assert.equal(view.log.aged,null);
 });
 test('flujos PT conservan ventana parcial y separan EOP/RM de devoluciones',()=>{const v=M.build(base(),{},deps);assert.deepEqual(v.inv.movements.labels,['Jul.*','Ago.','Sep.','Oct.*']);assert.equal(v.inv.movements.received[3],40);assert.equal(v.inv.movements.shipped[3],15);});
 test('Logística conserva empresa, valor monetario y edad indeterminada aparte',()=>{const v=M.build(base(),{company:['TEX']},deps);assert.equal(v.log.total,500);assert.equal(v.log.aged,100);assert.equal(v.log.unknown,100);assert.deepEqual(v.log.warehouses.map(w=>w.value),[0,500]);assert.equal(v.log.movements.received[2],50);});
