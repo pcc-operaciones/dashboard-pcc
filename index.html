@@ -4308,7 +4308,7 @@ async function loadWip() {
 
         // Sprint 0 — ID único del lote
         ordenCorte: (r[c('ORDEN DE CORTE')]||'').trim(),
-        stateSince: diaKey(parseDate(r[c('F_INICIO_ESTADO')]||r[c('FECHA INICIO ESTADO')]||r[c('FECHA ESTADO')])),
+        stateSince: diaKey(parseDate(r[c('F_INICIO_ESTADO')]||r[c('FECHA_INICIO_ESTADO')]||r[c('FECHA INICIO ESTADO')]||r[c('FECHA ESTADO')])),
 
         // mes keys para anual/mensual (gráfico histórico — sin cambios)
         fProg:  mesKey(dProgFin),  fCorte: mesKey(dCorteFin),
@@ -5988,10 +5988,6 @@ function switchGerencia(ger,btn,silencioso){
   if(ger==='inv'||ger==='log')requestAnimationFrame(()=>{document.getElementById(ger==='inv'?'page-inventario':'page-logistica').style.top=document.getElementById('gerencia-bar').getBoundingClientRect().bottom+'px';});
   if(!silencioso&&(ger==='gg'||ger==='stock'))(ger==='gg'?general:stock)?.querySelector('h1')?.focus({preventScroll:true});
 }
-window.addEventListener('hashchange',()=>{
-  const area=location.hash.slice(1)||'gg';
-  if(['gg','ops','cos','inv','log','stock'].includes(area)&&document.body.dataset.gerencia!==area)switchGerencia(area,null,true);
-});
 window.addEventListener('resize',()=>{const ger=document.body.dataset.gerencia;if(ger==='inv'||ger==='log')document.getElementById(ger==='inv'?'page-inventario':'page-logistica').style.top=document.getElementById('gerencia-bar').getBoundingClientRect().bottom+'px';});
 
 
@@ -9971,7 +9967,7 @@ function exportTablaPDF(tableId, titulo) {
 <div id="page-logistica" style="display:none;position:fixed;inset:0;top:86px;z-index:10;"><iframe id="iframe-logistica" src="logistica.html?v=2.2" style="width:100%;height:100%;border:none;display:block;" title="Logística"></iframe></div>
 
 <script src="executive-adapter.js?v=2.3"></script>
-<script src="executive.js?v=2.3"></script>
+<script src="executive.js?v=2.4"></script>
 <script src="atlas.js?v=1.6"></script>
 </body>
 </html>

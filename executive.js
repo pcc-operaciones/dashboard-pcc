@@ -118,6 +118,10 @@ function mount(){
 }
 window.PccExecutive={refresh};
 mount();
-switchGerencia(['gg','ops','cos','inv','log'].includes(location.hash.slice(1))?location.hash.slice(1):'gg',null,true);
-window.addEventListener('hashchange',()=>{const area=location.hash.slice(1);switchGerencia(['gg','ops','cos','inv','log'].includes(area)?area:'gg',null,true);});
+function openLinkedArea(){
+ const area=location.hash.slice(1);
+ switchGerencia(['gg','ops','cos','inv','log','stock'].includes(area)?area:'gg',null,true);
+}
+openLinkedArea();
+window.addEventListener('hashchange',openLinkedArea);
 })();
