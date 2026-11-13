@@ -49,10 +49,20 @@ function references(rows){
  for(const r of rows){const id=referenceId(r);if(!groups.has(id))groups.set(id,[]);groups.get(id).push(r);}
  return [...groups].map(([id,items])=>{const r=items.at(-1),s=summary(items);return {id,ref:r.ref||'—',desc:r.desc||'',...classify(r),linea:classify(r).nativeLine,subcat:r.subcat||'',cant:s.units,rent:s.rent,ccu:s.ccu,margen:s.margin,utilPesos:s.profit,missingProfit:items.filter(r=>!finite(r.utilPesos)).length,count:items.length,rows:items};});
 }
-function rankings(groups,n=10){
- const valid=groups.filter(r=>finite(r.rent)),tie=(a,b)=>a.id.localeCompare(b.id);
- const block=rows=>({rows,profit:total(rows,'utilPesos'),missingProfit:rows.reduce((s,r)=>s+r.missingProfit,0)});
- return {top:block([...valid].sort((a,b)=>b.rent-a.rent||tie(a,b)).slice(0,n)),bottom:block([...valid].sort((a,b)=>a.rent-b.rent||tie(a,b)).slice(0,n))};
+const rankingMetrics={
+ rent:{label:'Rent. Interna',top:'Mayor rentabilidad',bottom:'rent. más baja'},
+ ccu:{label:'CCU sin IVA',top:'Mayor CCU sin IVA',bottom:'CCU más bajo'},
+ utilPesos:{label:'Utilidad $',top:'Mayor utilidad $',bottom:'menor utilidad $'}
+};
+const rankingHeaders=['Referencia','Descripción','Línea','Rentabilidad','CCU sin IVA','Utilidad $','Unidades'];
+function rankings(groups,n=10,metric='rent'){
+ const valid=groups.filter(r=>finite(r[metric]));
+ const block=direction=>{
+  const rows=[...valid].sort((a,b)=>direction*(a[metric]-b[metric])||a.id.localeCompare(b.id)).slice(0,n);
+  return {rows,rent:mean(rows,'rent'),ccu:mean(rows,'ccu'),profit:total(rows,'utilPesos'),units:total(rows,'cant'),
+   missingProfit:rows.reduce((s,r)=>s+r.missingProfit,0)};
+ };
+ return {top:block(-1),bottom:block(1)};
 }
 function shiftMonth(key,offset){const d=new Date(Date.UTC(+key.slice(0,4),+key.slice(5)-1+offset,1));return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');}
 function windows(anchor){return {recent:[shiftMonth(anchor,-1),anchor],historical:Array.from({length:6},(_,i)=>shiftMonth(anchor,i-7))};}
@@ -128,6 +138,6 @@ function variations(rows,anchor,allowedIds){
  }).sort((a,b)=>b.delta-a.delta||a.id.localeCompare(b.id));
  return {anchor,...window,rows:entries.slice(0,5).map(row=>({...row,components:compareComponents(row.historicalRows,row.recentRows)})),comparable:entries.length};
 }
-const api={summary,period,inPeriod,classify,references,rankings,variations,windows,monthLabel,number,percent,providers,traceIndex};
+const api={summary,period,inPeriod,classify,references,rankings,rankingMetrics,rankingHeaders,variations,windows,monthLabel,number,percent,providers,traceIndex};
 root.PccCostModel=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

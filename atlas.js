@@ -19,9 +19,10 @@ const colors=['#6b8fd4','#17b6a2','#cc9748','#9a6cd0','#239bb5'];
 const agingRed='#ad2934';
 const agingViews=new Set(['invage','logage','wipaged']);
 const areaNames={ops:'Operaciones PCC',cos:'Costos',inv:'Inventario PT',log:'Logística',sales:'Ventas',people:'Talento Humano'};
-const views={ops:[['stages','Unidades mensuales por etapa'],['wip','Producto en proceso por estado'],['wipaged','WIP de más de 90 días'],['performance','Eficiencia y cumplimiento']],cos:[['cost','Rentabilidad y CCU sin IVA'],['margin','Margen promedio mensual'],['negative','Costeos negativos'],['ranking','10 mayores y 10 menores rentabilidades'],['variation','5 mayores aumentos del costo total']],inv:[['invflow','Recibidas vs. despachadas'],['invage','Antigüedad del inventario principal'],['invvalue','Costo y cobertura de valoración'],['invpending','OP No Recibidas']],log:[['logflow','Entradas y salidas mensuales'],['stock','Existencias de telas e insumos'],['logage','Antigüedad estimada FIFO'],['company','Existencias por empresa']],sales:[['sales','Venta real frente a meta']],people:[['people','Evolución del ausentismo']]};
+const views={ops:[['stages','Unidades mensuales por etapa'],['wip','Producto en proceso por estado'],['wipaged','WIP de más de 90 días'],['performance','Eficiencia y cumplimiento']],cos:[['cost','Rentabilidad y CCU sin IVA'],['margin','Margen promedio mensual'],['negative','Costeos negativos'],['ranking','Top / Bottom de referencias'],['variation','5 mayores aumentos del costo total']],inv:[['invflow','Recibidas vs. despachadas'],['invage','Antigüedad del inventario principal'],['invvalue','Costo y cobertura de valoración'],['invpending','OP No Recibidas']],log:[['logflow','Entradas y salidas mensuales'],['stock','Existencias de telas e insumos'],['logage','Antigüedad estimada FIFO'],['company','Existencias por empresa']],sales:[['sales','Venta real frente a meta']],people:[['people','Evolución del ausentismo']]};
 const defaults={ops:'stages',cos:'cost',inv:'invflow',log:'logflow',sales:'sales',people:'people'};
 let filters={},costSelection,costRefId=null,v,source,renderTimer,area='ops',view='stages',order='flow',material='all',recordId=null,detailPage=0,returnFocus=null;
+let rankingMetric='rent',rankingCount=10;
 const charts=new Set(),dialog=$('dialog');let largeChart=null;const detailCharts=new Set();
 try{filters=M.cleanFilters(JSON.parse(localStorage.getItem('pcc.atlas.filters.v1')||'{}'));}catch{filters=M.cleanFilters();}
 function remember(){try{localStorage.setItem('pcc.atlas.filters.v1',JSON.stringify(filters));}catch{/* El filtro sigue funcionando aunque el navegador no pueda conservarlo. */}}
@@ -131,7 +132,7 @@ function wipSummary(){
 }
 function renderCards(){
  const captions={ops:'Etapas independientes · WIP en unidades',cos:'Promedios por registro · no es margen real de ventas',inv:'*Mes parcial · EOP recibidas / RM despachadas',log:logisticsScope(),sales:'Venta al consumidor · fuente por integrar',people:'Incapacidades y recobros en el detalle'};
- const links={ops:[['wip','Estados del WIP'],['performance','Eficiencia y cumplimiento']],cos:[['margin','Margen mensual'],['negative','Costeos negativos'],['ranking','10 mayores y 10 menores rentabilidades'],['variation','5 mayores aumentos del costo total']],inv:[['invage','Antigüedad'],['invvalue','Costo y cobertura']],log:[['stock','Telas e insumos'],['logage','Edad FIFO'],['company','Por empresa']],sales:[['sales','Ver alcance comercial']],people:[['people','Ver alcance de Talento Humano']]};
+ const links={ops:[['wip','Estados del WIP'],['performance','Eficiencia y cumplimiento']],cos:[['margin','Margen mensual'],['negative','Costeos negativos'],['ranking','Top / Bottom de referencias'],['variation','5 mayores aumentos del costo total']],inv:[['invage','Antigüedad'],['invvalue','Costo y cobertura']],log:[['stock','Telas e insumos'],['logage','Edad FIFO'],['company','Por empresa']],sales:[['sales','Ver alcance comercial']],people:[['people','Ver alcance de Talento Humano']]};
  $('[data-areas]').innerHTML=Object.keys(areaNames).map(id=>{
   const future=['sales','people'].includes(id);let content='';
   if(id==='ops'){
@@ -145,12 +146,13 @@ function renderCards(){
 }
 function destroyCharts(largeOnly=false){for(const chart of [...charts])if(!largeOnly||detailCharts.has(chart)){chart.destroy();charts.delete(chart);}detailCharts.clear();largeChart=null;}
 function note(target){
+ if(target==='ranking')return 'Las listas se ordenan por la métrica seleccionada. La rentabilidad y el CCU son promedios por referencia. La utilidad y las unidades se suman. Las listas pueden compartir referencias si hay pocos resultados.';
  if(target==='wipaged')return 'Días calendario desde la programación hasta hoy. '+num(v.ops.undatedUnits)+' unidades en WIP sin fecha válida de programación.';
  if(target==='lots')return 'La fecha del estado corresponde al inicio o fin registrado de la etapa, según el estado actual. El guion indica que no hay fecha verificable.';
  if(target==='variation')return 'Costos por unidad. La ventana reciente incluye el mes de referencia y el anterior. Cada cambio compara el promedio de lotes recientes con el de los seis meses previos. Los componentes disponibles pueden cubrir solo parte del costo total.';
  if(target==='invpending')return 'Unidades pendientes de recibir en BPT de las órdenes entregadas por Producción. Alcance general de la pestaña OP No Recibidas.';
  const invRange=v.inv.movements.from&&v.inv.movements.to?date(v.inv.movements.from)+' a '+date(v.inv.movements.to):'Ventana de movimientos no verificada';
- return {stages:'Unidades según la fecha de cumplimiento de cada etapa. Una prenda puede participar en varias etapas: no se suman como producción total.',wip:'Estado actual de cada lote. El volumen muestra dónde revisar; no demuestra por sí solo un cuello de botella. Clic en un estado para consultar sus lotes.',lots:'Lotes activos del alcance seleccionado; excluye entregados y cancelados.',performance:'Mismas fórmulas del área: eficiencia ponderada por tiempos, excluye Servicios; cumplimiento = producción / meta. Las fuentes no disponibles se excluyen del cálculo.',ranking:'Referencias ordenadas por rentabilidad promedio por registro. La cifra en $ suma la utilidad de costeo (UTILIDAD EU × cantidad). Las dos listas pueden coincidir cuando hay menos de 20 referencias; no se suman porcentajes ni representan utilidad real de ventas.',cost:'Promedios aritméticos por registro válido. No equivalen al margen real de ventas ni a la utilidad empresarial.',margin:'Promedio aritmético del margen en pesos por unidad por registro válido de cada mes.',negative:v.cos.period.label+' · '+num(v.cos.negativeCount)+' registros negativos de '+num(v.cos.count)+' registros del alcance. Se conservan los lotes distintos de una misma referencia.',invflow:invRange+'. Recepciones EOP y despachos RM; devoluciones, compras y ajustes son conceptos separados. *Meses parciales según la ventana de la fuente.',invage:'Inventario principal: '+num(v.inv.principal)+' unidades. Mayores a 90 días: '+num(v.inv.age[3])+' ('+pct(v.inv.agedShare)+'). Todas las bodegas: '+num(v.inv.units)+' unidades.',invvalue:'Costo conocido al corte '+date(v.inv.cutoff)+'. '+num(v.inv.missingCostUnits)+' unidades sin costo en el alcance.',logflow:'Movimientos SIESA: '+date(v.log.meta.movimientos_desde)+' a '+date(v.log.meta.movimientos_hasta)+'. *Meses parciales. El selector de materiales afecta este gráfico.',stock:'Existencias de telas e insumos al '+date(v.log.meta.corte_inventario)+'. Se presenta valor; no se suman cantidades de unidades físicas diferentes.',logage:'Estimación FIFO al '+date(v.log.meta.corte_inventario)+'. Edad indeterminada separada del saldo mayor a 90 días; no equivale a obsolescencia contable.',company:'Existencias de materiales por empresa, al corte de Logística.',sales:'Venta al consumidor, ambas empresas, líneas y tiendas. Fuente comercial pendiente de integrar.',people:'Personal al corte, ausentismo, vacantes y rotación. Cierres y reglas pendientes de validar; incapacidades y recobros en el detalle.'}[target]||'';
+ return {stages:'Unidades según la fecha de cumplimiento de cada etapa. Una prenda puede participar en varias etapas: no se suman como producción total.',wip:'Estado actual de cada lote. El volumen muestra dónde revisar; no demuestra por sí solo un cuello de botella. Clic en un estado para consultar sus lotes.',lots:'Lotes activos del alcance seleccionado; excluye entregados y cancelados.',performance:'Mismas fórmulas del área: eficiencia ponderada por tiempos, excluye Servicios; cumplimiento = producción / meta. Las fuentes no disponibles se excluyen del cálculo.',cost:'Promedios aritméticos por registro válido. No equivalen al margen real de ventas ni a la utilidad empresarial.',margin:'Promedio aritmético del margen en pesos por unidad por registro válido de cada mes.',negative:v.cos.period.label+' · '+num(v.cos.negativeCount)+' registros negativos de '+num(v.cos.count)+' registros del alcance. Se conservan los lotes distintos de una misma referencia.',invflow:invRange+'. Recepciones EOP y despachos RM; devoluciones, compras y ajustes son conceptos separados. *Meses parciales según la ventana de la fuente.',invage:'Inventario principal: '+num(v.inv.principal)+' unidades. Mayores a 90 días: '+num(v.inv.age[3])+' ('+pct(v.inv.agedShare)+'). Todas las bodegas: '+num(v.inv.units)+' unidades.',invvalue:'Costo conocido al corte '+date(v.inv.cutoff)+'. '+num(v.inv.missingCostUnits)+' unidades sin costo en el alcance.',logflow:'Movimientos SIESA: '+date(v.log.meta.movimientos_desde)+' a '+date(v.log.meta.movimientos_hasta)+'. *Meses parciales. El selector de materiales afecta este gráfico.',stock:'Existencias de telas e insumos al '+date(v.log.meta.corte_inventario)+'. Se presenta valor; no se suman cantidades de unidades físicas diferentes.',logage:'Estimación FIFO al '+date(v.log.meta.corte_inventario)+'. Edad indeterminada separada del saldo mayor a 90 días; no equivale a obsolescencia contable.',company:'Existencias de materiales por empresa, al corte de Logística.',sales:'Venta al consumidor, ambas empresas, líneas y tiendas. Fuente comercial pendiente de integrar.',people:'Personal al corte, ausentismo, vacantes y rotación. Cierres y reglas pendientes de validar; incapacidades y recobros en el detalle.'}[target]||'';
 }
 let printing=false;
 function table(headers,rows,renderRow){
@@ -176,23 +178,60 @@ function costDescription(r){return '<small class="ax-cost-description">'+esc(r.d
 function costReferenceButton(r){return '<button type="button" class="ax-ref-link" data-cost-ref="'+esc(r.id)+'" title="'+esc(r.desc+' · '+r.company+' / '+r.line)+'">'+esc(r.ref)+' ↗</button>';}
 function drawCostRanking(host){
  if(!v.cos.ready){host.innerHTML=empty(unavailable('cos','ranking'));return;}
- host.innerHTML='<div class="atlas-ranking-grid">'+[['top','Mayor rentabilidad'],['bottom','Menor rentabilidad']].map(([key,title])=>{
-  const block=v.cos.rankings[key];
-  const first=block.rows[0]?.rent,last=block.rows.at(-1)?.rent;
+ const {rankingMetrics,rankingHeaders,rankings}=PccCostModel;
+ const metric=rankingMetrics[rankingMetric];
+ const orderButtons=Object.entries(rankingMetrics).map(([key,item])=>
+  '<button type="button" data-rank-metric="'+key+'" aria-pressed="'+(key===rankingMetric)+'">'+item.label+'</button>').join('');
+ const controls='<div class="atlas-ranking-controls"><span>Ordenar por:</span><div role="group" aria-label="Ordenar por">'+orderButtons+
+  '</div><label>Mostrar Top / Bottom <input type="number" min="1" max="50" step="1" data-rank-count value="'+rankingCount+'" aria-label="Cantidad de referencias por lista"> referencias</label></div>';
+ const blocks=rankings(v.cos.references,rankingCount,rankingMetric);
+ if(!host.querySelector('[data-rank-count]'))host.innerHTML=controls+'<div class="atlas-ranking-grid"></div>';
+ host.querySelectorAll('[data-rank-metric]').forEach(button=>
+  button.setAttribute('aria-pressed',String(button.dataset.rankMetric===rankingMetric)));
+ host.querySelector('.atlas-ranking-grid').innerHTML=['top','bottom'].map(key=>{
+  const block=blocks[key];
+  const title=key==='top'?'Top '+rankingCount+' — '+metric.top:'Bottom '+rankingCount+' — Críticos';
+  const first=block.rows[0]?.[rankingMetric],last=block.rows.at(-1)?.[rankingMetric];
   const rows=block.rows.map(r=>{
-   const strength=first===last?1:(r.rent-last)/(first-last);
+   const strength=first===last?1:(r[rankingMetric]-last)/(first-last);
    const tint=7+Math.round(17*strength);
-   return '<tr style="--rank-tint:'+tint+'%"><th scope="row">'+costReferenceButton(r)+costDescription(r)+
-    '</th><td>'+pct(r.rent)+'</td><td>'+pct(r.ccu)+'</td><td>'+cash(r.utilPesos)+'</td></tr>';
+   return '<tr style="--rank-tint:'+tint+'%"><th scope="row">'+costReferenceButton(r)+'</th><td>'+esc(r.desc||'—')+
+    '</td><td><span class="atlas-ranking-line">'+esc(r.line)+'</span></td><td>'+pct(r.rent)+'</td><td>'+pct(r.ccu)+
+    '</td><td>'+cash(r.utilPesos)+'</td><td>'+num(r.cant)+'</td></tr>';
   }).join('');
+  const footer=rows?'<tfoot><tr><th scope="row" colspan="3">Promedio / Total ('+num(block.rows.length)+' refs)</th><td>'+
+   pct(block.rent)+'</td><td>'+pct(block.ccu)+'</td><td>'+cash(block.profit)+'</td><td>'+num(block.units)+'</td></tr></tfoot>':'';
   const table=rows?'<div class="ax-record-scroll"><table class="atlas-cost-table"><thead><tr>'+
-   '<th scope="col">Referencia</th><th scope="col">Rentabilidad</th><th scope="col">Rent. CCU sin IVA</th><th scope="col">Utilidad $</th>'+
-   '</tr></thead><tbody>'+rows+'</tbody></table></div>':empty('Sin referencias con rentabilidad válida.');
-  const totalLabel=block.missingProfit?'Subtotal conocido · '+num(block.missingProfit)+' registros sin utilidad':'Utilidad de costeo acumulada';
-  return '<section class="atlas-ranking-panel" data-ranking="'+key+'"><div class="atlas-ranking-heading"><h3>'+title+'</h3><span>'+
-   num(block.rows.length)+' referencias</span></div><strong class="atlas-ranking-total">'+cash(block.profit)+'</strong>'+
-   '<p class="ax-sub">'+totalLabel+'</p>'+table+'</section>';
- }).join('')+'</div>';
+   rankingHeaders.map(label=>'<th scope="col">'+label+'</th>').join('')+
+   '</tr></thead><tbody>'+rows+'</tbody>'+footer+'</table></div>':empty('Sin referencias con datos para este orden.');
+  const subtitle=key==='bottom'?'<span>'+metric.bottom+'</span>':'';
+  const exports=rows?'<div class="atlas-ranking-exports"><button type="button" data-rank-export="excel">Excel</button>'+
+   '<button type="button" data-rank-export="pdf">PDF</button></div>':'';
+  const coverage=block.missingProfit?'<p class="ax-sub">Utilidad parcial · '+num(block.missingProfit)+' registros sin utilidad</p>':'';
+  return '<section class="atlas-ranking-panel" data-ranking="'+key+'"><div class="atlas-ranking-heading"><h3>'+title+
+   '</h3>'+subtitle+exports+'</div>'+table+coverage+'</section>';
+ }).join('');
+}
+function exportRanking(button){
+ const panel=button.closest('[data-ranking]');
+ const title=panel.querySelector('h3').textContent;
+ const scope=scopeText()+' · '+v.cos.period.label+' · Orden: '+PccCostModel.rankingMetrics[rankingMetric].label;
+ if(button.dataset.rankExport==='pdf')return PccPrintView(panel,title,scope);
+ if(typeof XLSX==='undefined'){alert('Librería Excel no cargada');return;}
+ const key=panel.dataset.ranking;
+ const block=PccCostModel.rankings(v.cos.references,rankingCount,rankingMetric)[key];
+ const data=block.rows.map(r=>[r.ref,r.desc,r.line,r.rent,r.ccu,r.utilPesos,r.cant]);
+ data.push(['Promedio / Total ('+block.rows.length+' refs)',null,null,block.rent,block.ccu,block.profit,block.units]);
+ const sheet=XLSX.utils.aoa_to_sheet([[title],[scope],[],PccCostModel.rankingHeaders,...data]);
+ for(let row=4;row<4+data.length;row++){
+  for(const col of [3,4,5,6]){
+   const cell=sheet[XLSX.utils.encode_cell({r:row,c:col})];
+   if(cell?.t==='n')cell.z=col<5?'0.0%':col===5?'"$" #,##0':'#,##0';
+  }
+ }
+ const book=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(book,sheet,'Datos');
+ XLSX.writeFile(book,'costos_'+key+'_'+v.cos.period.anchor+'.xlsx');
 }
 const windowText=keys=>keys.map(PccCostModel.monthLabel).join(' · ');
 function componentCell(component){
@@ -357,6 +396,8 @@ function changeFilters(){filters=M.cleanFilters(filters);recordId=null;costRefId
 root.addEventListener('click',event=>{
  const close=event.target.closest('[data-close]');if(close){dialog.close();return;}
  if(event.target.closest('[data-atlas-print]')){printAtlas();return;}
+ const rankExport=event.target.closest('[data-rank-export]');if(rankExport){exportRanking(rankExport);return;}
+ const rankMetric=event.target.closest('[data-rank-metric]');if(rankMetric){rankingMetric=rankMetric.dataset.rankMetric;drawCostRanking($('[data-enlarged]'));return;}
  if(event.target.closest('[data-cost-compare]')){const context=v.cos.nativeFilters;dialog.close();PccExecutiveOpen('cos',context);return;}
  const costAll=event.target.closest('[data-cost-all]');if(costAll){if(costAll.dataset.costAll==='reset')costSelection=undefined;else costSelection[costAll.dataset.costAll]=[];costRefId=null;recordId=null;detailPage=0;render();return;}
  const costRef=event.target.closest('[data-cost-ref]');if(costRef){costRefId=costRef.dataset.costRef;detailPage=0;drawDetail();return;}
@@ -376,11 +417,18 @@ root.addEventListener('click',event=>{
 });
 root.addEventListener('change',event=>{
  const input=event.target;
- if(input.dataset.filter){const key=input.dataset.filter;filters[key]=input.checked?[...filters[key],input.value]:filters[key].filter(x=>x!==input.value);changeFilters();}
+ if(input.matches('[data-rank-count]'))input.value=rankingCount;
+ else if(input.dataset.filter){const key=input.dataset.filter;filters[key]=input.checked?[...filters[key],input.value]:filters[key].filter(x=>x!==input.value);changeFilters();}
  else if(input.dataset.costFilter){const key=input.dataset.costFilter;costSelection[key]=input.checked?[...costSelection[key],input.value]:costSelection[key].filter(x=>x!==input.value);costRefId=null;recordId=null;detailPage=0;render();}
  else if(input.matches('[data-view]')){view=input.value;recordId=null;costRefId=null;stateFilter='';detailPage=0;drawDetail();}
  else if(input.matches('[data-order]')){order=input.value;drawDetail();}
  else if(input.matches('[data-material]')){material=input.value;drawDetail();}
+});
+root.addEventListener('input',event=>{
+ const input=event.target;
+ if(!input.matches('[data-rank-count]')||!finite(input.valueAsNumber)||input.valueAsNumber<1)return;
+ rankingCount=Math.min(50,Math.floor(input.valueAsNumber));
+ drawCostRanking($('[data-enlarged]'));
 });
 dialog.addEventListener('close',()=>{destroyCharts(true);document.body.classList.remove('atlas-modal-open');if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});});
 document.addEventListener('click',event=>{if(!root.contains(event.target))root.querySelectorAll('.ax-filter-menu[open]').forEach(el=>el.open=false);});

@@ -18,7 +18,7 @@
 <script src="data-quality.js"></script>
 <link rel="stylesheet" href="data-quality.css">
 <script src="executive-model.js?v=2.4"></script>
-<script src="cost-model.js?v=1.3"></script>
+<script src="cost-model.js?v=1.4"></script>
 <script src="atlas-model.js?v=1.7"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -281,7 +281,7 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
     @page { margin:1.2cm; size:A4 landscape; }
   }</style>
 <link rel="stylesheet" href="executive.css?v=2.4">
-<link rel="stylesheet" href="atlas.css?v=1.12">
+<link rel="stylesheet" href="atlas.css?v=1.13">
 </head>
 <body data-gerencia="gg">
 <div class="wrap">
@@ -6867,11 +6867,9 @@ function renderCostosResumen() {
   // ── Top N / Bottom N ──
   const metrica = _topMetric === 'ccu' ? 'ccu' : _topMetric === 'utilPesos' ? 'utilPesos' : 'rent';
 
-  const refsAgrupadas=PccCostModel.references(datos).filter(r=>metrica==='utilPesos'?r.utilPesos!==null:r[metrica]!==null);
-
-  const N    = Math.max(1, Math.min(50, parseInt(_topN) || 5));
-  const topN = [...refsAgrupadas].sort((a,b) => (b[metrica]||0) - (a[metrica]||0) || a.id.localeCompare(b.id)).slice(0, N);
-  const botN = [...refsAgrupadas].sort((a,b) => (a[metrica]||0) - (b[metrica]||0) || a.id.localeCompare(b.id)).slice(0, N);
+  const N = Math.max(1, Math.min(50, parseInt(_topN) || 5));
+  const {top,bottom} = PccCostModel.rankings(PccCostModel.references(datos), N, metrica);
+  const topN = top.rows, botN = bottom.rows;
 
   const filaTb = (r, colorCls) => {
     const rentPct = r.rent !== null ? (r.rent*100).toFixed(1)+'%' : '—';
@@ -6896,49 +6894,38 @@ function renderCostosResumen() {
     </tr>`;
   };
 
-  const filaResumen = (rows) => {
-    if (!rows.length) return '';
-    const avgRent = rows.reduce((s,r)=>s+(r.rent||0),0)/rows.length;
-    const ccuRows = rows.filter(r=>r.ccu!==null);
-    const avgCcu  = ccuRows.length ? ccuRows.reduce((s,r)=>s+r.ccu,0)/ccuRows.length : null;
-    const sumUtil = rows.reduce((s,r)=>s+(r.utilPesos||0),0);
-    const sumUds  = rows.reduce((s,r)=>s+(r.cant||0),0);
+  const filaResumen = ({rows,rent:avgRent,ccu:avgCcu,profit:sumUtil,units:sumUds}) => {
     const rCls = avgRent>=0.15?'color:var(--green)':avgRent>=0.05?'color:var(--amber)':'color:var(--red)';
     const uCls = sumUtil>=0?'color:var(--green)':'color:var(--red)';
     return `<tr>
       <td colspan="3" style="color:var(--muted);">Promedio / Total (${rows.length} refs)</td>
-      <td style="${rCls};text-align:right;">${(avgRent*100).toFixed(1)}%</td>
+      <td style="${rCls};text-align:right;">${avgRent!==null?(avgRent*100).toFixed(1)+'%':'—'}</td>
       <td style="color:var(--muted);text-align:right;">${avgCcu!==null?(avgCcu*100).toFixed(1)+'%':'—'}</td>
-      <td style="${uCls};text-align:right;">$${Math.round(sumUtil).toLocaleString('es-CO')}</td>
+      <td style="${uCls};text-align:right;">${sumUtil!==null?'$'+Math.round(sumUtil).toLocaleString('es-CO'):'—'}</td>
       <td style="color:var(--navy);text-align:right;">${Math.round(sumUds).toLocaleString('es-CO')}</td>
     </tr>`;
   };
 
   // Títulos
-  const titleMap = {
-    rent:      { top: `Top ${N} — Mayor rentabilidad`,  sub: 'rent. más baja' },
-    ccu:       { top: `Top ${N} — Mayor CCU sin IVA`,   sub: 'CCU más bajo' },
-    utilPesos: { top: `Top ${N} — Mayor utilidad $`,    sub: 'mayor pérdida $' },
-  };
-  const tm = titleMap[metrica] || titleMap.rent;
+  const tm = PccCostModel.rankingMetrics[metrica];
   const elTTop = document.getElementById('titleTop5');
-  if (elTTop) elTTop.childNodes[0].textContent = tm.top;
+  if (elTTop) elTTop.childNodes[0].textContent = `Top ${N} — ${tm.top}`;
   const elTBot = document.getElementById('titleBot5');
   if (elTBot) elTBot.childNodes[0].textContent = `Bottom ${N} — Críticos `;
   const elSBot = document.getElementById('subBot5');
-  if (elSBot) elSBot.textContent = tm.sub;
+  if (elSBot) elSBot.textContent = tm.bottom;
 
   const sinDatos = '<tr><td colspan="7" class="muted" style="text-align:center;padding:12px;">Sin datos</td></tr>';
 
   const tbTop = g('tb-cost-top');
   if (tbTop) tbTop.innerHTML = topN.length ? topN.map(r => filaTb(r, 'good')).join('') : sinDatos;
   const tfTop = g('tf-cost-top');
-  if (tfTop) tfTop.innerHTML = topN.length ? filaResumen(topN) : '';
+  if (tfTop) tfTop.innerHTML = topN.length ? filaResumen(top) : '';
 
   const tbBot = g('tb-cost-bot');
   if (tbBot) tbBot.innerHTML = botN.length ? botN.map(r => filaTb(r, r.rent < 0.05 ? 'bad' : r.rent < 0.10 ? 'warn' : '')).join('') : sinDatos;
   const tfBot = g('tf-cost-bot');
-  if (tfBot) tfBot.innerHTML = botN.length ? filaResumen(botN) : '';
+  if (tfBot) tfBot.innerHTML = botN.length ? filaResumen(bottom) : '';
 }
 
 // ── setTopMetric: cambiar métrica de ordenación Top/Bottom ──
@@ -9963,6 +9950,6 @@ function exportTablaPDF(tableId, titulo) {
 
 <script src="executive-adapter.js?v=2.3"></script>
 <script src="executive.js?v=2.5"></script>
-<script src="atlas.js?v=1.13"></script>
+<script src="atlas.js?v=1.14"></script>
 </body>
 </html>

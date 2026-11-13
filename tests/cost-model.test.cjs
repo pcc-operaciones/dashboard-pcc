@@ -43,6 +43,23 @@ test('Costos: utilidad conocida cero no se confunde con dato ausente; el subtota
  assert.equal(ranking.top.profit,0);assert.equal(ranking.top.missingProfit,1);
  assert.equal(C.rankings(C.references([row('a','2026-01',1,{utilPesos:null})])).top.profit,null);
 });
+test('Costos: el Top/Bottom cambia de métrica y cantidad sin incluir valores ausentes',()=>{
+ const groups=C.references([
+  row('a','2026-10',1,{rent:.1,ccu:.4,utilPesos:0,cant:10}),
+  row('b','2026-10',1,{rent:null,ccu:.5,utilPesos:30,cant:20}),
+  row('c','2026-10',1,{rent:.3,ccu:null,utilPesos:-15,cant:25}),
+  row('d','2026-10',1,{rent:.2,ccu:.2,utilPesos:null,cant:15})
+ ]);
+ const ccu=C.rankings(groups,2,'ccu');
+ assert.deepEqual(ccu.top.rows.map(r=>r.ref),['b','a']);
+ assert.deepEqual(ccu.bottom.rows.map(r=>r.ref),['d','a']);
+ assert.equal(ccu.top.rent,.1);
+ assert.equal(ccu.top.units,30);
+ const utility=C.rankings(groups,2,'utilPesos');
+ assert.deepEqual(utility.top.rows.map(r=>r.ref),['b','a']);
+ assert.deepEqual(utility.bottom.rows.map(r=>r.ref),['c','a']);
+ assert.equal(utility.bottom.profit,-15);
+});
 test('Costos: ventanas mensuales cruzan años sin el desborde de los días 29–31',()=>{
  const w=C.windows('2026-01');assert.deepEqual(w.recent,['2025-12','2026-01']);assert.deepEqual(w.historical,['2025-06','2025-07','2025-08','2025-09','2025-10','2025-11']);
  assert.deepEqual(C.windows('2026-03').recent,['2026-02','2026-03']);
