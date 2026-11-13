@@ -33,13 +33,20 @@ test('consolidado suma existencias valoradas por sección y mantiene el WIP fuer
  const view=M.build(source,{},deps);
  assert.equal(view.inventory.total,2300);
  assert.equal(view.inv.agedValue,320);
+ assert.equal(view.inventory.agedTotal,864);
+ assert.equal(view.inventory.rows.find(row=>row.section==='Segundas').agedValue,44);
+ assert.equal(view.inventory.rows.find(row=>row.section==='Insumos').agedValue,100);
  assert.equal(view.inventory.rows.find(row=>row.section==='Producto en proceso (WIP)').value,null);
  assert.equal(view.inventory.rows.find(row=>row.section==='Producto en proceso (WIP)').units,50);
  source.log.status='error';
  const partial=M.build(source,{},deps);
  assert.equal(partial.inventory.total,800);
+ assert.equal(partial.inventory.agedTotal,364);
  assert.equal(partial.inventory.rows.find(row=>row.section==='Telas').value,null);
  assert.equal(view.inventory.rows.find(row=>row.section==='Inventario Tienda Yetro').value,null);
+ assert.equal(view.inventory.rows.find(row=>row.section==='Inventario Tienda Two&Two').agedValue,null);
+ const unavailable=M.build({...source,inv:{status:'error'}},{},deps);
+ assert.equal(unavailable.inventory.agedTotal,null);
 });
 test('el consolidado conserva el corte validado de Logística aunque fallen movimientos o recarga',()=>{
  const source=base();

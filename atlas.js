@@ -16,6 +16,8 @@ const $=s=>root.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&
 const finite=Number.isFinite,integer=new Intl.NumberFormat('es-CO',{maximumFractionDigits:0}),decimal=new Intl.NumberFormat('es-CO',{maximumFractionDigits:1}),precise=new Intl.NumberFormat('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2});
 const num=v=>finite(v)?integer.format(v):'—',pct=v=>finite(v)?decimal.format(v*100)+'%':'—',cash=v=>finite(v)?'$ '+integer.format(v):'—',money=v=>finite(v)?'$ '+decimal.format(v/1e6)+' M':'—',exact=v=>finite(v)?'$ '+precise.format(v):'—';
 const colors=['#6b8fd4','#17b6a2','#cc9748','#9a6cd0','#239bb5'];
+const agingRed='#ad2934';
+const agingViews=new Set(['invage','logage','wipaged']);
 const areaNames={ops:'Operaciones PCC',cos:'Costos',inv:'Inventario PT',log:'Logística',sales:'Ventas',people:'Talento Humano'};
 const views={ops:[['stages','Unidades mensuales por etapa'],['wip','Producto en proceso por estado'],['wipaged','WIP de más de 90 días'],['performance','Eficiencia y cumplimiento']],cos:[['cost','Rentabilidad y CCU sin IVA'],['margin','Margen promedio mensual'],['negative','Costeos negativos'],['ranking','10 mayores y 10 menores rentabilidades'],['variation','5 mayores aumentos del costo total']],inv:[['invflow','Recibidas vs. despachadas'],['invage','Antigüedad del inventario principal'],['invvalue','Costo y cobertura de valoración'],['invpending','OP No Recibidas']],log:[['logflow','Entradas y salidas mensuales'],['stock','Existencias de telas e insumos'],['logage','Antigüedad estimada FIFO'],['company','Existencias por empresa']],sales:[['sales','Venta real frente a meta']],people:[['people','Evolución del ausentismo']]};
 const defaults={ops:'stages',cos:'cost',inv:'invflow',log:'logflow',sales:'sales',people:'people'};
@@ -47,7 +49,7 @@ function stats(id){
  return future.map(s=>[s[0],'—',s[1],id]);
 }
 function action(id,target,body,cls,label){return '<button type="button" class="'+cls+'" data-open="'+id+'" data-target="'+target+'" aria-label="'+esc(label)+'">'+body+'</button>';}
-function statMarkup(id){return stats(id).map(s=>{const partial=id==='inv'&&s[3]==='invvalue'&&v.inv.missingCostUnits>0;const pending=['invpending','invage','wipaged'].includes(s[3]);return action(id,s[3],'<span>'+esc(s[0])+'</span><strong'+(s[1].startsWith('$')?' class="ax-cash"':'')+'>'+esc(s[1])+'</strong><small'+(partial?' class="atlas-essential"':pending?' class="atlas-pending-scope"':'')+'><span class="atlas-note-full">'+esc(s[2])+'</span>'+(partial?'<span class="atlas-note-compact">'+num(v.inv.missingCostUnits)+' uds s/costo</span>':'')+'</small>','ax-kpi','Ampliar '+s[0]+' de '+areaNames[id]+': '+s[1]+'. '+s[2]);}).join('');}
+function statMarkup(id){return stats(id).map(s=>{const partial=id==='inv'&&s[3]==='invvalue'&&v.inv.missingCostUnits>0;const pending=['invpending','invage','wipaged'].includes(s[3]);return action(id,s[3],'<span>'+esc(s[0])+'</span><strong'+(s[1].startsWith('$')?' class="ax-cash"':'')+'>'+esc(s[1])+'</strong><small'+(partial?' class="atlas-essential"':pending?' class="atlas-pending-scope"':'')+'><span class="atlas-note-full">'+esc(s[2])+'</span>'+(partial?'<span class="atlas-note-compact">'+num(v.inv.missingCostUnits)+' uds s/costo</span>':'')+'</small>','ax-kpi'+(agingViews.has(s[3])?' ax-aging-stat':''),'Ampliar '+s[0]+' de '+areaNames[id]+': '+s[1]+'. '+s[2]);}).join('');}
 function drawFilters(){
  const allowed=M.hierarchy.filter(h=>!filters.company.length||filters.company.includes(h.company)),groups=allowed.filter(h=>!filters.line.length||filters.line.includes(h.line));
  const opened=$('.ax-filter-menu[open]')?.dataset.menu,focused=document.activeElement?.dataset.filter?{key:document.activeElement.dataset.filter,value:document.activeElement.value}:null;
@@ -83,7 +85,7 @@ function legendHTML(setting){const short={'Planeación':'Plan.','Confección':'C
 function chartButton(id,target,title,height){const data=descriptor(target);return action(id,target,'<span class="ax-chart-title">'+esc(title)+'<span aria-hidden="true">↗</span></span><span class="atlas-chart" style="height:'+height+'px" data-chart="'+target+'"></span><span class="ax-compact-legend">'+legendHTML(data)+'</span>','ax-chart-button','Ampliar '+title+' de '+areaNames[id]);}
 function bars(items,interactive=false){
  const max=Math.max(1,...items.map(r=>r.value));
- return '<div class="ax-full-bars">'+items.map(r=>'<div class="ax-full-bar"><span>'+(interactive?'<button type="button" class="ax-detail-link" data-state="'+esc(r.name)+'">'+esc(r.name)+' ↗</button>':esc(r.name))+'</span><div class="ax-track"><div class="ax-fill" style="width:'+Math.max(0,r.value/max*100)+'%;background:'+(r.color||colors[1])+'"></div></div><span><strong>'+esc(r.label)+'</strong><small>'+esc(r.sub||'')+'</small></span></div>').join('')+'</div>';
+ return '<div class="ax-full-bars">'+items.map(r=>'<div class="ax-full-bar"><span>'+(interactive?'<button type="button" class="ax-detail-link" data-state="'+esc(r.name)+'">'+esc(r.name)+' ↗</button>':esc(r.name))+'</span><div class="ax-track"><div class="ax-fill" style="width:'+Math.max(0,r.value/max*100)+'%;background:'+(r.color||colors[1])+'"></div></div><span><strong'+(r.aging?' class="ax-aging-value"':'')+'>'+esc(r.label)+'</strong><small>'+esc(r.sub||'')+'</small></span></div>').join('')+'</div>';
 }
 function chartValueLabels(setting,large){
  return {
@@ -240,13 +242,13 @@ function negatives(){
  return '<div class="ax-record-summary"><strong>'+num(v.cos.negativeCount)+' registros negativos</strong><span>'+num(new Set(rows.map(r=>r.ref)).size)+' referencias · '+esc(v.cos.period.label)+'</span></div>'+table(['Empresa / línea','Referencia / descripción','Lote','Unidades','Precio venta / ud.','Costo / ud.','Rentabilidad','Margen / ud.'],rows,r=>'<tr><td>'+esc(r.company)+'<small>'+esc(r.line)+'</small></td><td><button type="button" class="ax-ref-link" data-record="'+r.id+'">'+esc(r.ref)+' ↗</button><small>'+esc(r.desc)+'</small></td><td>'+esc(r.lote??'—')+'</td><td>'+num(r.cant)+'</td><td>'+exact(r.pv)+'</td><td>'+exact(r.ct)+'</td><td class="ax-negative-value">'+pct(r.rent)+'</td><td class="ax-negative-value">'+exact(r.margen)+'</td></tr>');
 }
 function drawAgeDonut(host){
- const parts=[{name:'Hasta 90 días',value:v.log.ageRows.reduce((s,r)=>s+r.values.slice(0,3).reduce((a,b)=>a+b,0),0),color:colors[1]},{name:'Más de 90 días',value:v.log.aged,color:colors[2]},{name:'Edad indeterminada',value:v.log.unknown,color:'#8ba2b3'}];
+ const parts=[{name:'Hasta 90 días',value:v.log.ageRows.reduce((s,r)=>s+r.values.slice(0,3).reduce((a,b)=>a+b,0),0),color:colors[1]},{name:'Más de 90 días',value:v.log.aged,color:agingRed,aging:true},{name:'Edad indeterminada',value:v.log.unknown,color:'#8ba2b3'}];
  const total=parts.reduce((s,r)=>s+r.value,0);
  if(!total||typeof Chart==='undefined'){host.innerHTML=bars(parts.map(r=>({...r,label:money(r.value),sub:'Valor FIFO'})));return;}
  host.innerHTML='<div class="atlas-age-donut"><canvas role="img" aria-label="'+esc('Edad estimada FIFO: '+pct(v.log.aged/total)+' del valor tiene más de 90 días')+'"></canvas></div>';
  const chart=new Chart(host.querySelector('canvas'),{type:'doughnut',data:{labels:parts.map(p=>p.name),datasets:[{data:parts.map(p=>p.value),backgroundColor:parts.map(p=>p.color),borderWidth:0,spacing:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'75%',animation:false,plugins:{legend:{display:false},datalabels:{display:false},tooltip:{callbacks:{label:c=>c.label+': '+money(c.parsed)}}}},plugins:[{id:'atlas-age-label',afterDraw(chart){const {ctx,chartArea}=chart;if(!chartArea)return;const x=(chartArea.left+chartArea.right)/2,y=(chartArea.top+chartArea.bottom)/2;ctx.save();ctx.textAlign='center';ctx.fillStyle='#20394d';ctx.font='500 28px Bahnschrift, sans-serif';ctx.fillText(pct(v.log.aged/total),x,y);ctx.fillStyle='#526b7d';ctx.font='12px sans-serif';ctx.fillText('+90 días · FIFO',x,y+23);ctx.restore();}}]});
  charts.add(chart);detailCharts.add(chart);largeChart=chart;
- $('[data-large-legend]').innerHTML=parts.map(p=>'<span class="ax-key" style="--key:'+p.color+'">'+esc(p.name)+': '+money(p.value)+'</span>').join('');
+ $('[data-large-legend]').innerHTML=parts.map(p=>'<span class="ax-key'+(p.aging?' ax-aging-value':'')+'" style="--key:'+p.color+'">'+esc(p.name)+': '+money(p.value)+'</span>').join('');
 }
 function sourceDetails(){
  let html='';for(const [id,s]of [['ops',v.ops],['cos',v.cos],['inv',v.inv]]){
@@ -265,7 +267,7 @@ function drawDetail(){
  drawCostPeriod();
  const standalone=area==='sources'||area==='consolidated';
  $('[data-modal-kpis]').hidden=standalone||view==='negative'||view==='performance'||view==='stages'||view==='invpending'||(area==='cos'&&(['ranking','variation'].includes(view)||costRefId!==null));
- $('[data-modal-kpis]').innerHTML=standalone?'':stats(area).map(s=>'<div><span>'+esc(s[0])+'</span><strong>'+esc(s[1])+'</strong><small>'+esc(s[2])+'</small></div>').join('');
+ $('[data-modal-kpis]').innerHTML=standalone?'':stats(area).map(s=>'<div'+(agingViews.has(s[3])?' class="ax-aging-stat"':'')+'><span>'+esc(s[0])+'</span><strong>'+esc(s[1])+'</strong><small>'+esc(s[2])+'</small></div>').join('');
  $('.ax-modal-controls').hidden=standalone;
  $('[data-view]').innerHTML=standalone?'':views[area].map(s=>'<option value="'+s[0]+'">'+esc(s[1])+'</option>').join('');$('[data-view]').value=view==='lots'?'wip':view;
  $('[data-order-label]').hidden=view!=='wip';$('[data-material-label]').hidden=view!=='logflow';
@@ -304,11 +306,11 @@ function drawDetail(){
   const back=aged?'':'<button type="button" class="ax-detail-link" data-wip-back>← Volver a los estados</button>';
   const heading=aged?'Más de 90 días en proceso':stateFilter;
   if(aged&&!finite(v.ops.agedUnits)){host.innerHTML=empty('Sin fechas válidas de programación en el alcance');return;}
-  host.innerHTML=back+'<div class="ax-record-summary"><strong>'+esc(heading)+'</strong><span>'+num(rows.length)+' OP · '+num(rows.reduce((s,r)=>s+r.cant,0))+' unidades</span></div>'+
+  host.innerHTML=back+'<div class="ax-record-summary"><strong>'+esc(heading)+'</strong><span'+(aged?' class="ax-aging-value"':'')+'>'+num(rows.length)+' OP · '+num(rows.reduce((s,r)=>s+r.cant,0))+' unidades</span></div>'+
    table(['Empresa / línea','OP','Referencia','Producto','Estado','Unidades','En estado desde','Días en estado','Programación','Días en proceso'],rows,r=>
     '<tr><td>'+esc(r.company+' / '+r.line)+'</td><td>'+esc(r.ordenCorte)+'</td><td>'+esc(r.refSap)+'</td><td>'+esc(r.producto)+
-    '</td><td>'+esc(r.estado)+'</td><td>'+num(r.cant)+'</td><td>'+esc(r.stateSince?date(r.stateSince):'—')+
-    '</td><td>'+num(r.stateDays)+'</td><td>'+esc(r.processSince?date(r.processSince):'—')+'</td><td>'+num(r.processDays)+'</td></tr>');
+    '</td><td'+(r.processDays>90?' class="ax-aging-value"':'')+'>'+num(r.cant)+'</td><td>'+esc(r.stateSince?date(r.stateSince):'—')+
+    '</td><td>'+num(r.stateDays)+'</td><td>'+esc(r.processSince?date(r.processSince):'—')+'</td><td'+(r.processDays>90?' class="ax-aging-value"':'')+'>'+num(r.processDays)+'</td></tr>');
  }else if(view==='performance')drawPerformance(host);
  else if(view==='invpending'){
   const {pendingOpsStatus,pendingOps,pendingUnits}=v.inv;
@@ -317,7 +319,7 @@ function drawDetail(){
   host.innerHTML='<div class="ax-record-summary"><strong>'+num(pendingUnits)+' unidades por recibir</strong><span>'+num(rows.length)+' OP pendientes</span></div>'+
    (rows.length?table(['Orden de corte','Referencia','Descripción','Línea','Por recibir','Días en cierre'],rows,r=>'<tr><td>'+esc(r.orden)+'</td><td>'+esc(r.ref)+'</td><td>'+esc(r.desc)+'</td><td>'+esc(r.lineaOp)+'</td><td>'+num(r.porRecibir)+'</td><td>'+num(r.dias)+'</td></tr>'):empty('No hay OP pendientes de recibir'));
  }
- else if(view==='invage')host.innerHTML='<div class="ax-record-summary"><strong>'+exact(v.inv.agedValue)+'</strong><span>Costo conocido de primeras con más de 90 días'+(v.inv.agedMissingUnits?' · '+num(v.inv.agedMissingUnits)+' unidades sin costo':'')+'</span></div>'+bars(v.inv.age.map((val,i)=>({name:['0–30 días','31–60 días','61–90 días','Más de 90 días'][i],value:val,label:num(val),sub:'unidades',color:[colors[1],colors[4],colors[0],colors[2]][i]})));
+ else if(view==='invage')host.innerHTML='<div class="ax-record-summary"><strong class="ax-aging-value">'+exact(v.inv.agedValue)+'</strong><span>Costo conocido de primeras con más de 90 días'+(v.inv.agedMissingUnits?' · '+num(v.inv.agedMissingUnits)+' unidades sin costo':'')+'</span></div>'+bars(v.inv.age.map((val,i)=>({name:['0–30 días','31–60 días','61–90 días','Más de 90 días'][i],value:val,label:num(val),sub:'unidades',color:[colors[1],colors[4],colors[0],agingRed][i],aging:i===3})));
  else if(view==='invvalue')host.innerHTML='<div class="ax-value-detail"><span>Costo conocido del inventario PT</span><strong>'+exact(v.inv.knownValue)+'</strong><p>'+num(v.inv.units)+' unidades en todas las bodegas · '+num(v.inv.missingCostUnits)+' unidades sin costo.</p><p>'+(v.inv.missingCostUnits?'Valoración parcial: faltan costos para completar el total.':'Todas las unidades del alcance tienen costo conocido.')+'</p></div>';
  else if(view==='stock')host.innerHTML=bars(v.log.warehouses.map((r,i)=>({name:r.name,value:r.value,label:money(r.value),sub:'Valor SIESA',color:colors[i?0:1]})));
  else if(view==='logage')drawAgeDonut(host);
@@ -380,24 +382,30 @@ function renderConsolidated(){
  const model=v.inventory;
  const tiles=[
   {section:'Inventario PT',value:v.inv.knownValue,status:sourceState(v.inv.status)||'Todas las bodegas PT'},
-  ...model.rows.filter(row=>['Telas','Insumos','Otras bodegas','Producto en proceso (WIP)','Inventario Tienda Yetro'].includes(row.section))
+  ...model.rows.filter(row=>row.section!=='Primeras'&&row.section!=='Segundas'&&row.section!=='Cobros')
  ];
  $('[data-consolidated]').innerHTML=
   '<div class="ax-consolidated-head"><h2 id="atlas-consolidated-title">Inventario consolidado</h2>'+
   '<button type="button" class="ax-detail-link" data-inventory-detail>Ver detalle ↗</button></div>'+
   '<dl class="ax-consolidated-values"><div class="ax-consolidated-total"><dt>'+(model.partial?'Total valorado parcial':'Total valorado')+
   '</dt><dd>'+exact(model.total)+'</dd><small>COP</small></div>'+
+  '<div class="ax-consolidated-aging"><dt><button type="button" class="ax-detail-link" data-inventory-detail>Costo de más de 90 días ↗</button></dt>'+
+  '<dd class="ax-aging-value">'+exact(model.agedTotal)+'</dd><small>'+ (finite(model.agedTotal)?'COP · total parcial':'Valoración no disponible')+'</small></div>'+
   tiles.map(row=>'<div><dt>'+esc(row.section)+'</dt><dd>'+exact(row.value)+
    '</dd><small>'+esc(inventoryStatus(row))+'</small></div>').join('')+'</dl>';
 }
 function consolidatedDetail(){
  const model=v.inventory;
- return '<div class="ax-record-scroll"><table class="pcc-stock-table"><thead><tr><th>Área</th><th>Sección</th><th>Corte</th><th>Valor en pesos (COP)</th><th>Alcance</th></tr></thead><tbody>'+
+ const quantity=new Intl.NumberFormat('es-CO',{maximumFractionDigits:3});
+ const agedQuantity=row=>row.agedQuantities?.length?
+  row.agedQuantities.map(([unit,value])=>quantity.format(value)+' '+esc(unit)).join('<br>'):num(row.agedUnits);
+ return '<div class="ax-record-scroll"><table class="pcc-stock-table"><thead><tr><th>Área</th><th>Sección</th><th>Corte</th><th>Valor total (COP)</th><th>Cantidad +90</th><th>Costo +90 (COP)</th><th>Alcance del costo +90</th></tr></thead><tbody>'+
   model.rows.map(row=>'<tr><td>'+esc(row.area)+'</td><th scope="row">'+esc(row.section)+'</th><td>'+esc(row.cutoff?date(row.cutoff):'—')+
-   '</td><td>'+exact(row.value)+'</td><td>'+esc(inventoryStatus(row))+'</td></tr>').join('')+
+   '</td><td>'+exact(row.value)+'<small>'+esc(inventoryStatus(row))+'</small></td><td class="ax-aging-value">'+agedQuantity(row)+'</td><td class="ax-aging-value">'+exact(row.agedValue)+
+   '</td><td>'+esc(sourceState(row.agedStatus)||row.agedStatus)+'</td></tr>').join('')+
   '</tbody><tfoot><tr><th colspan="3">'+(model.partial?'Total valorado parcial':'Total valorado')+'</th><td>'+exact(model.total)+
-  '</td><td>Secciones valoradas en pesos</td></tr></tfoot></table></div>'+
-  '<p class="ax-sub">Cada sección conserva su fecha de corte.</p>';
+  '</td><td>—</td><td class="ax-aging-value">'+exact(model.agedTotal)+'</td><td>Total parcial de más de 90 días</td></tr></tfoot></table></div>'+
+  '<p class="ax-sub">Cada sección conserva su fecha de corte. El total de más de 90 días suma la valoración conocida de Inventario PT y el costo FIFO estimado de Logística. Logística se calcula por empresa, incluso con filtros de línea o categoría. Las cantidades de telas e insumos se muestran por unidad de medida.</p>';
 }
 async function printAtlas(){
  if(!dialog.open)return PccPrintView(root,'Gerencia General',scopeText());

@@ -419,9 +419,17 @@ body.atlas-modal-open{overflow:hidden}
 #pcc-atlas .ax-consolidated-values{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:5px;margin:0}
 #pcc-atlas .ax-consolidated-values>div{background:#f2f6f9;border-radius:4px;padding:5px 8px;min-width:0}
 #pcc-atlas .ax-consolidated-values>.ax-consolidated-total{background:#e8f5f1}
+#pcc-atlas .ax-consolidated-values>.ax-consolidated-aging{background:#fff0f1}
 #pcc-atlas .ax-consolidated-values dt,#pcc-atlas .ax-consolidated-values small{font-size:11px;color:var(--ax-muted);line-height:1.2}
 #pcc-atlas .ax-consolidated-values dd{font-size:16px;font-weight:700;margin:1px 0;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 #pcc-atlas .ax-consolidated-values small{display:block}
+#pcc-atlas .ax-consolidated-aging .ax-detail-link,
+#pcc-atlas .ax-aging-value,
+#pcc-atlas .ax-full-bar .ax-aging-value,
+#pcc-atlas .ax-record-summary .ax-aging-value,
+#pcc-atlas .ax-aging-stat strong,
+#pcc-atlas .ax-aging-stat small{color:#ad2934}
+#pcc-atlas .ax-consolidated-aging .ax-detail-link{font-weight:600}
 @media(min-width:1100px) and (min-height:640px) and (max-height:700px){
  body[data-gerencia=gg] .topbar{height:32px;padding-top:5px;padding-bottom:5px}
  body[data-gerencia=gg] #gerencia-bar{min-height:48px;padding-top:2px!important;padding-bottom:2px!important}

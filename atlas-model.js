@@ -77,22 +77,46 @@ function inventoryConsolidated({inv,log,ops}){
   ['Inventario PT','Primeras',pt.filter(r=>!r.esSeg&&!r.esCobros)],
   ['Inventario PT','Segundas',pt.filter(r=>r.esSeg)],
   ['Inventario PT','Cobros',pt.filter(r=>!r.esSeg&&r.esCobros)]
- ].map(([area,section,rows])=>({area,section,cutoff:inv.cutoff,value:inv.ready?sum(rows,'knownValue'):null,
-  status:inv.ready?(rows.some(r=>!finite(r.knownValue)||r.missingCostUnits>0)?'Costo conocido parcial':'Costo ERP'):inv.status}));
+ ].map(([area,section,rows])=>{
+  const agedRows=rows.filter(r=>finite(r.u3)&&r.u3!==0);
+  const valuedAge=agedRows.filter(r=>finite(r.c3)&&(r.c3!==0||r.missingCostUnits===0));
+  return {area,section,cutoff:inv.cutoff,value:inv.ready?sum(rows,'knownValue'):null,
+   status:inv.ready?(rows.some(r=>!finite(r.knownValue)||r.missingCostUnits>0)?'Costo conocido parcial':'Costo ERP'):inv.status,
+   agedUnits:inv.ready?sum(agedRows,'u3'):null,
+   agedValue:inv.ready&&(!agedRows.length||valuedAge.length)?sum(valuedAge,'c3'):null,
+   agedStatus:inv.ready?(valuedAge.length<agedRows.length||agedRows.some(r=>r.missingCostUnits>0)?'Valoración parcial · costo faltante':'Costo ERP'):inv.status};
+ });
  const logisticsSections=[['MT001','Telas'],['MT002','Insumos']];
- const additional=log.rows.filter(r=>!logisticsSections.some(([code])=>code===r.warehouse));
+ const otherWarehouse=row=>!logisticsSections.some(([code])=>code===row.warehouse);
+ const additional=log.rows.filter(otherWarehouse);
  const logisticsScope=log.companies.join(' + ')+' · total por empresa'+(log.ready&&log.status!=='ready'?' · último corte validado':'');
- for(const {name,value} of log.warehouses){
-  groups.push({area:'Logística',section:name,cutoff:log.meta.corte_inventario,value,status:log.ready?logisticsScope:log.status});
+ const logisticsGroup=(section,value,ageRows)=>{
+  const quantities=new Map();
+  if(log.ageReady)for(const {unit,qty} of ageRows){
+   if(unit&&finite(qty?.[3]))quantities.set(unit,(quantities.get(unit)||0)+qty[3]);
+  }
+  return {area:'Logística',section,cutoff:log.meta.corte_inventario,value,status:log.ready?logisticsScope:log.status,
+   agedValue:log.ageReady?sum(ageRows,'riskValue'):null,agedQuantities:[...quantities],
+   agedStatus:log.ageReady?'FIFO estimado · '+logisticsScope:log.ageMessage||'Antigüedad FIFO no disponible'};
+ };
+ for(const {warehouse,name,value} of log.warehouses){
+  groups.push(logisticsGroup(name,value,log.ageRows.filter(row=>row.warehouse===warehouse)));
  }
- if(additional.length)groups.push({area:'Logística',section:'Otras bodegas',cutoff:log.meta.corte_inventario,value:sum(additional,'costTotal'),status:logisticsScope});
+ const additionalAge=log.ageRows.filter(otherWarehouse);
+ if(additional.length||additionalAge.length)groups.push(logisticsGroup('Otras bodegas',sum(additional,'costTotal'),additionalAge));
  const valued=groups.filter(row=>finite(row.value));
  const partial=valued.length<groups.length||groups.some(row=>row.status==='Costo conocido parcial');
  groups.push(
-  {area:'Operaciones PCC',section:'Producto en proceso (WIP)',cutoff:'',value:null,units:ops.wipUnits,status:'Valoración por integrar'},
-  {area:'Tienda Yetro',section:'Inventario Tienda Yetro',cutoff:'',value:null,status:'Fuente por integrar'}
+  {area:'Operaciones PCC',section:'Producto en proceso (WIP)',cutoff:'',value:null,units:ops.wipUnits,status:'Valoración por integrar',
+   agedValue:null,agedUnits:ops.agedUnits,agedStatus:'Valoración por integrar'},
+  {area:'Ventas',section:'Inventario Tienda Yetro',cutoff:'',value:null,status:'Fuente por integrar',
+   agedValue:null,agedStatus:'Fuente por integrar'},
+  {area:'Ventas',section:'Inventario Tienda Two&Two',cutoff:'',value:null,status:'Fuente por integrar',
+   agedValue:null,agedStatus:'Fuente por integrar'}
  );
- return {rows:groups,total:valued.length?sum(valued,'value'):null,partial};
+ const valuedAge=groups.filter(row=>finite(row.agedValue));
+ return {rows:groups,total:valued.length?sum(valued,'value'):null,partial,
+  agedTotal:valuedAge.length?sum(valuedAge,'agedValue'):null};
 }
 function build(input,filterValue={},deps={},costSelection){
  const filters=cleanFilters(filterValue),key=deps.period?.(input.config)||null,year=key?.slice(0,4),monthCount=key?+key.slice(5):0,months=monthNames.slice(0,monthCount),keys=months.map((_,i)=>year+'-'+String(i+1).padStart(2,'0'));
