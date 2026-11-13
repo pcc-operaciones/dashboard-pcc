@@ -91,13 +91,32 @@ function traceIndex(lots){
  }
  return index;
 }
+const genericProviders=new Set([
+ 'EXTERNA','EXTERNO','EXTERNAS','EXTERNOS','INTERNA','INTERNO','INTERNAS','INTERNOS',
+ 'SIN REGISTRO','SIN ASIGNAR','NO APLICA','N/A','NA','-','—','0'
+]);
+function providerName(value){
+ const name=String(value??'').trim();
+ return name&&!genericProviders.has(norm(name).replace(/\s+/g,' '))?name:null;
+}
 function providers(row,index){
  const key=operationKey(classify(row).company,row.ref,row.lote);
  const trace=key?index.get(key)?.traza:null;
- const roles=[['Corte',trace?.corte?.resp],['Confección',row.taller||trace?.confeccion?.resp],
-  ['Lavandería / tintorería',trace?.tintoreria?.resp],['Bordado',trace?.bordado?.resp],
-  ['Presentación',trace?.presentacion?.resp]];
- return roles.filter(([,name])=>name).map(([label,name])=>({label,name}));
+ const stages=[
+  ['Corte','corte',row.corte],['Confección','confeccion',row.conf],
+  ['Lavandería / tintorería','tintoreria',row.lav],['Bordado','bordado',row.bordado],
+  ['Presentación','presentacion',row.pres]
+ ];
+ return stages.flatMap(([label,stage,cost])=>{
+  const operation=trace?.[stage];
+  const name=providerName(operation?.resp);
+  if(name)return [{label,name}];
+  const workshop=stage==='confeccion'?providerName(row.taller):null;
+  if(workshop)return [{label:label+' (Costos)',name:workshop}];
+  const hasStage=operation?.ini||operation?.fin||String(operation?.resp??'').trim()||
+    (finite(cost)&&cost>0)||(stage==='confeccion'&&String(row.taller??'').trim());
+  return hasStage?[{label,name:null}]:[];
+ });
 }
 function variations(rows,anchor,allowedIds){
  const window=windows(anchor),groups=references(rows.filter(r=>(r.cant||0)>0&&!(r.tela===0&&r.promTela===0)&&finite(r.ct)&&r.ct>0));

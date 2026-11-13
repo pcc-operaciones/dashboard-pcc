@@ -183,7 +183,9 @@ function drawCostReference(host){
  host.innerHTML='<button type="button" class="ax-detail-link" data-cost-back>← Volver al resumen de referencias</button>'+
   '<div class="ax-record-summary"><strong>'+esc(r.desc)+'</strong><span>'+num(rows.length)+' registros</span></div>'+
   table(headers,[...rows].sort((a,b)=>b.fecha.localeCompare(a.fecha)),row=>{
-   const providers=PccCostModel.providers(row,index).map(p=>'<span class="ax-provider">'+esc(p.label)+' · '+esc(p.name)+'</span>').join('');
+   const missingProvider=source.wip?.status==='loading'?'Consultando trazabilidad':
+    source.wip?.status==='error'?'Trazabilidad no disponible':'Nombre no registrado';
+   const providers=PccCostModel.providers(row,index).map(p=>'<span class="ax-provider">'+esc(p.label)+' · '+esc(p.name??missingProvider)+'</span>').join('');
    return '<tr><th scope="row">'+esc(PccCostModel.monthLabel(row.fecha))+'</th><td>'+esc(row.lote??'—')+
     '</td><td>'+esc(row.desc||r.desc||'—')+'</td><td>'+num(row.cant)+'</td><td>'+exact(row.ct)+'</td><td>'+pct(row.rent)+
     '</td><td>'+cash(row.utilPesos)+'</td><td>'+ (providers||'Sin registro')+'</td></tr>';

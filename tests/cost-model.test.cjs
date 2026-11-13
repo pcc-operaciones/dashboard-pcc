@@ -76,8 +76,22 @@ test('Costos: vincula responsables solo con empresa, referencia y OP inequívoca
  const trace={empresa:'EU',refSap:'A',ordenCorte:'OP-0000042',traza:{corte:{resp:'Corte registrado'},confeccion:{resp:'Taller en traza'}}};
  const cost={empresa:'EU',ref:'a',lote:42,taller:'Taller en costeo'};
  assert.deepEqual(C.providers(cost,C.traceIndex([trace])),[
-  {label:'Corte',name:'Corte registrado'},{label:'Confección',name:'Taller en costeo'}
+  {label:'Corte',name:'Corte registrado'},{label:'Confección',name:'Taller en traza'}
  ]);
  assert.deepEqual(C.providers({...cost,taller:''},C.traceIndex([trace,{...trace}])),[]);
  assert.deepEqual(C.providers({...cost,empresa:'TEX',taller:''},C.traceIndex([trace])),[]);
+});
+
+test('Costos: reemplaza EXTERNA por el nombre de la OP y conserva los faltantes sin atribuir',()=>{
+ const trace={empresa:'EU',refSap:'A',ordenCorte:'OP-0000042',traza:{
+  confeccion:{resp:'Proveedor registrado'},tintoreria:{resp:'EXTERNA',ini:'2026-10-01'}
+ }};
+ const cost={empresa:'EU',ref:'a',lote:42,taller:'EXTERNA',conf:1000};
+ assert.deepEqual(C.providers(cost,C.traceIndex([trace])),[
+  {label:'Confección',name:'Proveedor registrado'},{label:'Lavandería / tintorería',name:null}
+ ]);
+ assert.deepEqual(C.providers(cost,C.traceIndex([])),[{label:'Confección',name:null}]);
+ assert.deepEqual(C.providers({...cost,taller:'Taller identificado'},C.traceIndex([])),[
+  {label:'Confección (Costos)',name:'Taller identificado'}
+ ]);
 });
