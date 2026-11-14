@@ -31,6 +31,12 @@ La fecha de `B2` representa el corte común del ERP, no el instante de actualiza
 
 La hoja `WIP_COSTOS` tiene una fila por **empresa + OP** y guarda fecha de corte, estado informado por el Excel, MP, MO, CIF, costo total y fecha de actualización del archivo. El dashboard cruza esa clave con los lotes activos, muestra el costo solo de las OP encontradas y señala cuántas OP activas no tienen costo. Los filtros de empresa y cliente se aplican sobre las OP visibles. Una misma OP se cuenta una sola vez, aunque tenga varias filas de lotes.
 
+## Botones dentro de Google Sheets
+
+El proyecto `SyncExcel` está vinculado a `KPI PCC MENSUAL`. Añadir [PanelCargaWip.gs](../apps-script/production-wip/PanelCargaWip.gs) como **un archivo de código nuevo** en ese mismo proyecto y recargar la hoja. Aparece el menú **Carga WIP → Abrir panel de carga**. El panel contiene el campo de fecha y los botones **Procesar los cuatro Excel** y **Consultar estado**.
+
+El botón de proceso guarda la fecha común en `CONTROL_WIP!B2`, ejecuta `sincronizarDatos()` y, cuando termina, ejecuta `calcularKPIs()`. Son dos llamadas separadas para respetar el diseño original contra tiempos de espera largos. Al final consulta `CONTROL_WIP!B3` y el número de OP publicadas. Si una llamada falla, el panel muestra el error y no informa que la publicación se completó. El menú `onOpen` es un activador simple de interfaz; no se instala otro activador periódico. Los dos activadores diarios existentes siguen funcionando.
+
 ## Alcance y límite
 
 Este cambio publica el **último corte de costos WIP**. No crea todavía cierres mensuales de WIP. `SyncExcel` continúa copiando los lotes y generando `KPI_ALERTAS` como antes. El script que compartió el usuario es la fuente de referencia para el punto de inserción; no hay acceso de edición desde esta sesión al proyecto privado, por lo que el pegado y la primera ejecución deben hacerse en su cuenta.
