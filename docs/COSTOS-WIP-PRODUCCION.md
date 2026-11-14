@@ -4,6 +4,8 @@
 
 ## Instalación en el proyecto existente
 
+Antes de ejecutar WIP, en el editor de `SyncExcel` pulsar **Servicios → + → Google Sheets API → Añadir**. El módulo escribe `CONTROL_WIP` y publica `WIP_COSTOS` mediante la API de Sheets para evitar tiempos de espera del servicio de hojas en este libro. En un proyecto predeterminado de Apps Script, añadir el servicio habilita la API en su proyecto de Cloud. Si `SyncExcel` usa un proyecto de Cloud estándar, habilitar también **Google Sheets API** en ese mismo proyecto. Conservar el servicio Drive existente.
+
 1. En `SyncExcel`, añadir un archivo de secuencia llamado `CostosWip` y pegar [CostosWip.gs](../apps-script/production-wip/CostosWip.gs). Si ya se pegó una versión anterior, sustituir su contenido completo. Conservar las funciones existentes `leerExcel` y `escribirHoja`.
 2. En la función **existente** `sincronizarDatos()`, justo después de `const ss = SpreadsheetApp.openById(KPI_SPREADSHEET_ID);`, añadir:
 
@@ -36,6 +38,8 @@ La hoja `WIP_COSTOS` tiene una fila por **empresa + OP** y guarda fecha de corte
 El proyecto `SyncExcel` está vinculado a `KPI PCC MENSUAL`. Añadir [PanelCargaWip.gs](../apps-script/production-wip/PanelCargaWip.gs) como **un archivo de código nuevo** en ese mismo proyecto y recargar la hoja. Aparece el menú **Carga WIP → Abrir panel de carga**. El panel contiene el campo de fecha y los botones **Procesar los cuatro Excel** y **Consultar estado**.
 
 El botón de proceso guarda la fecha común en `CONTROL_WIP!B2`, ejecuta `sincronizarDatos()` y, cuando termina, ejecuta `calcularKPIs()`. Son dos llamadas separadas para respetar el diseño original contra tiempos de espera largos. Al final consulta `CONTROL_WIP!B3` y el número de OP publicadas. Si una llamada falla, el panel muestra el error y no informa que la publicación se completó. El menú `onOpen` es un activador simple de interfaz; no se instala otro activador periódico. Los dos activadores diarios existentes siguen funcionando.
+
+Si aparece `Sheets API HTTP 403` indicando que la API no está habilitada, añadir el servicio Google Sheets API según el primer párrafo y ejecutar solo `calcularKPIs()` si `sincronizarDatos()` ya terminó correctamente. No se requiere volver a reemplazar los Excel.
 
 ## Alcance y límite
 
