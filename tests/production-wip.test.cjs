@@ -35,11 +35,12 @@ test('rechaza OP repetida y total que no concilia', () => {
     ['OP-00001', 'CORTE', 100, 20, 5, 130]]}, 'EU'), /no coincide/);
 });
 
-test('mantiene el último corte si solo se reemplaza uno de los Excel', () => {
+test('mantiene el último corte si falta reemplazar uno de los cuatro Excel', () => {
   const messages = [];
-  const props = {eu: 1000, tex: 1000, cutoff: '2026-11-12'};
+  const props = {lotEu: 1000, lotTex: 1000, costEu: 1000, costTex: 1000, cutoff: '2026-11-12'};
   const app = context({
-    DriveApp: {getFileById: id => ({getLastUpdated: () => new Date(id.includes('16Pev') ? 2000 : 1000)})},
+    EU_FILE_ID: 'lot-eu', TEX_FILE_ID: 'lot-tex',
+    DriveApp: {getFileById: id => ({getLastUpdated: () => new Date(id === 'lot-tex' ? 1000 : 2000)})},
     PropertiesService: {getScriptProperties: () => ({getProperty: () => JSON.stringify(props)})},
     Logger: {log: value => messages.push(value)},
   });
@@ -48,4 +49,19 @@ test('mantiene el último corte si solo se reemplaza uno de los Excel', () => {
   const ss = {getSheetByName: () => sheet};
   app.sincronizarCostosWip_(ss);
   assert.ok(messages.some(message => String(message).includes('PENDIENTE')));
+});
+
+test('espera la copia de los lotes si cambiaron después de sincronizarDatos', () => {
+  const messages = [];
+  const app = context({
+    EU_FILE_ID: 'lot-eu', TEX_FILE_ID: 'lot-tex',
+    DriveApp: {getFileById: () => ({getLastUpdated: () => new Date(2000)})},
+    PropertiesService: {getScriptProperties: () => ({getProperty: name => name.includes('LOTES_COPIADOS')
+      ? JSON.stringify({lotEu: 1000, lotTex: 1000}) : '{}'})},
+    Logger: {log: value => messages.push(value)},
+  });
+  const cells = {A2: {setValue() {}}, A3: {setValue() {}}, B3: {setValue: value => messages.push(value)}};
+  const ss = {getSheetByName: () => ({getRange: address => cells[address]})};
+  app.sincronizarCostosWip_(ss);
+  assert.ok(messages.some(message => String(message).includes('sincronizarDatos')));
 });

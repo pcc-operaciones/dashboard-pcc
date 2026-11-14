@@ -1,5 +1,6 @@
 /*
  * Añadir este archivo al proyecto SyncExcel existente. No crea activadores.
+ * sincronizarDatos() registra las versiones de los lotes copiados.
  * calcularKPIs() llama a sincronizarCostosWip_(ss) después de KPI_ALERTAS.
  * Usa leerExcel() y escribirHoja() del mismo proyecto.
  */
@@ -8,6 +9,22 @@ const PCC_WIP_TEX_FILE_ID = '1h2Y7_HAfz1_XjXDqCYN10aeHqBy85ex_';
 const PCC_WIP_HOJA = 'WIP_COSTOS';
 const PCC_WIP_CONTROL = 'CONTROL_WIP';
 const PCC_WIP_PROP = 'PCC_WIP_COSTOS_FUENTES_V1';
+const PCC_WIP_LOTES_COPIADOS_PROP = 'PCC_WIP_LOTES_COPIADOS_V1';
+
+function pccWipVersionesLotes_() {
+  return {
+    lotEu: DriveApp.getFileById(EU_FILE_ID).getLastUpdated().getTime(),
+    lotTex: DriveApp.getFileById(TEX_FILE_ID).getLastUpdated().getTime()
+  };
+}
+
+function pccWipRegistrarLotesCopiados_(before) {
+  var after = pccWipVersionesLotes_();
+  if (before.lotEu !== after.lotEu || before.lotTex !== after.lotTex) {
+    throw new Error('Los Excel de lotes cambiaron mientras se copiaban. Repite sincronizarDatos.');
+  }
+  PropertiesService.getScriptProperties().setProperty(PCC_WIP_LOTES_COPIADOS_PROP, JSON.stringify(after));
+}
 
 function pccWipTexto_(value) {
   return String(value == null ? '' : value).trim();
@@ -126,26 +143,35 @@ function sincronizarCostosWip_(ss) {
 function pccWipSincronizar_(ss) {
   var euFile = DriveApp.getFileById(PCC_WIP_EU_FILE_ID);
   var texFile = DriveApp.getFileById(PCC_WIP_TEX_FILE_ID);
-  var euVersion = euFile.getLastUpdated().getTime();
-  var texVersion = texFile.getLastUpdated().getTime();
+  var versions = pccWipVersionesLotes_();
+  versions.costEu = euFile.getLastUpdated().getTime();
+  versions.costTex = texFile.getLastUpdated().getTime();
   var props = PropertiesService.getScriptProperties();
   var previous = JSON.parse(props.getProperty(PCC_WIP_PROP) || '{}');
-  if (previous.eu === euVersion && previous.tex === texVersion) {
-    Logger.log('WIP costos: mismos dos Excel; no se reprocesan.');
+  var keys = ['lotEu', 'lotTex', 'costEu', 'costTex'];
+  var same = keys.every(function(key) { return previous[key] === versions[key]; });
+  if (ss.getSheetByName(PCC_WIP_HOJA) && same) {
+    Logger.log('WIP costos: mismos cuatro Excel; no se reprocesan.');
     return;
   }
-  if (previous.eu && previous.tex && (previous.eu === euVersion || previous.tex === texVersion)) {
-    pccWipEstado_(ss, 'PENDIENTE: falta reemplazar el otro Excel de costos WIP.');
-    Logger.log('WIP costos: pendiente de reemplazar EU y TEX.');
+  if (previous.cutoff && !same && keys.some(function(key) { return previous[key] === versions[key]; })) {
+    pccWipEstado_(ss, 'PENDIENTE: faltan archivos nuevos del paquete de cuatro Excel WIP.');
+    Logger.log('WIP costos: paquete de cuatro Excel incompleto.');
+    return;
+  }
+  var copied = JSON.parse(props.getProperty(PCC_WIP_LOTES_COPIADOS_PROP) || 'null');
+  if (!copied || copied.lotEu !== versions.lotEu || copied.lotTex !== versions.lotTex) {
+    pccWipEstado_(ss, 'PENDIENTE: ejecuta sincronizarDatos para copiar estos Excel de lotes.');
+    Logger.log('WIP costos: las hojas de lotes no corresponden a los Excel actuales.');
     return;
   }
   var control = pccWipEstado_(ss, 'VALIDANDO');
   var cutoff = pccWipFecha_(control.getRange('B2').getValue());
-  [euVersion, texVersion].forEach(function(version) {
+  keys.map(function(key) { return versions[key]; }).forEach(function(version) {
     var uploadDate = Utilities.formatDate(new Date(version), 'America/Bogota', 'yyyy-MM-dd');
     var lagDays = Math.floor((Date.parse(uploadDate + 'T12:00:00Z') - Date.parse(cutoff + 'T12:00:00Z')) / 86400000);
     if (lagDays < 0 || lagDays > 1) {
-      throw new Error('La fecha de CONTROL_WIP!B2 debe ser la del cargue de ambos Excel o el día anterior.');
+      throw new Error('La fecha de CONTROL_WIP!B2 debe ser la del cargue de los cuatro Excel o el día anterior.');
     }
   });
   if (previous.cutoff && cutoff < previous.cutoff) throw new Error('El corte WIP no puede retroceder.');
@@ -154,10 +180,15 @@ function pccWipSincronizar_(ss) {
   var tex = pccWipLeerCostos_(leerExcel(PCC_WIP_TEX_FILE_ID), 'TEX');
   var header = ['FECHA_CORTE', 'EMPRESA', 'ORDEN', 'ESTADO_EXCEL', 'MP_COP', 'MO_COP', 'CIF_COP', 'TOTAL_COP', 'ARCHIVO_ACTUALIZADO'];
   var rows = [header];
-  eu.forEach(function(r) { rows.push([cutoff].concat(r, Utilities.formatDate(new Date(euVersion), 'America/Bogota', 'yyyy-MM-dd HH:mm:ss'))); });
-  tex.forEach(function(r) { rows.push([cutoff].concat(r, Utilities.formatDate(new Date(texVersion), 'America/Bogota', 'yyyy-MM-dd HH:mm:ss'))); });
+  eu.forEach(function(r) { rows.push([cutoff].concat(r, Utilities.formatDate(new Date(versions.costEu), 'America/Bogota', 'yyyy-MM-dd HH:mm:ss'))); });
+  tex.forEach(function(r) { rows.push([cutoff].concat(r, Utilities.formatDate(new Date(versions.costTex), 'America/Bogota', 'yyyy-MM-dd HH:mm:ss'))); });
+  var unchanged = pccWipVersionesLotes_();
+  if (unchanged.lotEu !== versions.lotEu || unchanged.lotTex !== versions.lotTex ||
+      euFile.getLastUpdated().getTime() !== versions.costEu || texFile.getLastUpdated().getTime() !== versions.costTex) {
+    throw new Error('Uno de los cuatro Excel cambió durante el procesamiento. Repite la ejecución.');
+  }
   pccWipPublicar_(ss, rows);
-  props.setProperty(PCC_WIP_PROP, JSON.stringify({eu: euVersion, tex: texVersion, cutoff: cutoff}));
+  props.setProperty(PCC_WIP_PROP, JSON.stringify({lotEu: versions.lotEu, lotTex: versions.lotTex, costEu: versions.costEu, costTex: versions.costTex, cutoff: cutoff}));
   pccWipEstado_(ss, 'PUBLICADO: corte ' + cutoff + ' · EU ' + eu.length + ' OP · TEX ' + tex.length + ' OP');
   Logger.log('WIP costos: ' + (rows.length - 1) + ' OP publicadas para ' + cutoff);
 }
