@@ -95,47 +95,66 @@ function pccWipLeerCostos_(workbook, empresa) {
   throw new Error(empresa + ': no se encontraron los encabezados de COSTOS WIP');
 }
 
+function pccWipApi_(method, path, body) {
+  var options = {
+    method: method,
+    contentType: 'application/json',
+    headers: {Authorization: 'Bearer ' + ScriptApp.getOAuthToken()},
+    muteHttpExceptions: true
+  };
+  if (body != null) options.payload = JSON.stringify(body);
+  var response = UrlFetchApp.fetch('https://sheets.googleapis.com/v4/spreadsheets/' +
+    encodeURIComponent(KPI_SPREADSHEET_ID) + path, options);
+  var code = response.getResponseCode();
+  if (code < 200 || code >= 300) {
+    throw new Error('Sheets API HTTP ' + code + ': ' + response.getContentText().slice(0, 400));
+  }
+  return JSON.parse(response.getContentText());
+}
+
+function pccWipRango_(range) {
+  return '/values/' + encodeURIComponent(range);
+}
+
+function pccWipValores_(range) {
+  return pccWipApi_('get', pccWipRango_(range) + '?valueRenderOption=FORMATTED_VALUE').values || [];
+}
+
+function pccWipEscribir_(range, values) {
+  return pccWipApi_('put', pccWipRango_(range) + '?valueInputOption=RAW', {values: values});
+}
+
 function pccWipEstado_(ss, message) {
-  var control = ss.getSheetByName(PCC_WIP_CONTROL);
-  if (!control) control = ss.insertSheet(PCC_WIP_CONTROL);
-  control.getRange('A2').setValue('Fecha de corte EU y TEX (AAAA-MM-DD)');
-  control.getRange('A3').setValue('Estado de costos WIP');
-  control.getRange('B3').setValue(message);
-  return control;
+  pccWipEscribir_(PCC_WIP_CONTROL + '!A3:B3', [['Estado de costos WIP', message]]);
 }
 
 function pccWipPublicar_(ss, rows) {
+  var sheets = pccWipApi_('get', '?fields=sheets(properties(sheetId,title))').sheets || [];
+  var byName = {};
+  sheets.forEach(function(s) { byName[s.properties.title] = s.properties.sheetId; });
   var stageName = 'WIP_COSTOS_NUEVO';
-  var backupName = 'WIP_COSTOS_ANTERIOR';
-  var old = ss.getSheetByName(PCC_WIP_HOJA);
-  var backup = ss.getSheetByName(backupName);
-  if (!old && backup) { backup.setName(PCC_WIP_HOJA); old = backup; backup = null; }
-  if (backup) ss.deleteSheet(backup);
-  var stage = ss.getSheetByName(stageName);
-  if (stage) ss.deleteSheet(stage);
-  stage = ss.insertSheet(stageName);
-  try {
-    escribirHoja(ss, stageName, rows);
-    if (stage.getLastRow() !== rows.length) throw new Error('No se escribió todo el corte WIP.');
-    if (old) old.setName(backupName);
-    try {
-      stage.setName(PCC_WIP_HOJA);
-    } catch (error) {
-      if (old) old.setName(PCC_WIP_HOJA);
-      throw error;
-    }
-    if (old) ss.deleteSheet(old);
-  } catch (error) {
-    if (stage.getName() === stageName) ss.deleteSheet(stage);
-    throw error;
-  }
+  var stageId = Math.floor(Math.random() * 1000000000) + 1000000000;
+  while (sheets.some(function(s) { return s.properties.sheetId === stageId; })) stageId++;
+  var requests = [];
+  if (byName[stageName] != null) requests.push({deleteSheet: {sheetId: byName[stageName]}});
+  requests.push({addSheet: {properties: {sheetId: stageId, title: stageName,
+    gridProperties: {rowCount: Math.max(1000, rows.length), columnCount: Math.max(26, rows[0].length)}}}});
+  requests.push({updateCells: {start: {sheetId: stageId, rowIndex: 0, columnIndex: 0},
+    rows: rows.map(function(row) { return {values: row.map(function(value) {
+      return {userEnteredValue: typeof value === 'number' ? {numberValue: value} : {stringValue: String(value)}};
+    })}; }), fields: 'userEnteredValue'}});
+  if (byName[PCC_WIP_HOJA] != null) requests.push({deleteSheet: {sheetId: byName[PCC_WIP_HOJA]}});
+  requests.push({updateSheetProperties: {properties: {sheetId: stageId, title: PCC_WIP_HOJA}, fields: 'title'}});
+  pccWipApi_('post', ':batchUpdate', {requests: requests});
 }
 
 function sincronizarCostosWip_(ss) {
   try {
     pccWipSincronizar_(ss);
   } catch (error) {
-    pccWipEstado_(ss, 'ERROR: ' + String(error.message || error).slice(0, 180));
+    Logger.log('WIP causa original: ' + (error.stack || error));
+    try { pccWipEstado_(ss, 'ERROR: ' + String(error.message || error).slice(0, 180)); }
+    catch (statusError) { Logger.log('No se pudo registrar el estado WIP: ' + statusError); }
     throw error;
   }
 }
@@ -150,7 +169,9 @@ function pccWipSincronizar_(ss) {
   var previous = JSON.parse(props.getProperty(PCC_WIP_PROP) || '{}');
   var keys = ['lotEu', 'lotTex', 'costEu', 'costTex'];
   var same = keys.every(function(key) { return previous[key] === versions[key]; });
-  if (ss.getSheetByName(PCC_WIP_HOJA) && same) {
+  var published = (pccWipApi_('get', '?fields=sheets(properties(title))').sheets || [])
+    .some(function(sheet) { return sheet.properties.title === PCC_WIP_HOJA; });
+  if (published && same) {
     Logger.log('WIP costos: mismos cuatro Excel; no se reprocesan.');
     return;
   }
@@ -165,8 +186,9 @@ function pccWipSincronizar_(ss) {
     Logger.log('WIP costos: las hojas de lotes no corresponden a los Excel actuales.');
     return;
   }
-  var control = pccWipEstado_(ss, 'VALIDANDO');
-  var cutoff = pccWipFecha_(control.getRange('B2').getValue());
+  pccWipEstado_(ss, 'VALIDANDO');
+  var cutoffRows = pccWipValores_(PCC_WIP_CONTROL + '!B2');
+  var cutoff = pccWipFecha_(cutoffRows[0] && cutoffRows[0][0]);
   keys.map(function(key) { return versions[key]; }).forEach(function(version) {
     var uploadDate = Utilities.formatDate(new Date(version), 'America/Bogota', 'yyyy-MM-dd');
     var lagDays = Math.floor((Date.parse(uploadDate + 'T12:00:00Z') - Date.parse(cutoff + 'T12:00:00Z')) / 86400000);

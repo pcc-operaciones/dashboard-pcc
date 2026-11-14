@@ -44,10 +44,11 @@ test('mantiene el último corte si falta reemplazar uno de los cuatro Excel', ()
     PropertiesService: {getScriptProperties: () => ({getProperty: () => JSON.stringify(props)})},
     Logger: {log: value => messages.push(value)},
   });
-  const cells = {A2: {setValue() {}}, A3: {setValue() {}}, B3: {setValue: value => messages.push(value)}};
-  const sheet = {getRange: address => cells[address]};
-  const ss = {getSheetByName: () => sheet};
-  app.sincronizarCostosWip_(ss);
+  app.pccWipApi_ = (method, path, body) => {
+    if (path.includes('fields=')) return {sheets: [{properties: {title: 'WIP_COSTOS'}}]};
+    messages.push(body.values[0][1]); return {};
+  };
+  app.sincronizarCostosWip_({});
   assert.ok(messages.some(message => String(message).includes('PENDIENTE')));
 });
 
@@ -60,8 +61,50 @@ test('espera la copia de los lotes si cambiaron después de sincronizarDatos', (
       ? JSON.stringify({lotEu: 1000, lotTex: 1000}) : '{}'})},
     Logger: {log: value => messages.push(value)},
   });
-  const cells = {A2: {setValue() {}}, A3: {setValue() {}}, B3: {setValue: value => messages.push(value)}};
-  const ss = {getSheetByName: () => ({getRange: address => cells[address]})};
-  app.sincronizarCostosWip_(ss);
+  app.pccWipApi_ = (method, path, body) => {
+    if (path.includes('fields=')) return {sheets: []};
+    messages.push(body.values[0][1]); return {};
+  };
+  app.sincronizarCostosWip_({});
   assert.ok(messages.some(message => String(message).includes('sincronizarDatos')));
+});
+
+test('publica el corte en una sola operación atómica y descarta la hoja temporal vacía', () => {
+  const app = context();
+  let published;
+  app.pccWipApi_ = (method, path, body) => {
+    if (method === 'get') return {sheets: [
+      {properties: {title: 'WIP_COSTOS_NUEVO', sheetId: 21}},
+      {properties: {title: 'WIP_COSTOS', sheetId: 22}}
+    ]};
+    published = body.requests; return {};
+  };
+  app.pccWipPublicar_({}, [['FECHA_CORTE', 'TOTAL_COP'], ['2026-11-12', 125]]);
+  assert.equal(published[0].deleteSheet.sheetId, 21);
+  assert.equal(published[1].addSheet.properties.title, 'WIP_COSTOS_NUEVO');
+  assert.equal(published[2].updateCells.rows[1].values[1].userEnteredValue.numberValue, 125);
+  assert.equal(published[3].deleteSheet.sheetId, 22);
+  assert.equal(published[4].updateSheetProperties.properties.title, 'WIP_COSTOS');
+});
+
+test('conserva el error original cuando falla también el registro de estado', () => {
+  const app = context({Logger: {log() {}}});
+  app.pccWipSincronizar_ = () => { throw new Error('causa original'); };
+  app.pccWipEstado_ = () => { throw new Error('estado agotado'); };
+  assert.throws(() => app.sincronizarCostosWip_({}), /causa original/);
+});
+
+test('usa la API de Sheets y comunica errores HTTP sin ocultarlos', () => {
+  const calls = [];
+  const app = context({
+    KPI_SPREADSHEET_ID: 'book',
+    ScriptApp: {getOAuthToken: () => 'token'},
+    UrlFetchApp: {fetch: (url, options) => {
+      calls.push([url, options]);
+      return {getResponseCode: () => 503, getContentText: () => 'servicio ocupado'};
+    }},
+  });
+  assert.throws(() => app.pccWipEscribir_('CONTROL_WIP!B3', [['VALIDANDO']]), /HTTP 503.*servicio ocupado/);
+  assert.match(calls[0][0], /\/values\/CONTROL_WIP!B3\?valueInputOption=RAW$/);
+  assert.equal(calls[0][1].method, 'put');
 });

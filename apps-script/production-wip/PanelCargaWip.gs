@@ -58,7 +58,7 @@ function abrirPanelCargaWip() {
       var x=await ejecutar('estadoPanelWip');
       if((x.status||'').indexOf('PUBLICADO')===0){mostrar(x.status+'\\nOP publicadas: '+x.rows,'ok')}
       else{mostrar(x.status+'\\nRevisa el estado antes de cerrar el panel.','error')}
-    }catch(e){mostrar('No se completó la carga: '+((e&&e.message)||String(e))+'\\nLa carga anterior permanece disponible.','error')}
+    }catch(e){mostrar('No se completó la carga: '+((e&&e.message)||String(e))+'\\nConsulta el estado antes de usar los datos WIP.','error')}
     finally{ocupado(false)}
   }
   el('procesar').addEventListener('click',procesar);
@@ -73,19 +73,21 @@ function guardarFechaPanelWip(value) {
   var cutoff = pccWipFecha_(value);
   var today = Utilities.formatDate(new Date(), 'America/Bogota', 'yyyy-MM-dd');
   if (cutoff > today) throw new Error('La fecha de corte no puede ser futura.');
-  var ss = SpreadsheetApp.openById(KPI_SPREADSHEET_ID);
-  var control = pccWipEstado_(ss, 'FECHA REGISTRADA · pendiente de procesar los cuatro Excel');
-  control.getRange('B2').setNumberFormat('@').setValue(cutoff);
+  pccWipEscribir_(PCC_WIP_CONTROL + '!A2:B3', [
+    ['Fecha de corte EU y TEX (AAAA-MM-DD)', cutoff],
+    ['Estado de costos WIP', 'FECHA REGISTRADA · pendiente de procesar los cuatro Excel']
+  ]);
   return cutoff;
 }
 
 function estadoPanelWip() {
-  var ss = SpreadsheetApp.openById(KPI_SPREADSHEET_ID);
-  var control = ss.getSheetByName(PCC_WIP_CONTROL);
-  var costs = ss.getSheetByName(PCC_WIP_HOJA);
+  var control = pccWipValores_(PCC_WIP_CONTROL + '!B2:B3');
+  var sheets = pccWipApi_('get', '?fields=sheets(properties(title))').sheets || [];
+  var published = sheets.some(function(sheet) { return sheet.properties.title === PCC_WIP_HOJA; });
+  var costs = published ? pccWipValores_(PCC_WIP_HOJA + '!A:A') : [];
   return {
-    cutoff: control ? String(control.getRange('B2').getDisplayValue() || '') : '',
-    status: control ? String(control.getRange('B3').getDisplayValue() || 'Sin procesar') : 'Sin procesar',
-    rows: costs ? Math.max(0, costs.getLastRow() - 1) : 0
+    cutoff: String(control[0] && control[0][0] || ''),
+    status: String(control[1] && control[1][0] || 'Sin procesar'),
+    rows: Math.max(0, costs.length - 1)
   };
 }

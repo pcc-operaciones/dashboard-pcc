@@ -37,14 +37,15 @@ test('el menú abre un panel con dos botones y cliente válido', () => {
 
 test('guarda una fecha única en CONTROL_WIP y rechaza fechas futuras', () => {
   const written = [];
-  const cell = {setNumberFormat() {return this;}, setValue(value) {written.push(value);return this;}};
   const {ctx} = load({
     KPI_SPREADSHEET_ID:'book',
     Utilities:{formatDate:()=>'2026-11-14'},
     pccWipFecha_:value=>value,
-    pccWipEstado_:() => ({getRange:() => cell}),
+    pccWipEscribir_:(range, values) => written.push([range, values]),
+    PCC_WIP_CONTROL:'CONTROL_WIP',
   });
   assert.equal(ctx.guardarFechaPanelWip('2026-11-13'), '2026-11-13');
-  assert.deepEqual(written, ['2026-11-13']);
+  assert.equal(written[0][0], 'CONTROL_WIP!A2:B3');
+  assert.equal(written[0][1][0][1], '2026-11-13');
   assert.throws(() => ctx.guardarFechaPanelWip('2026-11-15'), /futura/);
 });
