@@ -6,7 +6,7 @@
     let logistics={status:'loading'};
     try{logistics=document.getElementById('iframe-logistica')?.contentWindow?.PccExecutiveLogistics?.()||logistics;}catch{logistics={status:'error'};}
     const records=[...PccFresh.records.values()];
-    return {config:window._pccConfig,ops:{status:window._executiveOpsStatus||'loading',mods:allM(),records:records.filter(r=>r.group==='ops')},wip:{status:window._executiveWipStatus||'loading',all:window._WIP_ALL||[]},cos:{status:window._executiveCostStatus||'loading',rows:COSTOS_DATA,records:records.filter(r=>r.group==='cos')},inv:inventory,log:logistics};
+    return {config:window._pccConfig,ops:{status:window._executiveOpsStatus||'loading',mods:allM(),records:records.filter(r=>r.group==='ops')},wip:{status:window._executiveWipStatus||'loading',all:window._WIP_ALL||[],active:WIP_DATA,costs:WIP_COSTOS,cutoff:WIP_COSTOS_CORTE},cos:{status:window._executiveCostStatus||'loading',rows:COSTOS_DATA,records:records.filter(r=>r.group==='cos')},inv:inventory,log:logistics};
   };
   window.PccExecutiveOpen=function(area,costContext){
     if(area==='cos'){

@@ -42,6 +42,10 @@ body[data-gerencia=gg] :is(.nav,.page,#loadOv,#errBar,#pcc-freshness){display:no
 .gg-scale{display:flex;justify-content:space-between;font-size:11px;color:var(--gg-muted);}
 .gg-area-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
 .gg-area{border:1px solid var(--gg-border);border-radius:10px;background:var(--gg-white);padding:18px;min-width:0;}
+.gg-area-wip{display:grid;gap:4px;margin-top:14px;padding:12px;border:1px solid var(--gg-border);border-radius:8px;background:#F5F9FC;}
+.gg-area-wip-label{font-size:12px;font-weight:700;color:var(--gg-ink);}
+.gg-area-wip strong{font-size:19px;line-height:1.2;color:var(--gg-ink);overflow-wrap:anywhere;}
+.gg-area-wip small{font-size:11px;line-height:1.4;color:var(--gg-muted);}
 .gg-area-header{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;}
 .gg-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--gg-warn);}
 .gg-status:before{content:'';width:6px;height:6px;flex-shrink:0;border-radius:50%;background:currentColor;}

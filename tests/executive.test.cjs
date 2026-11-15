@@ -60,3 +60,17 @@ test('la tarjeta del área enumera solo fallos y atrasos y se limpia al corregir
  i.ops.status='loading';i.ops.records=[activity(10,'Dato anterior')];
  assert.deepEqual(M.build(i,deps,reviewNow).areas.find(a=>a.id==='ops').attentionRecords,[]);
 });
+
+test('la tarjeta de Operaciones suma una vez cada OP activa con costo y muestra cobertura del corte',()=>{
+ const i=base();i.wip={status:'ready',cutoff:'2026-11-12',active:[
+  {empresa:'EU',ordenCorte:'OP-1'},{empresa:'EU',ordenCorte:'OP-1'},
+  {empresa:'TEX',ordenCorte:'OP-1'},{empresa:'TEX',ordenCorte:'OP-2'}
+ ],costs:new Map([
+  ['EU|OP-1',{mp:60,mo:30,cif:10,total:100}],
+  ['TEX|OP-1',{mp:120,mo:60,cif:20,total:200}]
+ ])};
+ const cost=M.build(i,deps).areas.find(a=>a.id==='ops').wipCost;
+ assert.deepEqual(cost,{cutoff:'2026-11-12',active:3,withCost:2,missing:1,total:300,mp:180,mo:90,cif:30});
+ i.wip.status='loading';
+ assert.equal(M.build(i,deps).areas.find(a=>a.id==='ops').wipCost,null);
+});
