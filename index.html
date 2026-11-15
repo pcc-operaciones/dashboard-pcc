@@ -748,6 +748,20 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
   <!-- PESTAÑA 1: WIP Actual -->
   <div id="wipPane-actual">
 
+    <div class="card" style="padding:14px;margin-bottom:12px" aria-labelledby="wip-cost-title">
+      <div class="stitle" id="wip-cost-title">Costos asumidos en WIP</div>
+      <div class="muted" id="wip-cost-scope" style="font-size:12px;margin:5px 0 12px">Pendiente de publicar el primer corte de costos.</div>
+      <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">
+        <div class="kpi-card c-navy"><div class="kpi-lbl">Costo acumulado conocido</div><div class="kpi-val" style="font-size:18px;overflow-wrap:anywhere" id="wip-cost-total">—</div></div>
+        <div class="kpi-card c-teal"><div class="kpi-lbl">Materia prima</div><div class="kpi-val" style="font-size:18px;overflow-wrap:anywhere" id="wip-cost-mp">—</div></div>
+        <div class="kpi-card c-teal"><div class="kpi-lbl">Mano de obra</div><div class="kpi-val" style="font-size:18px;overflow-wrap:anywhere" id="wip-cost-mo">—</div></div>
+        <div class="kpi-card c-teal"><div class="kpi-lbl">CIF</div><div class="kpi-val" style="font-size:18px;overflow-wrap:anywhere" id="wip-cost-cif">—</div></div>
+      </div>
+      <details style="margin-top:10px"><summary style="cursor:pointer;color:var(--navy)">Ver costos por orden de producción</summary>
+        <div style="overflow:auto;max-height:420px;margin-top:8px"><table><thead><tr><th>Empresa</th><th>OP</th><th>Estado WIP</th><th>MP</th><th>MO</th><th>CIF</th><th>Total</th></tr></thead><tbody id="wip-cost-rows"></tbody></table></div>
+      </details>
+    </div>
+
     <!-- Sprint 3: Buscador de lote -->
     <div class="card" style="padding:10px 14px;margin-bottom:8px;
          background:linear-gradient(135deg,#F0F7FF 0%,#F8FAFC 100%);
@@ -4237,6 +4251,8 @@ function renderTablaAlertas() { renderKanban(); }
 // WIP — carga y render
 // ═══════════════════════════════════════════════════
 let WIP_DATA = [];
+let WIP_COSTOS = new Map();
+let WIP_COSTOS_CORTE = '';
 let WIP_UDS_DIA = {};
 let wipFiltEmpresa = 'TODAS', wipFiltCliente = 'TODAS';
 let wipTendChart = null;
@@ -4254,7 +4270,36 @@ async function loadWip() {
       fetchSheet(KPI_ID, 'EU_Lotes', 'A:AW'),
       fetchSheet(KPI_ID, 'TEX_Lotes', 'A:AX'),
     ]);
-    const [rowsEU, rowsTEX] = await window.PccWipRowsPromise;
+    const costsPromise=fetchSheet(KPI_ID, 'WIP_COSTOS', 'A:I').catch(error=>{
+      console.warn('Costos WIP no disponibles:', error);
+      return [];
+    });
+    const [[rowsEU, rowsTEX], costRows] = await Promise.all([window.PccWipRowsPromise, costsPromise]);
+    WIP_COSTOS = new Map();
+    WIP_COSTOS_CORTE = '';
+    try { if(costRows.length>1){
+      const header=costRows[0].map(x=>String(x||'').trim().toUpperCase());
+      const col=name=>header.indexOf(name);
+      const needed=['FECHA_CORTE','EMPRESA','ORDEN','MP_COP','MO_COP','CIF_COP','TOTAL_COP'];
+      if(needed.some(name=>col(name)<0))throw new Error('La hoja WIP_COSTOS no tiene todas las columnas requeridas.');
+      for(const row of costRows.slice(1)){
+        const empresa=String(row[col('EMPRESA')]||'').trim().toUpperCase();
+        const op=String(row[col('ORDEN')]||'').trim().toUpperCase();
+        const corte=String(row[col('FECHA_CORTE')]||'').trim();
+        if(!empresa||!op)continue;
+        if(WIP_COSTOS_CORTE && WIP_COSTOS_CORTE!==corte)throw new Error('WIP_COSTOS mezcla fechas de corte.');
+        WIP_COSTOS_CORTE=corte;
+        const values=['MP_COP','MO_COP','CIF_COP','TOTAL_COP'].map(name=>pN(row[col(name)]));
+        if(values.some(value=>value===null||!Number.isFinite(value)))throw new Error('Costo WIP inválido para '+empresa+' '+op);
+        const key=empresa+'|'+op;
+        if(WIP_COSTOS.has(key))throw new Error('Costo WIP duplicado: '+key);
+        WIP_COSTOS.set(key,{empresa,op,mp:values[0],mo:values[1],cif:values[2],total:values[3]});
+      }
+    }} catch(error){
+      console.warn('Costos WIP inválidos; se mantiene el tablero de lotes:', error);
+      WIP_COSTOS = new Map();
+      WIP_COSTOS_CORTE = '';
+    }
 
     const mapCols = (hdrRow) => {
       const h = hdrRow.map(x => String(x||'').trim().toUpperCase());
@@ -4468,6 +4513,7 @@ function filtrarWip() {
 function renderWip() {
   if (!WIP_DATA.length) return;
   const datos = filtrarWip();
+  renderCostosWip(datos);
   const COLORES_CL = {
     'LINEA EU':'#1B3A5C','MODA EU':'#4A3B8C','TWO&TWO':'#0D6B5E','YETRO':'#6B3A8C',
     'TEX EVA y LAXO':'#1E7A40','TEX DISNEY':'#B03030'
@@ -4550,6 +4596,25 @@ function renderWip() {
 
   // Gráfico histórico
   renderWipTendencia();
+}
+
+function renderCostosWip(datos) {
+  const money=value=>'$ '+value.toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const unique=new Map();
+  datos.forEach(lote=>{
+    const key=lote.empresa+'|'+String(lote.ordenCorte||'').trim().toUpperCase();
+    if(!unique.has(key))unique.set(key,lote);
+  });
+  const linked=[...unique].map(([key,lote])=>({lote,cost:WIP_COSTOS.get(key)})).filter(item=>item.cost);
+  const without=unique.size-linked.length;
+  g('wip-cost-scope').textContent=WIP_COSTOS_CORTE
+    ? 'Corte declarado: '+WIP_COSTOS_CORTE+' · '+linked.length+' de '+unique.size+' OP activas con costo · '+without+' sin costo informado. Los totales incluyen solo OP con costo y respetan los filtros.'
+    : 'Pendiente de publicar el primer corte de costos WIP.';
+  const sums=linked.reduce((a,item)=>{a.mp+=item.cost.mp;a.mo+=item.cost.mo;a.cif+=item.cost.cif;a.total+=item.cost.total;return a;},{mp:0,mo:0,cif:0,total:0});
+  for(const part of ['total','mp','mo','cif'])g('wip-cost-'+part).textContent=WIP_COSTOS_CORTE?money(sums[part]):'—';
+  g('wip-cost-rows').innerHTML=linked.length?linked.sort((a,b)=>b.cost.total-a.cost.total).map(({lote,cost})=>
+    '<tr><td>'+cost.empresa+'</td><td>'+cost.op+'</td><td>'+String(lote.estado||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td><td>'+money(cost.mp)+'</td><td>'+money(cost.mo)+'</td><td>'+money(cost.cif)+'</td><td>'+money(cost.total)+'</td></tr>'
+  ).join(''):'<tr><td colspan="7">No hay OP con costo para este filtro.</td></tr>';
 }
 
 let wipGranularidad = 'mensual';
