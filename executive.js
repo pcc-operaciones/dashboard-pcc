@@ -7,7 +7,6 @@ const $=id=>document.getElementById(id);
 const e=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 function button(text,action,primary=false){const b=e('button',text,'gg-button'+(primary?' gg-button-primary':''));b.type='button';b.addEventListener('click',action);return b;}
 function format(value,unit){return typeof value!=='number'||!Number.isFinite(value)?'—':new Intl.NumberFormat('es-CO',{maximumFractionDigits:unit==='percent'?1:0,style:unit==='percent'?'percent':'decimal'}).format(value);}
-function formatMoney(value){return typeof value==='number'&&Number.isFinite(value)?'$ '+new Intl.NumberFormat('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2}).format(value):'—';}
 function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Bogota',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
 function loadTasks(){try{const parsed=JSON.parse(localStorage.getItem(storeKey)||'[]');if(!Array.isArray(parsed))throw Error();tasks=parsed.map(M.validateTask).filter(Boolean);}catch{storageOK=false;tasks=[];}}
 function saveTasks(next){try{localStorage.setItem(storeKey,JSON.stringify(next));tasks=next;storageOK=true;return true;}catch{storageOK=false;message('No se pudo guardar en este navegador. Exporta los compromisos para conservar una copia.');return false;}}
@@ -28,12 +27,6 @@ function areaNode(a){
  const status=e('span',a.status,'gg-status');status.dataset.ok=String(a.status==='Vigente');header.append(e('h3',a.name),status);n.append(header);
  if(!a.active){n.append(e('p',a.scope,'gg-caption'),e('p','Se integrará a esta vista cuando su cuadro de mando esté disponible.','gg-caption'));return n;}
  n.append(e('p',a.owner,'gg-caption'),e('p','Referencia: '+a.fresh.label,'gg-caption'));
- if(a.id==='ops'){
-   const box=e('div',undefined,'gg-area-wip'),cost=a.wipCost;
-   box.append(e('span','Costo asumido conocido en WIP','gg-area-wip-label'),e('strong',cost?formatMoney(cost.total):'—'));
-   box.append(e('small',cost?'Corte '+cost.cutoff.split('-').reverse().join('/')+' · '+cost.withCost+' de '+cost.active+' OP activas con costo · '+cost.missing+' sin costo informado':'Pendiente de consultar o publicar costos WIP'));
-   n.append(box);
- }
  if(a.attentionRecords.length){
  const details=e('details'),summary=e('summary','Fuentes que requieren atención ('+a.attentionRecords.length+')');
  details.append(summary);

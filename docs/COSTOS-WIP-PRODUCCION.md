@@ -33,8 +33,6 @@ La fecha de `B2` representa el corte común del ERP, no el instante de actualiza
 
 La hoja `WIP_COSTOS` tiene una fila por **empresa + OP** y guarda fecha de corte, estado informado por el Excel, MP, MO, CIF, costo total y fecha de actualización del archivo. El dashboard cruza esa clave con los lotes activos, muestra el costo solo de las OP encontradas y señala cuántas OP activas no tienen costo. Los filtros de empresa y cliente se aplican sobre las OP visibles. Una misma OP se cuenta una sola vez, aunque tenga varias filas de lotes.
 
-En **Operaciones → WIP Actual** se muestran el costo conocido total, su desglose MP/MO/CIF y la tabla por OP, respetando los filtros. La tarjeta de **Operaciones** en Gerencia General muestra el total sin filtros, la fecha del corte y cuántas OP activas tienen costo. No se valora con cero el WIP sin costo informado.
-
 ## Botones dentro de Google Sheets
 
 El proyecto `SyncExcel` está vinculado a `KPI PCC MENSUAL`. Añadir [PanelCargaWip.gs](../apps-script/production-wip/PanelCargaWip.gs) como **un archivo de código nuevo** en ese mismo proyecto y recargar la hoja. Aparece el menú **Carga WIP → Abrir panel de carga**. El panel contiene el campo de fecha y los botones **Procesar los cuatro Excel** y **Consultar estado**.

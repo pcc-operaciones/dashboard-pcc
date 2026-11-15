@@ -5,18 +5,6 @@
   function period(config){const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];const m=months.indexOf(String(config?.mes||'').toLowerCase());return m<0||!/^20\d{2}$/.test(String(config?.año))?null:config.año+'-'+String(m+1).padStart(2,'0');}
   function costSummary(rows,key){const selected=key?rows.filter(r=>r.fecha===key):[],valid=selected.filter(r=>finite(r.rent));return {count:selected.length,rent:valid.length?valid.reduce((s,r)=>s+r.rent,0)/valid.length:null,negative:valid.length?valid.filter(r=>r.rent<0).length:null,missing:selected.length-valid.length};}
   function inventorySummary(rows){const selected=rows.filter(r=>!r.esSeg&&!r.esCobros);if(!rows.length)return {units:null,aged:null,agedShare:null};const stock=r=>finite(r.totalUds)?r.totalUds:['u0','u1','u2','u3'].reduce((n,k)=>n+(finite(r[k])?r[k]:0),0);const units=rows.reduce((s,r)=>s+stock(r),0),principal=selected.reduce((s,r)=>s+stock(r),0),aged=selected.length?selected.reduce((s,r)=>s+(finite(r.u3)?r.u3:0),0):null;return {units,aged,agedShare:principal>0?aged/principal:null};}
-  function wipCostSummary(lotes,costs,cutoff){
-    if(!cutoff||!Array.isArray(lotes)||!(costs instanceof Map))return null;
-    const orders=new Set(),sums={total:0,mp:0,mo:0,cif:0};let withCost=0;
-    for(const lote of lotes){
-      const key=String(lote.empresa||'').trim().toUpperCase()+'|'+String(lote.ordenCorte||'').trim().toUpperCase();
-      if(orders.has(key))continue;orders.add(key);
-      const cost=costs.get(key);
-      if(!cost||!['total','mp','mo','cif'].every(k=>finite(cost[k])))continue;
-      withCost++;for(const part of ['total','mp','mo','cif'])sums[part]+=cost[part];
-    }
-    return {cutoff,active:orders.size,withCost,missing:orders.size-withCost,...sums};
-  }
   function build(input,deps,now=new Date()){
     const key=period(input.config),label=key?input.config.mes+' '+input.config.año:'Período no configurado';
     const result={key,label,areas:[],metrics:[],issues:[]};
@@ -38,8 +26,6 @@
       const metric=(id,title,value,unit,note,target)=>result.metrics.push({id,area:area.id,title,value:ready?value:null,unit,note,target,status,period:area.id==='inv'?'Último inventario disponible':label});
       if(area.id==='ops'){
         const mods=source.mods||[],ef=mods.length?deps.data.ops(mods,'ef'):null,compliance=mods.length?deps.data.ops(mods,'cumpl'):null;
-        const wip=input.wip||{};
-        a.wipCost=wip.status==='ready'?wipCostSummary(wip.active,wip.costs,wip.cutoff):null;
         metric('efficiency','Eficiencia de producción',ef,'percent','Ponderada por tiempos · excluye Servicios',.75);
         metric('compliance','Cumplimiento de producción',compliance,'percent','Producción / meta de los módulos con datos',1);
         if(ready&&finite(compliance)&&compliance<1)issue('ops','ops-plan','Producción por debajo de la meta','Revisar módulos con desviación y acordar el plan de recuperación.');
@@ -64,5 +50,5 @@
   const states=['Pendiente','En curso','Completado'];
   function validateTask(value){const task={};for(const [k,max]of [['id',80],['title',200],['owner',100],['decision',500],['area',10],['due',10],['status',20]])task[k]=String(value?.[k]??'').trim().slice(0,max);if(!task.id||!task.title||!task.owner||!areas.some(a=>a.id===task.area&&a.active)||!states.includes(task.status)||!/^\d{4}-\d{2}-\d{2}$/.test(task.due))return null;const date=new Date(task.due+'T12:00:00Z');if(!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==task.due)return null;return task;}
   function taskState(task,today){return task.status!=='Completado'&&task.due<today?'Vencido':task.status;}
-  const api={areas,period,costSummary,inventorySummary,wipCostSummary,build,validateTask,taskState,states};root.PccExecutiveModel=api;if(typeof module!=='undefined')module.exports=api;
+  const api={areas,period,costSummary,inventorySummary,build,validateTask,taskState,states};root.PccExecutiveModel=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
