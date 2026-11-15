@@ -20,6 +20,7 @@
 <script src="executive-model.js?v=2.4"></script>
 <script src="cost-model.js?v=1.4"></script>
 <script src="atlas-model.js?v=1.7"></script>
+<script src="wip-cost-groups.js?v=1"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;}
@@ -882,20 +883,25 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
       </div>
     </div>
 
-    <div class="g2" style="gap:8px;margin-bottom:8px">
+    <div class="g2" style="grid-template-columns:1fr;gap:8px;margin-bottom:8px">
       <div class="card" style="padding:12px">
         <div class="stitle" style="margin-bottom:8px">WIP por Estado del flujo</div>
-        <table>
-          <thead><tr><th>Estado</th><th>Lotes</th><th>Unidades</th><th>EU</th><th>TEX</th><th>Días inv.</th></tr></thead>
-          <tbody id="tb-wip-estados"></tbody>
-        </table>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Estado</th><th>Lotes</th><th>Unidades</th><th>EU</th><th>TEX</th><th>Días inv.</th><th style="text-align:right;white-space:nowrap" title="Suma de costos de OP identificadas en WIP_COSTOS">Costo conocido (COP)</th></tr></thead>
+            <tbody id="tb-wip-estados"></tbody>
+          </table>
+        </div>
       </div>
       <div class="card" style="padding:12px">
         <div class="stitle" style="margin-bottom:8px">WIP por Cliente / Línea</div>
-        <table>
-          <thead><tr><th>Cliente</th><th>Lotes</th><th>Unidades</th><th>% total</th><th>Uds/día</th><th>Días inv.</th></tr></thead>
-          <tbody id="tb-wip-clientes"></tbody>
-        </table>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Cliente</th><th>Lotes</th><th>Unidades</th><th>% total</th><th>Uds/día</th><th>Días inv.</th><th style="text-align:right;white-space:nowrap" title="Suma de costos de OP identificadas en WIP_COSTOS">Costo conocido (COP)</th></tr></thead>
+            <tbody id="tb-wip-clientes"></tbody>
+          </table>
+        </div>
+        <div class="muted" style="font-size:10px;margin-top:7px">Solo OP con costo informado. Si una OP aparece en varios estados o líneas, su costo se distribuye según las unidades de cada grupo.</div>
       </div>
     </div>
   </div>
@@ -4543,6 +4549,15 @@ function renderWip() {
   if(g('wip-uds-dia-lbl')) g('wip-uds-dia-lbl').textContent = udsDiaLbl;
 
   // Tabla por estado con días de inventario
+  const costosPorEstado=PccWipCostGroups.groupCosts(datos,WIP_COSTOS,r=>r.estado);
+  const costosPorCliente=PccWipCostGroups.groupCosts(datos,WIP_COSTOS,r=>getClienteWip(r));
+  const celdaCosto=grupo=>{
+    if(!WIP_COSTOS_CORTE)return '<td class="muted" style="text-align:right;white-space:nowrap">—</td>';
+    const costo=grupo?.total||0, conocidas=grupo?.withCost||0, ops=grupo?.ops||0;
+    return '<td style="text-align:right;white-space:nowrap;font-weight:600">'+
+      (conocidas?'$ '+costo.toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+
+      '<span class="muted" style="display:block;font-size:10px;font-weight:400">'+conocidas+' de '+ops+' OP con costo</span></td>';
+  };
   const porEstado = {};
   datos.forEach(r => {
     const e = r.estado;
@@ -4568,6 +4583,7 @@ function renderWip() {
       <td class="muted">${d.eu||'—'}</td>
       <td class="muted">${d.tex||'—'}</td>
       <td class="${diasCls}" style="font-weight:600">${diasInv!=null?diasInv+' d':'—'}</td>
+      ${celdaCosto(costosPorEstado.get(e))}
     </tr>`;
   }).join('');
 
@@ -4591,6 +4607,7 @@ function renderWip() {
         <td class="muted">${totalUds>0?(d.uds/totalUds*100).toFixed(1)+'%':'—'}</td>
         <td class="muted">${udsDia>0?udsDia.toLocaleString('es-CO'):'—'}</td>
         <td class="${diasCls}" style="font-weight:600">${diasInv!=null?diasInv+' d':'—'}</td>
+        ${celdaCosto(costosPorCliente.get(cl))}
       </tr>`;
     }).join('');
 
