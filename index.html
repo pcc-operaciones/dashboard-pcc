@@ -80,6 +80,13 @@ body{font-family:'DM Sans',sans-serif;}
 /* GRIDS */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem;}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.25rem;}
+.wip-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px;}
+.wip-summary-table{table-layout:fixed;font-size:10px;}
+.wip-summary-table th,.wip-summary-table td{padding:5px 4px;line-height:1.2;}
+.wip-summary-table th{font-size:9px;white-space:normal;}
+.wip-summary-table td:first-child{overflow-wrap:anywhere;}
+.wip-summary-table td:last-child{text-align:right;}
+@media(max-width:1100px){.wip-summary-grid{grid-template-columns:1fr;}}
 /* CARD */
 .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;}
 /* TABLE */
@@ -883,12 +890,13 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
       </div>
     </div>
 
-    <div class="g2" style="grid-template-columns:1fr;gap:8px;margin-bottom:8px">
+    <div class="wip-summary-grid">
       <div class="card" style="padding:12px">
         <div class="stitle" style="margin-bottom:8px">WIP por Estado del flujo</div>
         <div style="overflow-x:auto">
-          <table>
-            <thead><tr><th>Estado</th><th>Lotes</th><th>Unidades</th><th>EU</th><th>TEX</th><th>Días inv.</th><th style="text-align:right;white-space:nowrap" title="Suma de costos de OP identificadas en WIP_COSTOS">Costo conocido (COP)</th></tr></thead>
+          <table class="wip-summary-table">
+            <colgroup><col style="width:28%"><col style="width:8%"><col style="width:12%"><col style="width:7%"><col style="width:7%"><col style="width:9%"><col style="width:29%"></colgroup>
+            <thead><tr><th>Estado</th><th>Lotes</th><th>Unidades</th><th>EU</th><th>TEX</th><th>Días inv.</th><th style="text-align:right" title="Suma de costos de OP identificadas en WIP_COSTOS">Costo conocido (COP)</th></tr></thead>
             <tbody id="tb-wip-estados"></tbody>
           </table>
         </div>
@@ -896,8 +904,9 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
       <div class="card" style="padding:12px">
         <div class="stitle" style="margin-bottom:8px">WIP por Cliente / Línea</div>
         <div style="overflow-x:auto">
-          <table>
-            <thead><tr><th>Cliente</th><th>Lotes</th><th>Unidades</th><th>% total</th><th>Uds/día</th><th>Días inv.</th><th style="text-align:right;white-space:nowrap" title="Suma de costos de OP identificadas en WIP_COSTOS">Costo conocido (COP)</th></tr></thead>
+          <table class="wip-summary-table">
+            <colgroup><col style="width:23%"><col style="width:8%"><col style="width:12%"><col style="width:11%"><col style="width:11%"><col style="width:9%"><col style="width:26%"></colgroup>
+            <thead><tr><th>Cliente</th><th>Lotes</th><th>Unidades</th><th>% total</th><th>Uds/día</th><th>Días inv.</th><th style="text-align:right" title="Suma de costos de OP identificadas en WIP_COSTOS">Costo conocido (COP)</th></tr></thead>
             <tbody id="tb-wip-clientes"></tbody>
           </table>
         </div>
@@ -4556,7 +4565,7 @@ function renderWip() {
     const costo=grupo?.total||0, conocidas=grupo?.withCost||0, ops=grupo?.ops||0;
     return '<td style="text-align:right;white-space:nowrap;font-weight:600">'+
       (conocidas?'$ '+costo.toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+
-      '<span class="muted" style="display:block;font-size:10px;font-weight:400">'+conocidas+' de '+ops+' OP con costo</span></td>';
+      '<span class="muted" style="display:block;font-size:9px;font-weight:400">'+conocidas+' de '+ops+' OP con costo</span></td>';
   };
   const porEstado = {};
   datos.forEach(r => {
@@ -5163,7 +5172,7 @@ function ejecutarBusquedaWip() {
   );
   if (exacto) {
     _abrirModalConLotes([exacto], `Lote: ${exacto.ordenCorte}`);
-    abrirTrazabilidad(exacto.ordenCorte);
+    abrirTrazabilidad(exacto.ordenCorte, exacto.empresa);
     return;
   }
 
@@ -5344,7 +5353,7 @@ function _renderTablaWip(lotes) {
     return `<tr>
       <td style="font-weight:600;color:var(--teal);font-family:monospace;font-size:11px;
                  white-space:nowrap;cursor:pointer;text-decoration:underline"
-          onclick="abrirTrazabilidad('${oc.replace(/'/g,"\\'")}')"
+          onclick="abrirTrazabilidad('${oc.replace(/'/g,"\\'")}','${r.empresa}')"
           title="Ver trazabilidad de ${oc}">${oc}</td>
       <td style="font-size:11px;color:var(--muted);white-space:nowrap">${ref}</td>
       <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px"
@@ -5704,11 +5713,12 @@ function _resolverFechas(lote) {
 // para los contadores de progreso — usamos solo las etapas base
 const TRAZA_ETAPAS = TRAZA_ETAPAS_BASE;
 
-function abrirTrazabilidad(ordenCorte) {
+function abrirTrazabilidad(ordenCorte, empresa) {
   // Buscar en todos los lotes incluyendo ENTREGADO
   const fuente = window._WIP_ALL || WIP_DATA;
-  const lote = fuente.find(r => r.ordenCorte === ordenCorte);
+  const lote = fuente.find(r => r.ordenCorte === ordenCorte && (!empresa || r.empresa === empresa));
   if (!lote) return;
+  const costo = PccWipCostGroups.lotCost(lote, WIP_COSTOS);
 
   // Todas las etapas (proceso + espera) en orden de flujo
   const etapas = _resolverFechas(lote);
@@ -5742,6 +5752,23 @@ function abrirTrazabilidad(ordenCorte) {
                       letter-spacing:.5px;font-weight:600;margin-bottom:3px">${lbl}</div>
           ${val}
         </div>`).join('')}
+    </div>`;
+
+  const dineroWip = valor => '$ '+valor.toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const bloqueCosto = costo ? `
+    <div style="background:#F0F7F6;border:1px solid #B8DCD7;border-radius:8px;padding:10px 12px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:3px">Costo asumido de la OP · ${lote.empresa}</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Corte de costos: ${WIP_COSTOS_CORTE}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px">
+        ${[['Total',costo.total],['Materia prima',costo.mp],['Mano de obra',costo.mo],['CIF',costo.cif]].map(([label,value])=>`
+          <div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:7px 9px">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">${label}</div>
+            <div style="font-size:12px;font-weight:700;color:var(--navy);white-space:nowrap">${dineroWip(value)}</div>
+          </div>`).join('')}
+      </div>
+    </div>` : `
+    <div style="background:#F8FAFC;border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:11px;color:var(--muted)">
+      Costo asumido de la OP: sin dato informado${WIP_COSTOS_CORTE?' en el corte '+WIP_COSTOS_CORTE:''}.
     </div>`;
 
   // ── BLOQUE 2: Timeline horizontal (solo etapas de proceso) ──
@@ -5921,7 +5948,7 @@ function abrirTrazabilidad(ordenCorte) {
       </div>
     </div>`;
 
-  g('wipTrazaContenido').innerHTML = bloqueDatos + bloqueTimeline + bloqueTabla;
+  g('wipTrazaContenido').innerHTML = bloqueDatos + bloqueCosto + bloqueTimeline + bloqueTabla;
   _mostrarVistaWip('traza');
 }
 

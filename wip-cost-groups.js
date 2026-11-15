@@ -5,6 +5,12 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function() {
   'use strict';
 
+  function lotCost(lot, costs) {
+    const empresa = String(lot.empresa || '').trim().toUpperCase();
+    const op = String(lot.ordenCorte || '').trim().toUpperCase();
+    return empresa && op ? costs.get(empresa + '|' + op) : undefined;
+  }
+
   function groupCosts(lots, costs, groupOf) {
     const byOp = new Map();
     for (const lot of lots) {
@@ -37,5 +43,5 @@
     return result;
   }
 
-  return {groupCosts};
+  return {groupCosts, lotCost};
 });

@@ -1,6 +1,15 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {groupCosts} = require('../wip-cost-groups.js');
+const {groupCosts, lotCost} = require('../wip-cost-groups.js');
+
+test('el modal cruza por empresa y OP sin confundir órdenes iguales', () => {
+  const costs = new Map([
+    ['EU|OP-1', {total:100, mp:60, mo:30, cif:10}],
+    ['TEX|OP-1', {total:200, mp:120, mo:60, cif:20}],
+  ]);
+  assert.equal(lotCost({empresa:' tex ', ordenCorte:' op-1 '}, costs).total, 200);
+  assert.equal(lotCost({empresa:'EU', ordenCorte:'OP-2'}, costs), undefined);
+});
 
 test('agrupa costo por empresa y OP, sin duplicar lotes de la misma orden', () => {
   const lots = [
