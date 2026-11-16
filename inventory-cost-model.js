@@ -44,7 +44,22 @@
   }
   return points;
  }
- const api={monthly,sources};
+ function byArea(rows){
+  const areas=new Map();
+  for(const row of rows){
+   if(!areas.has(row.area))areas.set(row.area,[]);
+   areas.get(row.area).push(row);
+  }
+  const known=(sections,key)=>{
+   const values=sections.map(row=>row[key]).filter(finite);
+   return values.length?values.reduce((total,value)=>total+value,0):null;
+  };
+  return [...areas].map(([area,sections])=>({
+   area,value:known(sections,'value'),agedValue:known(sections,'agedValue'),
+   cutoffs:[...new Set(sections.map(row=>row.cutoff).filter(Boolean))]
+  }));
+ }
+ const api={monthly,sources,byArea};
  root.PccInventoryCostModel=api;
  if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

@@ -1,6 +1,20 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {monthly}=require('../inventory-cost-model.js');
+const {monthly,byArea}=require('../inventory-cost-model.js');
+
+test('Costo inventarios: compara los saldos por área y conserva los datos pendientes',()=>{
+ const cutoff='2026-11-12';
+ assert.deepEqual(byArea([
+  {area:'Inventario PT',value:80,agedValue:35,cutoff},
+  {area:'Logística',value:50,agedValue:0,cutoff},
+  {area:'Inventario PT',value:20,agedValue:null,cutoff},
+  {area:'Ventas',value:null,agedValue:null,cutoff:''}
+ ]),[
+  {area:'Inventario PT',value:100,agedValue:35,cutoffs:[cutoff]},
+  {area:'Logística',value:50,agedValue:0,cutoffs:[cutoff]},
+  {area:'Ventas',value:null,agedValue:null,cutoffs:[]}
+ ]);
+});
 
 test('Costo inventarios: distingue cierre exacto, corte parcial y fuente sin valoración',()=>{
  const pt=(cutoff,value)=>({cutoff,summary:[

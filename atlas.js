@@ -133,7 +133,7 @@ function wipSummary(){
 function renderCards(){
  const captions={ops:'Etapas independientes · WIP en unidades',cos:'Promedios por registro · no es margen real de ventas',inv:'*Mes parcial · EOP recibidas / RM despachadas',log:logisticsScope(),sales:'Venta al consumidor · fuente por integrar',people:'Incapacidades y recobros en el detalle'};
  const links={ops:[['wip','Estados del WIP'],['performance','Eficiencia y cumplimiento']],cos:[['margin','Margen mensual'],['negative','Costeos negativos'],['ranking','Top / Bottom de referencias'],['variation','5 mayores aumentos del costo total']],inv:[['invage','Antigüedad'],['invvalue','Costo y cobertura']],log:[['stock','Telas e insumos'],['logage','Edad FIFO'],['company','Por empresa']],sales:[['sales','Ver alcance comercial']],people:[['people','Ver alcance de Talento Humano']]};
- $('[data-areas]').innerHTML=Object.keys(areaNames).map(id=>{
+ $('[data-areas]').innerHTML=consolidatedCard()+Object.keys(areaNames).map(id=>{
   const future=['sales','people'].includes(id);let content='';
   if(id==='ops'){
    content=chartButton(id,'stages','Unidades mensuales por etapa',100);
@@ -141,7 +141,7 @@ function renderCards(){
   }else if(future)content='<div class="ax-reserved"><strong>'+esc(views[id][0][1])+'</strong><span>Fuente por integrar · indicadores propuestos</span></div>';
   else content=chartButton(id,defaults[id],{cos:'Rentabilidad y CCU sin IVA · %',inv:'Recibidas vs. despachadas · unidades',log:'Entradas vs. salidas · $ millones'}[id],168);
   return '<article class="ax-tile ax-area-card '+(future?'ax-future-tile':'')+'" data-area="'+id+'" aria-label="'+areaNames[id]+'">'+action(id,defaults[id],'<span><h3>'+areaNames[id]+'</h3><span class="ax-sub">'+esc(status(id))+'</span></span><span class="ax-expand" aria-hidden="true">↗</span>','ax-area-heading','Ampliar '+areaNames[id])+'<div class="ax-visible-kpis">'+statMarkup(id)+'</div><div class="ax-area-charts">'+content+'</div><span class="ax-card-caption">'+esc(captions[id])+'</span>'+(id==='cos'?costInsights():'')+'<div class="ax-tile-foot">'+links[id].map(s=>action(id,s[0],esc(s[1])+' ↗','ax-detail-link','Ampliar '+s[1])).join('')+'</div></article>';
- }).join('')+consolidatedCard()+
+ }).join('')+
   '<article class="ax-tile ax-area-card ax-future-tile" data-area="design" aria-label="Diseño">'+
   '<div class="ax-area-heading"><span><h3>Diseño</h3><span class="ax-sub">En preparación</span></span></div></article>';
  root.querySelectorAll('[data-chart]').forEach(host=>drawChart(host,descriptor(host.dataset.chart)));

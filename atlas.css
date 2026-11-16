@@ -452,14 +452,7 @@ body.atlas-modal-open{overflow:hidden}
 #pcc-atlas .ax-aging-stat strong,
 #pcc-atlas .ax-aging-stat small{color:#ad2934}
 #pcc-atlas .ax-consolidated-aging .ax-detail-link{font-weight:600}
-@media(min-width:1450px){
- #pcc-atlas .ax-area-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
- #pcc-atlas .ax-consolidated-values dt,#pcc-atlas .ax-consolidated-values small{font-size:10px}
- #pcc-atlas .ax-consolidated-values dd{font-size:14px}
-}
 @media(min-width:1680px) and (min-height:800px) and (max-height:940px){
- #pcc-atlas .ax-area-grid{grid-template-rows:minmax(337px,1.09fr) minmax(300px,1fr)}
- #pcc-atlas .ax-main{height:calc(100dvh - var(--atlas-top,106px));min-height:748px}
  #pcc-atlas [data-area=ops] .ax-wip-summary{font-size:10px;line-height:1.12}
  #pcc-atlas [data-area=ops] .ax-compact-legend{display:none}
  #pcc-atlas .ax-kpi>small{font-size:10px}
