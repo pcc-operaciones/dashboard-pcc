@@ -21,9 +21,7 @@ async function values(sid,key,name,range){
   const url='https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(sid)+'/values/'+
     encodeURIComponent(name+'!'+range)+'?key='+encodeURIComponent(key)+
     '&valueRenderOption=UNFORMATTED_VALUE&_='+Date.now();
-  const response=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(25000)});
-  if(!response.ok)throw Error('No se pudo leer '+name+' (Sheets '+response.status+').');
-  return (await response.json()).values||[];
+  return (await PccInventoryLoader.request(url,{timeout:25000})).values||[];
 }
 async function payload(sid,key,descriptor){
   if(!descriptor||!Number.isInteger(descriptor.row)||!Number.isInteger(descriptor.count)||
