@@ -218,6 +218,11 @@ body[data-gerencia=ops] #page-area.active{display:flex!important;flex-direction:
 .modal-close{width:32px;height:32px;border-radius:50%;border:none;background:#F1F5F9;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:background .15s;}
 .modal-close:hover{background:#E2E8F0;color:var(--text);}
 .modal-body{padding:16px 20px;overflow-y:auto;flex:1;}
+.wip-lotes-scroll{max-height:52vh;overflow:auto;overscroll-behavior:contain;}
+#tablaWipLotes thead th{position:sticky;top:0;z-index:2;background:#F8FAFC;}
+#tablaWipLotes thead th:first-child{left:0;z-index:4;box-shadow:2px 0 4px rgba(27,58,92,.08);}
+#tablaWipLotes tbody td:first-child{position:sticky;left:0;z-index:1;background:#fff;box-shadow:2px 0 4px rgba(27,58,92,.08);}
+#tablaWipLotes tbody tr:hover td:first-child{background:#FAFBFC;}
 /* Sprint 4 — filtros Excel */
 #tablaWipLotes thead th[data-col]{cursor:pointer;user-select:none;white-space:nowrap;}
 #tablaWipLotes thead th[data-col]:hover{background:#E8F0FE;}
@@ -1139,7 +1144,7 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
         </div>
 
         <!-- Tabla de lotes -->
-        <div class="tw">
+        <div class="tw wip-lotes-scroll" id="wipLotesScroll">
           <table id="tablaWipLotes" style="font-size:12px">
             <thead>
               <tr id="wipTablaHead">
@@ -1153,6 +1158,7 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
                 <th data-col="resp" style="min-width:110px">Responsable <span class="wf-ico">▾</span></th>
                 <th data-col="uds" style="text-align:right;min-width:55px">Uds <span class="wf-ico">▾</span></th>
                 <th>En estado desde</th><th data-col="dias" style="text-align:right;min-width:80px">Días en estado <span class="wf-ico">▾</span></th><th>Días en proceso</th>
+                <th style="text-align:right;min-width:160px" title="Costo asumido de la OP al último corte de WIP_COSTOS; si la OP aparece en varios lotes, este valor se repite">Costo OP (COP)</th>
               </tr>
             </thead>
             <tbody id="tbWipLotes"></tbody>
@@ -4268,6 +4274,7 @@ function renderTablaAlertas() { renderKanban(); }
 let WIP_DATA = [];
 let WIP_COSTOS = new Map();
 let WIP_COSTOS_CORTE = '';
+const formatearCostoWip = value => '$ '+value.toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2});
 let WIP_UDS_DIA = {};
 let wipFiltEmpresa = 'TODAS', wipFiltCliente = 'TODAS';
 let wipTendChart = null;
@@ -4625,7 +4632,7 @@ function renderWip() {
 }
 
 function renderCostosWip(datos) {
-  const money=value=>'$ '+value.toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const money=formatearCostoWip;
   const unique=new Map();
   datos.forEach(lote=>{
     const key=lote.empresa+'|'+String(lote.ordenCorte||'').trim().toUpperCase();
@@ -5333,7 +5340,7 @@ function _renderTablaWip(lotes) {
 
   if (!lotes.length) {
     g('tbWipLotes').innerHTML =
-      `<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">
+      `<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px">
         Sin resultados para este filtro</td></tr>`;
     return;
   }
@@ -5349,6 +5356,7 @@ function _renderTablaWip(lotes) {
     const resp        = _respDeEstado(r);
     const ref         = r.refSap    || '—';
     const temp        = r.temporada || '—';
+    const costo       = PccWipCostGroups.lotCost(r, WIP_COSTOS);
 
     return `<tr>
       <td style="font-weight:600;color:var(--teal);font-family:monospace;font-size:11px;
@@ -5377,6 +5385,7 @@ function _renderTablaWip(lotes) {
       <td>${edad.stateSince?.split('-').reverse().join('/')??'—'}</td>
       <td style="text-align:right" class="${diasCls}"><strong>${diasTxt}</strong></td>
       <td style="text-align:right">${edad.processDays??'—'}</td>
+      <td style="text-align:right;white-space:nowrap;font-weight:600" title="${costo?'Costo de la OP al corte '+WIP_COSTOS_CORTE:'Sin costo informado para esta OP'}">${costo?formatearCostoWip(costo.total):'—'}</td>
     </tr>`;
   }).join('');
 }
@@ -5754,7 +5763,7 @@ function abrirTrazabilidad(ordenCorte, empresa) {
         </div>`).join('')}
     </div>`;
 
-  const dineroWip = valor => '$ '+valor.toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const dineroWip = formatearCostoWip;
   const bloqueCosto = costo ? `
     <div style="background:#F0F7F6;border:1px solid #B8DCD7;border-radius:8px;padding:10px 12px;margin-bottom:10px">
       <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:3px">Costo asumido de la OP · ${lote.empresa}</div>
