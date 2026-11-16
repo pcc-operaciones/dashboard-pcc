@@ -11,7 +11,7 @@
     return empresa && op ? costs.get(empresa + '|' + op) : undefined;
   }
 
-  function groupCosts(lots, costs, groupOf) {
+  function groupCosts(lots, costs, groupOf, components = false) {
     const byOp = new Map();
     for (const lot of lots) {
       const op = String(lot.ordenCorte || '').trim().toUpperCase();
@@ -30,13 +30,16 @@
       const cost = costs.get(key);
       const totalUnits = [...groups.values()].reduce((sum, units) => sum + units, 0);
       for (const [group, units] of groups) {
-        if (!result.has(group)) result.set(group, {total: 0, withCost: 0, ops: 0});
+        if (!result.has(group)) result.set(group, components?
+          {total: 0, withCost: 0, ops: 0, mp: 0, mo: 0, cif: 0}:{total: 0, withCost: 0, ops: 0});
         const item = result.get(group);
         item.ops++;
         if (cost) {
           item.withCost++;
           // Una OP que figure en varios grupos reparte su costo por unidades.
-          item.total += cost.total * units / totalUnits;
+          const fraction = units / totalUnits;
+          item.total += cost.total * fraction;
+          if (components) for (const field of ['mp','mo','cif']) item[field] += (cost[field] ?? 0) * fraction;
         }
       }
     }

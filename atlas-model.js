@@ -1,6 +1,7 @@
 (function(root){
 'use strict';
 const C=root.PccCostModel||(typeof require==='function'?require('./cost-model.js'):null);
+const W=root.PccWipCostGroups||(typeof require==='function'?require('./wip-cost-groups.js'):null);
 const finite=n=>typeof n==='number'&&Number.isFinite(n);
 const norm=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();
 const company=s=>norm(s).includes('TEX')?'TEX':norm(s)==='EU'?'EU':'';
@@ -71,6 +72,29 @@ function lotAge(lot,today=bogotaDay(new Date())){
  const stateDays=daysSince(date,today),processDays=daysSince(start,today);
  return {stateSince:stateDays===null?null:date,stateDays,processSince:processDays===null?null:start,processDays};
 }
+function wipValuation(input,lots,match,supported){
+ const cutoff=input?.costCutoff||'';
+ if(!supported||!input?.costs?.size||daysSince(cutoff,cutoff)!==0)return null;
+ const visible=lots.filter(match);
+ const included=match;
+ const byScope=W.groupCosts(lots,input.costs,lot=>included(lot)?'scope':'outside',true);
+ const scope=byScope.get('scope')||{total:0,ops:0,withCost:0};
+ const stages=W.groupCosts(lots,input.costs,lot=>included(lot)?lot.estado:null);
+ const ageAtCut=lot=>lotAge(lot,cutoff).processDays;
+ const ages=W.groupCosts(lots,input.costs,lot=>{
+  if(!included(lot))return 'outside';
+  const processDays=ageAtCut(lot);
+  return processDays===null?'unknown':processDays>90?'aged':'recent';
+ });
+ const amount=group=>group&&(group.withCost||!group.ops)?group.total:null;
+ const aged=ages.get('aged'),unknown=ages.get('unknown');
+ return {cutoff,value:amount(scope),ops:scope.ops,withCost:scope.withCost,
+  components:['mp','mo','cif'].map(key=>scope.withCost?scope[key]:null),
+  agedValue:amount(aged)??(!aged&&!unknown?0:null),
+  agedUnits:sum(visible.filter(lot=>ageAtCut(lot)>90),'cant'),
+  agedPartial:!!unknown||!!aged&&aged.withCost<aged.ops,
+  stages:[...stages].filter(([name])=>name!==null).map(([name,g])=>({name,value:amount(g),ops:g.ops,withCost:g.withCost}))};
+}
 function inventoryConsolidated({inv,log,ops}){
  const pt=inv.rows;
  const groups=[
@@ -104,19 +128,25 @@ function inventoryConsolidated({inv,log,ops}){
  }
  const additionalAge=log.ageRows.filter(otherWarehouse);
  if(additional.length||additionalAge.length)groups.push(logisticsGroup('Otras bodegas',sum(additional,'costTotal'),additionalAge));
- const valued=groups.filter(row=>finite(row.value));
- const partial=valued.length<groups.length||groups.some(row=>row.status==='Costo conocido parcial');
+ const wip=ops.wipValue;
  groups.push(
-  {area:'Operaciones PCC',section:'Producto en proceso (WIP)',cutoff:'',value:null,units:ops.wipUnits,status:'Valoración por integrar',
-   agedValue:null,agedUnits:ops.agedUnits,agedStatus:'Valoración por integrar'},
+  {area:'Operaciones PCC',section:'Producto en proceso (WIP)',cutoff:wip?.cutoff||'',value:wip?.value??null,units:ops.wipUnits,
+   status:wip?wip.withCost+' de '+wip.ops+' OP con costo':!ops.wipSupported?'Categoría sin desglose':sourceWipStatus(ops.wipStatus),
+   agedValue:wip?.agedValue??null,agedUnits:wip?.agedUnits??ops.agedUnits,
+   agedStatus:wip?.agedPartial?'Parcial · faltan costos o fechas':wip?'Desde programación':'Costo WIP sin corte'},
   {area:'Ventas',section:'Inventario Tienda Yetro',cutoff:'',value:null,status:'Fuente por integrar',
    agedValue:null,agedStatus:'Fuente por integrar'},
   {area:'Ventas',section:'Inventario Tienda Two&Two',cutoff:'',value:null,status:'Fuente por integrar',
    agedValue:null,agedStatus:'Fuente por integrar'}
  );
+ const valued=groups.filter(row=>finite(row.value));
+ const partial=valued.length<groups.length||groups.some(row=>row.status==='Costo conocido parcial')||!!wip&&wip.withCost<wip.ops;
  const valuedAge=groups.filter(row=>finite(row.agedValue));
  return {rows:groups,total:valued.length?sum(valued,'value'):null,partial,
   agedTotal:valuedAge.length?sum(valuedAge,'agedValue'):null};
+}
+function sourceWipStatus(status){
+ return status==='loading'?'Consultando':status==='error'?'Fuente no disponible':'Costo WIP sin corte';
 }
 function build(input,filterValue={},deps={},costSelection){
  const filters=cleanFilters(filterValue),key=deps.period?.(input.config)||null,year=key?.slice(0,4),monthCount=key?+key.slice(5):0,months=monthNames.slice(0,monthCount),keys=months.map((_,i)=>year+'-'+String(i+1).padStart(2,'0'));
@@ -131,15 +161,22 @@ function build(input,filterValue={},deps={},costSelection){
  const nativeLines=filters.line.length?filters.line.map(line=>lineMap[line]):filters.company.length===1?filters.company[0]==='EU'?['EU','YETRO','TWOTWO']:['TEX']:[];
  const cos={status:state(input.cos),ready:costReady,period:costPeriod,count:costReady?costSummary.count:null,rent:costReady?costSummary.rent:null,ccu:costReady?costSummary.ccu:null,margin:costReady?costSummary.margin:null,profit:costReady?costSummary.profit:null,units:costReady?costSummary.units:null,negative:costReady&&validRent.length?validRent.filter(r=>r.rent<0):[],negativeCount:costReady&&validRent.length?validRent.filter(r=>r.rent<0).length:null,rows:selected,references:refs,rankings:C.rankings(refs),variation:C.variations(costs,costPeriod.anchor,new Set(refs.map(r=>r.id))),nativeFilters:{years:costPeriod.years,periods:costPeriod.periods,lineas:nativeLines,subcats:filters.category.length?[...new Set(costs.map(r=>r.sourceCategory))]:[]},monthly:costPeriod.keys.map(k=>{const rs=selected.filter(r=>r.fecha===k);return {rent:mean(rs,'rent'),ccu:mean(rs,'ccu'),margin:mean(rs,'margen')};}),records:input.cos?.records||[]};
  const wipReady=ready(input.wip),wipUnsupported=filters.category.some(x=>hierarchy[0].cats.includes(x));
- const allLots=wipReady?(input.wip.all||[]).map(r=>({...r,...taxonomy(r.empresa,r.empresa==='TEX'?r.mundo:r.clasificacion)})).filter(match):[];
+ const normalizedLots=wipReady?(input.wip.all||[]).map(r=>({...r,...taxonomy(r.empresa,r.empresa==='TEX'?r.mundo:r.clasificacion)})):[];
+ const allLots=normalizedLots.filter(match);
+ const activeLot=r=>r.estado&&!['ENTREGADO','CANCELADO'].includes(r.estado)&&r.cant>0;
  const today=bogotaDay(deps.now?.()||new Date());
- const lots=allLots.filter(r=>r.estado&&!['ENTREGADO','CANCELADO'].includes(r.estado)&&r.cant>0).map(r=>({...r,...lotAge(r,today)}));
+ const lots=allLots.filter(activeLot).map(r=>({...r,...lotAge(r,today)}));
  const states=[...new Set(lots.map(r=>r.estado))].sort((a,b)=>(stateOrder.indexOf(a)<0?99:stateOrder.indexOf(a))-(stateOrder.indexOf(b)<0?99:stateOrder.indexOf(b))).map(name=>{const rows=lots.filter(r=>r.estado===name);return {name,lots:rows.length,units:sum(rows,'cant')};});
  const ops={status:state(input.ops),wipStatus:state(input.wip),ready:ready(input.ops)&&!!key,wipReady:wipReady&&!wipUnsupported,performanceSupported:!scoped,wipSupported:!wipUnsupported,lots,wipUnits:wipReady&&!wipUnsupported?sum(lots,'cant'):null,states,stages:stageNames.map((name,i)=>({name,values:keys.map(k=>wipReady&&!wipUnsupported?sum(allLots.filter(r=>r[stageFields[i]]===k),'cant'):null)})),efficiency:ready(input.ops)&&key&&!scoped?deps.ops?.(input.ops.mods||[],'ef')??null:null,compliance:ready(input.ops)&&key&&!scoped?deps.ops?.(input.ops.mods||[],'cumpl')??null:null,records:input.ops?.records||[]};
  ops.performance=performanceDetail(input.ops?.mods||[],key,ops.ready&&ops.performanceSupported,deps.ops);
  ops.agedLots=lots.filter(lot=>lot.processDays>90).sort((a,b)=>b.processDays-a.processDays);
  ops.undatedUnits=ops.wipReady?sum(lots.filter(lot=>lot.processDays===null),'cant'):null;
  ops.agedUnits=ops.wipReady&&(!lots.length||ops.undatedUnits<ops.wipUnits)?sum(ops.agedLots,'cant'):null;
+ ops.wipValue=wipValuation(input.wip,normalizedLots.filter(activeLot),match,ops.wipReady);
+ if(ops.wipValue){
+  const byStage=new Map(ops.wipValue.stages.map(row=>[row.name,row]));
+  ops.wipValue.stages=states.map(({name,units})=>({name,units,value:null,ops:0,withCost:0,...byStage.get(name)}));
+ }
  const invReady=ready(input.inv);
  const inventory=invReady?(input.inv.rows||[]).map(r=>({...r,...taxonomy(company(r.empresa),r.lineaReal||r.linea,r.desc,true)})).filter(match):[];
  const principal=inventory.filter(r=>!r.esSeg&&!r.esCobros);

@@ -448,7 +448,8 @@ function renderConsolidated(){
  ];
  $('[data-consolidated]').innerHTML=
   '<div class="ax-consolidated-head"><h2 id="atlas-consolidated-title">Inventario consolidado</h2>'+
-  '<button type="button" class="ax-detail-link" data-inventory-detail>Ver detalle ↗</button></div>'+
+  '<div><button type="button" class="ax-detail-link" data-inventory-detail>Ver detalle ↗</button> · '+
+  '<a class="ax-detail-link" href="#invcost">Costo inventarios ↗</a></div></div>'+
   '<dl class="ax-consolidated-values"><div class="ax-consolidated-total"><dt>'+(model.partial?'Total valorado parcial':'Total valorado')+
   '</dt><dd>'+exact(model.total)+'</dd><small>'+share(model.total)+'COP</small></div>'+
   '<div class="ax-consolidated-aging"><dt><button type="button" class="ax-detail-link" data-inventory-detail>Costo de más de 90 días ↗</button></dt>'+
@@ -468,7 +469,7 @@ function consolidatedDetail(){
    '</td><td>'+esc(sourceState(row.agedStatus)||row.agedStatus)+'</td></tr>').join('')+
   '</tbody><tfoot><tr><th colspan="3">'+(model.partial?'Total valorado parcial':'Total valorado')+'</th><td>'+exact(model.total)+
   '</td><td>—</td><td class="ax-aging-value">'+exact(model.agedTotal)+'</td><td>Total parcial de más de 90 días</td></tr></tfoot></table></div>'+
-  '<p class="ax-sub">Cada sección conserva su fecha de corte. El total de más de 90 días suma la valoración conocida de Inventario PT y el costo FIFO estimado de Logística. Logística se calcula por empresa, incluso con filtros de línea o categoría. Las cantidades de telas e insumos se muestran por unidad de medida.</p>';
+  '<p class="ax-sub">Cada sección conserva su fecha de corte. El costo de más de 90 días incluye WIP desde programación, Inventario PT y FIFO estimado de Logística, según disponibilidad. Logística se calcula por empresa, incluso con filtros de línea o categoría.</p>';
 }
 async function printAtlas(){
  if(!dialog.open)return PccPrintView(root,'Gerencia General',scopeText());

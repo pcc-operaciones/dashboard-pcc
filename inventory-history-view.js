@@ -165,6 +165,10 @@ async function monthlyQuery(){
 mount();
 window.PccInventoryHistoryView={
  resetCoverage(){coverageQueryPromise=null;},
+ async costCuts(force=false){
+  if(force)coverageQueryPromise=null;
+  return (await monthlyQuery()).cuts.map(({cutoff,summary})=>({cutoff,summary}));
+ },
  async performanceSeries(cutoff){
   const q=await monthlyQuery();
   return Promise.all(M.inventoryMonthlyCuts(q.cuts,cutoff,6).map(async p=>({...p,detail:p.cut?await detail(p.cut):null})));

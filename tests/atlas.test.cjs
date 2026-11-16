@@ -10,6 +10,28 @@ test('empresa, línea y categoría filtran métricas y filas del mismo alcance s
 test('categorías dependen de empresa y línea; ignora selecciones inválidas',()=>{assert.deepEqual(M.cleanFilters({company:['TEX','fake'],line:['EU','TEXSION'],category:['EU Moda','LAXO','fake']}),{company:['TEX'],line:['TEXSION'],category:['LAXO']});});
 test('no inventa el desglose de categoría TEX en WIP ni el de producto en Logística',()=>{const v=M.build(base(),{category:['LAXO']},deps);assert.equal(v.ops.wipSupported,false);assert.equal(v.ops.wipUnits,null);assert.ok(v.ops.stages.every(s=>s.values.every(n=>n===null)));assert.equal(v.log.supported,false);assert.equal(v.log.aged,100);assert.equal(v.log.total,500);assert.deepEqual(v.log.companies,['TEX']);assert.equal(v.cos.count,1);});
 test('PT total incluye todas las bodegas y antigüedad usa solo el universo principal',()=>{const v=M.build(base(),{},deps);assert.equal(v.inv.units,102);assert.equal(v.inv.principal,100);assert.equal(v.inv.age[3],40);assert.equal(v.inv.agedShare,.4);assert.equal(v.inv.knownValue,800);assert.equal(v.inv.missingCostUnits,2);});
+test('Consolidado: reparte el costo de una OP entre estados y líneas y mide +90 al corte',()=>{
+ const input=base();
+ input.wip.all=[
+  {empresa:'EU',clasificacion:'LINEA',estado:'CORTADO',ordenCorte:'A',cant:25,fProgD:'2026-07-31'},
+  {empresa:'EU',clasificacion:'MODA',estado:'CONFECCION',ordenCorte:'A',cant:75,fProgD:'2026-08-02'},
+  {empresa:'EU',clasificacion:'LINEA',estado:'ENTREGADO',ordenCorte:'B',cant:10,fProgD:'2026-07-01'},
+  {empresa:'EU',clasificacion:'LINEA',estado:'CORTE',ordenCorte:'C',cant:10,fProgD:'2026-07-01'}
+ ];
+ input.wip.costCutoff='2026-10-31';
+ input.wip.costs=new Map([['EU|A',{total:400}],['EU|B',{total:900}]]);
+ const all=M.build(input,{},deps);
+ assert.equal(all.ops.wipValue.value,400);
+ assert.equal(all.ops.wipValue.agedValue,100);
+ assert.equal(all.ops.wipValue.agedUnits,35);
+ assert.equal(all.ops.wipValue.agedPartial,true);
+ assert.equal(all.inventory.total,2700);
+ const filtered=M.build(input,{category:['EU Línea']},deps);
+ assert.equal(filtered.ops.wipValue.value,100);
+ assert.equal(filtered.ops.wipValue.withCost,1);
+ assert.equal(filtered.ops.wipValue.ops,2);
+ assert.equal(filtered.ops.wipValue.stages.find(r=>r.name==='CORTE').value,null);
+});
 test('WIP: distingue días en estado de días en proceso y excluye fechas desconocidas y lotes cerrados',()=>{
  const source=base();
  source.wip.all=[

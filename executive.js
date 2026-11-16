@@ -58,6 +58,7 @@ function render(){
  $('gg-issue-count').textContent=issues.length+' alertas';
  if(document.body.dataset.gerencia==='gg')$('liveLbl').textContent=current.areas.some(a=>a.active&&a.status==='Consultando')?'Consultando áreas':'3 áreas integradas';
  window.PccAtlas?.refresh();
+ window.PccInventoryCost?.render();
 }
 function refresh(){if(!timer)timer=setTimeout(render,120);}
 function renderTasks(){
@@ -119,8 +120,7 @@ function mount(){
 window.PccExecutive={refresh};
 mount();
 function openLinkedArea(){
- const area=location.hash.slice(1);
- switchGerencia(['gg','ops','cos','inv','log'].includes(area)?area:'gg',null,true);
+ switchGerencia(location.hash.slice(1),null,true);
 }
 openLinkedArea();
 window.addEventListener('hashchange',openLinkedArea);
