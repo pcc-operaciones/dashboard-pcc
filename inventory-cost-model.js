@@ -15,14 +15,14 @@
   const value=records.reduce((total,row)=>total+(kind==='pt'?row.knownValue:row.value),0);
   return {cutoff:cut.cutoff,value,partial:records.length<rows.length||rows.some(row=>row.missingCostUnits>0)};
  }
- function monthly({pt=[],log=[],currentMonth,company='',exact=true,count=12}){
+ function monthly({pt=[],log=[],currentMonth,company='',exact=false,count=12}){
   const maps={wip:new Map(),pt:new Map(),log:new Map()};
   for(const kind of ['pt','log']){
    for(const cut of [...(kind==='pt'?pt:log)].sort((a,b)=>a.cutoff.localeCompare(b.cutoff))){
     if(!validDate(cut.cutoff)||!Array.isArray(cut.summary))continue;
     const month=cut.cutoff.slice(0,7);
     if(exact&&cut.cutoff!==endOfMonth(month))continue;
-    maps[kind].set(month,stockPoint(cut,company,kind)||{cutoff:cut.cutoff,value:null});
+    maps[kind].set(month,{...(stockPoint(cut,company,kind)||{cutoff:cut.cutoff,value:null}),exact:cut.cutoff===endOfMonth(month)});
    }
   }
   const points=[];

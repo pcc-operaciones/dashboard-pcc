@@ -11,11 +11,13 @@ test('Costo inventarios: distingue cierre exacto, corte parcial y fuente sin val
  const source={currentMonth:'2026-11',count:3,company:'EU',
   pt:[pt('2026-08-31',60),pt('2026-09-30',70),pt('2026-10-29',90)],
   log:[log('2026-08-31',50),log('2026-09-30',60),log('2026-10-31',70)]};
- const exact=monthly(source);
+ const exact=monthly({...source,exact:true});
  assert.deepEqual(exact.map(p=>p.total),[110,130,70]);
  assert.deepEqual(exact.map(p=>p.delta),[null,20,null]);
- const available=monthly({...source,exact:false});
+ const available=monthly(source);
  assert.equal(available[2].values.pt.cutoff,'2026-10-29');
+ assert.equal(available[2].values.pt.exact,false);
+ assert.equal(available[2].values.log.exact,true);
  assert.equal(available[2].total,null);
  assert.equal(monthly({...source,company:'TEX'})[0].values.pt.value,null);
  assert.equal(monthly({...source,company:''})[1].delta,null);

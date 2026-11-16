@@ -11,7 +11,7 @@ for(const child of [...page.children]){
  else management.append(child);
 }
 page.replaceChildren(root,management,legacy);
-root.innerHTML='<div class="ax-app"><main class="ax-main"><div class="ax-heading"><div><span class="ax-eyebrow">DIRECCIÓN DE LA EMPRESA · PCC</span><h1 tabindex="-1">Gerencia General</h1><p class="ax-heading-note">Resultados clave y evolución de la empresa</p></div><button type="button" class="ax-source" data-sources>Fechas y fuentes ↗</button></div><div class="ax-global-filters" aria-label="Filtros de Gerencia General" data-filters></div><p class="ax-filter-scope" data-scope aria-live="polite"></p><section class="ax-tile ax-consolidated" aria-labelledby="atlas-consolidated-title" data-consolidated></section><div class="ax-area-grid" data-areas></div><footer class="ax-footer"><span>Clic en un KPI o gráfico para ampliar · Escape para volver</span><span data-period></span></footer></main></div><dialog class="ax-dialog" aria-labelledby="atlas-dialog-title"><div class="ax-modal-head"><div><span class="ax-modal-eyebrow" data-modal-area></span><h2 id="atlas-dialog-title"></h2></div><button type="button" class="ax-source ax-modal-print" data-atlas-print>PDF</button><button type="button" class="ax-close" data-close aria-label="Cerrar vista ampliada">×</button></div><p class="ax-modal-scope" data-modal-scope></p><div class="atlas-cost-period" data-cost-period hidden></div><div class="ax-modal-kpis" data-modal-kpis></div><div class="ax-modal-controls"><label>Vista<select data-view aria-label="Vista ampliada"></select></label><label data-order-label>Orden<select data-order aria-label="Orden de los estados"><option value="flow">Orden del flujo</option><option value="volume">Mayor volumen</option></select></label><label data-material-label>Materiales<select data-material aria-label="Materiales"><option value="all">Telas + insumos</option><option value="MT001">Telas</option><option value="MT002">Insumos</option></select></label></div><div class="ax-enlarged" data-enlarged></div><div class="ax-large-legend" data-large-legend></div><p class="ax-modal-note" data-note></p></dialog>';
+root.innerHTML='<div class="ax-app"><main class="ax-main"><div class="ax-heading"><div><span class="ax-eyebrow">DIRECCIÓN DE LA EMPRESA · PCC</span><h1 tabindex="-1">Gerencia General</h1><p class="ax-heading-note">Resultados clave y evolución de la empresa</p></div><button type="button" class="ax-source" data-sources>Fechas y fuentes ↗</button></div><div class="ax-global-filters" aria-label="Filtros de Gerencia General" data-filters></div><p class="ax-filter-scope" data-scope aria-live="polite"></p><div class="ax-area-grid" data-areas></div><footer class="ax-footer"><span>Clic en un KPI o gráfico para ampliar · Escape para volver</span><span data-period></span></footer></main></div><dialog class="ax-dialog" aria-labelledby="atlas-dialog-title"><div class="ax-modal-head"><div><span class="ax-modal-eyebrow" data-modal-area></span><h2 id="atlas-dialog-title"></h2></div><button type="button" class="ax-source ax-modal-print" data-atlas-print>PDF</button><button type="button" class="ax-close" data-close aria-label="Cerrar vista ampliada">×</button></div><p class="ax-modal-scope" data-modal-scope></p><div class="atlas-cost-period" data-cost-period hidden></div><div class="ax-modal-kpis" data-modal-kpis></div><div class="ax-modal-controls"><label>Vista<select data-view aria-label="Vista ampliada"></select></label><label data-order-label>Orden<select data-order aria-label="Orden de los estados"><option value="flow">Orden del flujo</option><option value="volume">Mayor volumen</option></select></label><label data-material-label>Materiales<select data-material aria-label="Materiales"><option value="all">Telas + insumos</option><option value="MT001">Telas</option><option value="MT002">Insumos</option></select></label></div><div class="ax-enlarged" data-enlarged></div><div class="ax-large-legend" data-large-legend></div><p class="ax-modal-note" data-note></p></dialog>';
 const $=s=>root.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const finite=Number.isFinite,integer=new Intl.NumberFormat('es-CO',{maximumFractionDigits:0}),decimal=new Intl.NumberFormat('es-CO',{maximumFractionDigits:1}),precise=new Intl.NumberFormat('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2});
 const num=v=>finite(v)?integer.format(v):'—',pct=v=>finite(v)?decimal.format(v*100)+'%':'—',cash=v=>finite(v)?'$ '+integer.format(v):'—',money=v=>finite(v)?'$ '+decimal.format(v/1e6)+' M':'—',exact=v=>finite(v)?'$ '+precise.format(v):'—';
@@ -141,7 +141,9 @@ function renderCards(){
   }else if(future)content='<div class="ax-reserved"><strong>'+esc(views[id][0][1])+'</strong><span>Fuente por integrar · indicadores propuestos</span></div>';
   else content=chartButton(id,defaults[id],{cos:'Rentabilidad y CCU sin IVA · %',inv:'Recibidas vs. despachadas · unidades',log:'Entradas vs. salidas · $ millones'}[id],168);
   return '<article class="ax-tile ax-area-card '+(future?'ax-future-tile':'')+'" data-area="'+id+'" aria-label="'+areaNames[id]+'">'+action(id,defaults[id],'<span><h3>'+areaNames[id]+'</h3><span class="ax-sub">'+esc(status(id))+'</span></span><span class="ax-expand" aria-hidden="true">↗</span>','ax-area-heading','Ampliar '+areaNames[id])+'<div class="ax-visible-kpis">'+statMarkup(id)+'</div><div class="ax-area-charts">'+content+'</div><span class="ax-card-caption">'+esc(captions[id])+'</span>'+(id==='cos'?costInsights():'')+'<div class="ax-tile-foot">'+links[id].map(s=>action(id,s[0],esc(s[1])+' ↗','ax-detail-link','Ampliar '+s[1])).join('')+'</div></article>';
- }).join('');
+ }).join('')+consolidatedCard()+
+  '<article class="ax-tile ax-area-card ax-future-tile" data-area="design" aria-label="Diseño">'+
+  '<div class="ax-area-heading"><span><h3>Diseño</h3><span class="ax-sub">En preparación</span></span></div></article>';
  root.querySelectorAll('[data-chart]').forEach(host=>drawChart(host,descriptor(host.dataset.chart)));
 }
 function destroyCharts(largeOnly=false){for(const chart of [...charts])if(!largeOnly||detailCharts.has(chart)){chart.destroy();charts.delete(chart);}detailCharts.clear();largeChart=null;}
@@ -388,7 +390,6 @@ function render(){
  fitBoard();destroyCharts();drawFilters();renderCards();$('[data-period]').textContent='Operaciones: '+v.label+' · Costos: '+v.cos.period.label;
  if(document.body.dataset.gerencia==='gg')document.getElementById('liveLbl').textContent=[v.ops,v.cos,v.inv,v.log].filter(s=>s.status==='ready').length+' áreas conectadas';
  if(dialog.open)drawDetail();
- renderConsolidated();
 }
 function refresh(){if(!renderTimer)renderTimer=setTimeout(render,40);}
 function fitBoard(){if(!page.hidden)root.style.setProperty('--atlas-top',Math.max(0,page.getBoundingClientRect().top+window.scrollY)+'px');}
@@ -439,24 +440,25 @@ function inventoryStatus(row){
  const pending=sourceState(row.status)||row.status;
  return pending+(finite(row.units)?' · '+num(row.units)+' unidades':'');
 }
-function renderConsolidated(){
+function consolidatedCard(){
  const model=v.inventory;
  const share=value=>finite(value)&&model.total>0?'<strong>'+pct(value/model.total)+' del total</strong> · ':'';
  const tiles=[
   {section:'Inventario PT',value:v.inv.knownValue,status:sourceState(v.inv.status)||'Todas las bodegas PT'},
   ...model.rows.filter(row=>row.section!=='Primeras'&&row.section!=='Segundas'&&row.section!=='Cobros')
  ];
- $('[data-consolidated]').innerHTML=
-  '<div class="ax-consolidated-head"><h2 id="atlas-consolidated-title">Inventario consolidado</h2>'+
-  '<div><button type="button" class="ax-detail-link" data-inventory-detail>Ver detalle ↗</button> · '+
-  '<a class="ax-detail-link" href="#invcost">Costo inventarios ↗</a></div></div>'+
+ return '<article class="ax-tile ax-area-card ax-consolidated" data-area="consolidated" data-consolidated aria-label="Inventario consolidado">'+
+  '<button type="button" class="ax-area-heading" data-inventory-detail><span><h3>Inventario consolidado</h3>'+
+  '<span class="ax-sub">Valoración por sección · COP</span></span><span class="ax-expand" aria-hidden="true">↗</span></button>'+
   '<dl class="ax-consolidated-values"><div class="ax-consolidated-total"><dt>'+(model.partial?'Total valorado parcial':'Total valorado')+
   '</dt><dd>'+exact(model.total)+'</dd><small>'+share(model.total)+'COP</small></div>'+
   '<div class="ax-consolidated-aging"><dt><button type="button" class="ax-detail-link" data-inventory-detail>Costo de más de 90 días ↗</button></dt>'+
   '<dd class="ax-aging-value">'+exact(model.agedTotal)+'</dd><small>'+share(model.agedTotal)+
    (finite(model.agedTotal)?'COP · total parcial':'Valoración no disponible')+'</small></div>'+
   tiles.map(row=>'<div><dt>'+esc(row.section)+'</dt><dd>'+exact(row.value)+
-   '</dd><small>'+share(row.value)+esc(inventoryStatus(row))+'</small></div>').join('')+'</dl>';
+   '</dd><small>'+share(row.value)+esc(inventoryStatus(row))+'</small></div>').join('')+'</dl>'+
+  '<div class="ax-tile-foot"><button type="button" class="ax-detail-link" data-inventory-detail>Ver detalle ↗</button>'+
+  '<a class="ax-detail-link" href="#invcost">Costo inventarios ↗</a></div></article>';
 }
 function consolidatedDetail(){
  const model=v.inventory;

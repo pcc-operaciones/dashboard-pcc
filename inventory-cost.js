@@ -16,7 +16,7 @@
  const status=s=>({loading:'Consultando',ready:'Disponible',error:'Fuente no disponible',empty:'Sin registros'})[s]||s;
  const areas={wip:'WIP',pt:'Inventario PT',log:'Logística'};
  const pages={current:'Totales y participación',aging:'Más de 90 días',history:'Cierres mensuales'};
- let company='',view='current',exactClose=true,current,chart;
+ let company='',view='current',exactClose=false,current,chart;
  let history={pt:null,log:null},pending=null;
  root.innerHTML='<header class="ic-header"><div><h1 tabindex="-1">Costo inventarios</h1><p>Valoración consolidada en pesos colombianos</p></div>'+
   '<label class="ic-filter">Empresa <select data-ic-company><option value="">Todas</option><option value="EU">EU</option><option value="TEX">TEX</option></select></label></header>'+
@@ -78,12 +78,12 @@
   const caption=pending?'Consultando archivos históricos…':failed.length?'Histórico no disponible para '+failed.join(' y ')+'. Usa Actualizar para reintentar.':'Cortes publicados por Inventario PT y Logística.';
   const value=(p,key)=>{
    const item=p.values[key];
-   return item?money(item.value)+(item.partial?' *':'')+'<small>'+date(item.cutoff)+'</small>':'—';
+   return item?money(item.value)+(item.partial?' *':'')+'<small>'+date(item.cutoff)+' · '+(item.exact?'Cierre exacto':'Último corte del mes')+'</small>':'—';
   };
   const signed=n=>finite(n)?(n>0?'+':'')+money(n):'—';
   body.innerHTML='<article class="ic-card"><div class="ic-history-head"><div><h2>Histórico de inventario por mes</h2>'+
-   '<p role="status">'+html(caption)+'</p></div><label class="ic-filter">Mostrar <select data-ic-close><option value="exact"'+(exactClose?' selected':'')+
-   '>Cierres exactos</option><option value="available"'+(!exactClose?' selected':'')+'>Último corte de cada mes</option></select></label></div>'+
+   '<p role="status">'+html(caption)+'</p></div><label class="ic-filter">Mostrar <select data-ic-close><option value="available"'+(!exactClose?' selected':'')+
+   '>Cierre o último corte disponible</option><option value="exact"'+(exactClose?' selected':'')+'>Solo cierres exactos</option></select></label></div>'+
    (points.some(p=>p.valued.length)?'<div class="ic-chart"><canvas role="img" aria-label="Costo de inventario por fuente y mes"></canvas></div>':
     '<p class="ic-empty">No hay meses con costo publicado para este criterio.</p>')+
    table(['Mes','WIP (COP)','Inventario PT (COP)','Logística (COP)','Subtotal comparable (COP)','Variación frente al mes anterior'],
