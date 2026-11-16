@@ -312,7 +312,31 @@ function sourceDetails(){
  }
  return html+'<section class="atlas-source-block"><h3>WIP y etapas</h3><p>'+esc(sourceState(v.ops.wipStatus)||'Lotes EU y TEX conectados · estado actual y fechas de cumplimiento')+'</p></section><section class="atlas-source-block"><h3>Logística</h3><p>'+esc(status('log'))+'</p><p>Movimientos: '+esc(date(v.log.meta.movimientos_desde))+' a '+esc(date(v.log.meta.movimientos_hasta))+'</p><p>'+esc(v.log.error||v.log.ageMessage||'Edad FIFO del mismo corte validada por el área')+'</p></section><section class="atlas-source-block"><h3>Ventas y Talento Humano</h3><p>En construcción · sin cifras simuladas</p></section>';
 }
-function drawDetail(){
+const inventoryTabs=document.createElement('section');
+inventoryTabs.className='ax-inventory-modal';
+inventoryTabs.hidden=true;
+inventoryTabs.innerHTML='<nav class="ic-nav ax-inventory-tabs" aria-label="Vistas de Inventario consolidado">'+
+ '<button type="button" data-inventory-tab="detail" aria-controls="atlas-inventory-detail">Ver detalle</button>'+
+ '<button type="button" data-inventory-tab="cost" aria-controls="atlas-inventory-cost">Costo inventarios</button></nav>'+
+ '<div id="atlas-inventory-detail"></div><div id="atlas-inventory-cost" hidden></div>';
+$('[data-enlarged]').after(inventoryTabs);
+let inventoryReport;
+function drawInventoryDetail(reportView){
+ const showReport=view==='cost',detail=$('#atlas-inventory-detail'),report=$('#atlas-inventory-cost');
+ inventoryTabs.querySelectorAll('[data-inventory-tab]').forEach(button=>{
+  button.setAttribute('aria-pressed',String(button.dataset.inventoryTab===view));
+ });
+ detail.hidden=showReport;
+ report.hidden=!showReport;
+ if(!showReport){
+  inventoryReport?.suspend();
+  detail.innerHTML=consolidatedDetail();
+  return;
+ }
+ inventoryReport??=PccInventoryCost.mountModal(report);
+ inventoryReport.render(v,reportView);
+}
+function drawDetail(reportView){
  if(!dialog.open)return;destroyCharts(true);const host=$('[data-enlarged]');$('[data-large-legend]').replaceChildren();
  dialog.dataset.detailArea=area;dialog.dataset.detailView=view;
  $('[data-modal-area]').textContent=area==='sources'||area==='consolidated'?'PCC · Gerencia General':areaNames[area]+' · vista ampliada';
@@ -326,9 +350,12 @@ function drawDetail(){
  $('[data-view]').innerHTML=standalone?'':views[area].map(s=>'<option value="'+s[0]+'">'+esc(s[1])+'</option>').join('');$('[data-view]').value=view==='lots'?'wip':view;
  $('[data-order-label]').hidden=view!=='wip';$('[data-material-label]').hidden=view!=='logflow';
  $('[data-order]').value=order;$('[data-material]').value=material;
+ host.hidden=area==='consolidated';
+ inventoryTabs.hidden=area!=='consolidated';
+ $('[data-note]').hidden=area==='consolidated';
  $('[data-note]').textContent=area==='sources'?'Cada fuente conserva su fecha y alcance. Las fallas y los datos parciales permanecen identificados.':note(view);
  if(area==='sources'){host.innerHTML=sourceDetails();return;}
- if(area==='consolidated'){host.innerHTML=consolidatedDetail();return;}
+ if(area==='consolidated'){drawInventoryDetail(reportView);return;}
  if(area==='cos'&&costRefId!==null){drawCostReference(host);return;}
  if(recordId!==null){
   const row=v.cos.negative.find(r=>r.id===recordId);
@@ -381,9 +408,9 @@ function drawDetail(){
  else host.innerHTML='<div class="ax-large-pending"><strong>En construcción</strong><p>'+esc(note(view))+'</p><span class="ax-sub">Sin cifras simuladas</span></div>';
 }
 let stateFilter='';
-function open(id,target,trigger){
+function open(id,target,trigger,reportView){
  area=id;view=target;recordId=null;costRefId=null;detailPage=0;stateFilter='';returnFocus=trigger||document.activeElement;
- if(!dialog.open)dialog.showModal();document.body.classList.add('atlas-modal-open');drawDetail();
+ if(!dialog.open)dialog.showModal();document.body.classList.add('atlas-modal-open');drawDetail(reportView);dialog.scrollTop=0;
 }
 function render(){
  renderTimer=null;source=PccExecutiveSource();v=M.build(source,filters,{period:PccExecutiveModel.period,ops:PccData.ops},costSelection);filters=v.filters;costSelection={years:v.cos.period.years,periods:v.cos.period.periods};
@@ -404,7 +431,14 @@ root.addEventListener('click',event=>{
  const costRef=event.target.closest('[data-cost-ref]');if(costRef){costRefId=costRef.dataset.costRef;detailPage=0;drawDetail();return;}
  if(event.target.closest('[data-cost-back]')){costRefId=null;detailPage=0;drawDetail();return;}
  if(event.target.closest('[data-wip-back]')){view='wip';stateFilter='';detailPage=0;drawDetail();return;}
- const consolidated=event.target.closest('[data-inventory-detail]');if(consolidated){open('consolidated','consolidated',consolidated);return;}
+ const consolidated=event.target.closest('[data-inventory-detail]');
+ if(consolidated){
+  open('consolidated',consolidated.dataset.inventoryDetail,consolidated,consolidated.dataset.inventoryReport||'current');
+  $('[data-inventory-tab="'+view+'"]').focus({preventScroll:true});
+  return;
+ }
+ const inventoryTab=event.target.closest('[data-inventory-tab]');
+ if(inventoryTab){view=inventoryTab.dataset.inventoryTab;drawDetail();dialog.scrollTop=0;return;}
  const sourceButton=event.target.closest('[data-sources]');if(sourceButton){open('sources','sources',sourceButton);return;}
  const clear=event.target.closest('[data-clear]'),all=event.target.closest('[data-all]');if(clear||all){if(clear)filters=M.cleanFilters();else filters[all.dataset.all]=[];changeFilters();return;}
  const record=event.target.closest('[data-record]');if(record){recordId=record.dataset.record;drawDetail();return;}
@@ -431,7 +465,11 @@ root.addEventListener('input',event=>{
  rankingCount=Math.min(50,Math.floor(input.valueAsNumber));
  drawCostRanking($('[data-enlarged]'));
 });
-dialog.addEventListener('close',()=>{destroyCharts(true);document.body.classList.remove('atlas-modal-open');if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});});
+dialog.addEventListener('close',()=>{
+ destroyCharts(true);inventoryReport?.suspend();document.body.classList.remove('atlas-modal-open');
+ const trigger=returnFocus?.isConnected?returnFocus:area==='consolidated'?$('[data-consolidated] .ax-area-heading'):null;
+ trigger?.focus({preventScroll:true});
+});
 document.addEventListener('click',event=>{if(!root.contains(event.target))root.querySelectorAll('.ax-filter-menu[open]').forEach(el=>el.open=false);});
 window.addEventListener('hashchange',()=>{if(location.hash!=='#gg'&&dialog.open)dialog.close();requestAnimationFrame(()=>{for(const chart of charts)chart.resize();});});
 window.addEventListener('resize',fitBoard);
@@ -443,31 +481,27 @@ function inventoryStatus(row){
 function consolidatedCard(){
  const model=v.inventory;
  const share=value=>finite(value)&&model.total>0?'<strong>'+pct(value/model.total)+' del total</strong> · ':'';
- const tiles=[
-  {section:'Inventario PT',value:v.inv.knownValue,status:sourceState(v.inv.status)||'Todas las bodegas PT'},
-  ...model.rows.filter(row=>row.section!=='Primeras'&&row.section!=='Segundas'&&row.section!=='Cobros')
- ];
  return '<article class="ax-tile ax-area-card ax-consolidated" data-area="consolidated" data-consolidated aria-label="Inventario consolidado">'+
-  '<button type="button" class="ax-area-heading" data-inventory-detail><span><h3>Inventario consolidado</h3>'+
-  '<span class="ax-sub">Valoración por sección · COP</span></span><span class="ax-expand" aria-hidden="true">↗</span></button>'+
+  '<button type="button" class="ax-area-heading" data-inventory-detail="detail"><span><h3>Inventario consolidado</h3>'+
+  '<span class="ax-sub">Costo por área · COP</span></span><span class="ax-expand" aria-hidden="true">↗</span></button>'+
   '<dl class="ax-consolidated-values"><div class="ax-consolidated-total"><dt>'+(model.partial?'Total valorado parcial':'Total valorado')+
   '</dt><dd>'+exact(model.total)+'</dd><small>'+share(model.total)+'COP</small></div>'+
-  '<div class="ax-consolidated-aging"><dt><button type="button" class="ax-detail-link" data-inventory-detail>Costo de más de 90 días ↗</button></dt>'+
+  '<div class="ax-consolidated-aging"><dt><button type="button" class="ax-detail-link" data-inventory-detail="cost" data-inventory-report="aging">Costo de más de 90 días ↗</button></dt>'+
   '<dd class="ax-aging-value">'+exact(model.agedTotal)+'</dd><small>'+share(model.agedTotal)+
-   (finite(model.agedTotal)?'COP · total parcial':'Valoración no disponible')+'</small></div>'+
-  tiles.map(row=>'<div><dt>'+esc(row.section)+'</dt><dd>'+exact(row.value)+
-   '</dd><small>'+share(row.value)+esc(inventoryStatus(row))+'</small></div>').join('')+'</dl>'+
-  '<div class="ax-tile-foot"><button type="button" class="ax-detail-link" data-inventory-detail>Ver detalle ↗</button>'+
-  '<a class="ax-detail-link" href="#invcost">Costo inventarios ↗</a></div></article>';
+   (finite(model.agedTotal)?'COP · total parcial':'Valoración no disponible')+'</small></div></dl>'+
+  '<div class="ax-inventory-chart">'+PccInventoryCost.comparison(model.rows,true)+
+  '<button type="button" class="ax-inventory-chart-open" data-inventory-detail="cost" aria-label="Ampliar gráfico de costo por área"></button></div>'+
+  '<div class="ax-tile-foot"><button type="button" class="ax-detail-link" data-inventory-detail="detail">Ver detalle ↗</button>'+
+  '<button type="button" class="ax-detail-link" data-inventory-detail="cost">Costo inventarios ↗</button></div></article>';
 }
 function consolidatedDetail(){
  const model=v.inventory;
  const quantity=new Intl.NumberFormat('es-CO',{maximumFractionDigits:3});
  const agedQuantity=row=>row.agedQuantities?.length?
   row.agedQuantities.map(([unit,value])=>quantity.format(value)+' '+esc(unit)).join('<br>'):num(row.agedUnits);
- return '<div class="ax-record-scroll"><table class="pcc-stock-table"><thead><tr><th>Área</th><th>Sección</th><th>Corte</th><th>Valor total (COP)</th><th>Cantidad +90</th><th>Costo +90 (COP)</th><th>Alcance del costo +90</th></tr></thead><tbody>'+
+ return '<div class="ax-record-scroll" tabindex="0" role="region" aria-label="Detalle del inventario por sección"><table class="pcc-stock-table"><thead><tr><th>Área</th><th>Sección</th><th>Corte</th><th>Valor total (COP)</th><th>Cantidad +90</th><th>Costo +90 (COP)</th><th>Alcance del costo +90</th></tr></thead><tbody>'+
   model.rows.map(row=>'<tr><td>'+esc(row.area)+'</td><th scope="row">'+esc(row.section)+'</th><td>'+esc(row.cutoff?date(row.cutoff):'—')+
-   '</td><td>'+exact(row.value)+'<small>'+esc(inventoryStatus(row))+'</small></td><td class="ax-aging-value">'+agedQuantity(row)+'</td><td class="ax-aging-value">'+exact(row.agedValue)+
+   '</td><td>'+exact(row.value)+'<small>'+(finite(row.value)&&model.total>0?pct(row.value/model.total)+' del total · ':'')+esc(inventoryStatus(row))+'</small></td><td class="ax-aging-value">'+agedQuantity(row)+'</td><td class="ax-aging-value">'+exact(row.agedValue)+
    '</td><td>'+esc(sourceState(row.agedStatus)||row.agedStatus)+'</td></tr>').join('')+
   '</tbody><tfoot><tr><th colspan="3">'+(model.partial?'Total valorado parcial':'Total valorado')+'</th><td>'+exact(model.total)+
   '</td><td>—</td><td class="ax-aging-value">'+exact(model.agedTotal)+'</td><td>Total parcial de más de 90 días</td></tr></tfoot></table></div>'+

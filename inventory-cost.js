@@ -1,7 +1,6 @@
 (()=> {
  'use strict';
- const root=document.getElementById('page-invcost'),model=PccInventoryCostModel;
- const $=selector=>root.querySelector(selector);
+ const model=PccInventoryCostModel;
  const html=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const finite=Number.isFinite;
  const number=new Intl.NumberFormat('es-CO',{maximumFractionDigits:3});
@@ -16,14 +15,37 @@
  const status=s=>({loading:'Consultando',ready:'Disponible',error:'Fuente no disponible',empty:'Sin registros'})[s]||s;
  const sources={wip:'WIP',pt:'Inventario PT',log:'Logística'};
  const pages={current:'Resumen',sections:'Participación por sección',aging:'Más de 90 días',wip:'WIP por estado',history:'Histórico mensual'};
+ function comparison(rows,compact=false){
+  const areas=model.byArea(rows);
+  const max=Math.max(0,...areas.flatMap(({value,agedValue})=>[value,agedValue]).filter(finite));
+  const series=(value,total,label,alert)=>'<div class="ic-bar-series'+(alert?' ic-bar-alert':'')+'">'+
+   '<div class="ic-bar-shape" style="--ic-bar-size:'+(max>0&&finite(value)?Math.max(0,value)/max*100:0)+'%">'+
+   '<span class="ic-bar-amount"><span class="ic-sr-only">'+label+' </span>'+money(value)+
+   (compact&&finite(value)&&total>0?'<small class="ic-bar-share">'+share(value,total)+' del total</small>':'')+'</span>'+
+   (finite(value)&&value>0?'<i aria-hidden="true"></i>':'')+'</div></div>';
+  const total=areas.reduce((sum,row)=>sum+(row.value??0),0);
+  const groups=areas.map(row=>{
+   const caption=row.cutoffs.length?'Corte '+row.cutoffs.map(date).join(' · '):row.area==='Ventas'?'Fuente por integrar':'Corte sin confirmar';
+   return '<div class="ic-bar-group" role="group" aria-label="'+html(row.area)+'">'+
+    '<div class="ic-bar-pair">'+series(row.value,total,'Costo total',false)+series(row.agedValue,total,'Costo de más de 90 días',true)+'</div>'+
+    '<div class="ic-bar-caption"><strong>'+html(row.area)+'</strong><small>'+html(caption)+'</small></div></div>';
+  }).join('');
+  return '<figure class="ic-comparison'+(compact?' ic-comparison-compact':'')+'"><div class="ic-chart-key"><span>Costo total</span><span>Más de 90 días</span></div>'+
+   '<div class="ic-bar-groups">'+groups+'</div><figcaption>El saldo de más de 90 días está incluido en el costo total. — Valoración no disponible.</figcaption></figure>';
+ }
+ function createReport(root,embedded=false){
+ const $=selector=>root.querySelector(selector);
+ const dialog=embedded?root.closest('dialog'):null;
+ const visible=()=>!root.hidden&&(!embedded||dialog.open);
  let company='',sectionArea='',agingArea='',view='current',exactClose=false,current,chart;
  const history={pt:{},log:{}};
  const historyRequests=new Map();
- root.innerHTML='<header class="ic-header"><div><h1 tabindex="-1">Costo inventarios</h1><p>Valoración consolidada en pesos colombianos</p></div>'+
-  '<label class="ic-filter">Empresa <select data-ic-company><option value="">Todas</option><option value="EU">EU</option><option value="TEX">TEX</option></select></label></header>'+
+ const panelId=embedded?'ic-modal-report':'ic-report';
+ root.innerHTML=(embedded?'':'<header class="ic-header"><div><h1 tabindex="-1">Costo inventarios</h1><p>Valoración consolidada en pesos colombianos</p></div>'+
+  '<label class="ic-filter">Empresa <select data-ic-company><option value="">Todas</option><option value="EU">EU</option><option value="TEX">TEX</option></select></label></header>')+
   '<nav class="ic-nav" aria-label="Informes de costo de inventarios">'+Object.entries(pages).map(([id,label])=>
-   '<button type="button" data-ic-view="'+id+'" aria-pressed="'+(id===view)+'" aria-controls="ic-report">'+label+'</button>').join('')+'</nav>'+
-  '<section id="ic-report" data-ic-body aria-label="Vista de costo de inventarios"></section>';
+   '<button type="button" data-ic-view="'+id+'" aria-pressed="'+(id===view)+'" aria-controls="'+panelId+'">'+label+'</button>').join('')+'</nav>'+
+  '<section id="'+panelId+'" data-ic-body aria-label="Vista de costo de inventarios"></section>';
 
  const kpi=(name,value,detail,alert=false)=>'<div class="ic-kpi'+(alert?' ic-alert':'')+'"><span>'+name+'</span><strong>'+value+
   '</strong><small>'+detail+'</small></div>';
@@ -49,19 +71,6 @@
    inventoryAreas().map(({area})=>'<option'+(area===selected?' selected':'')+'>'+html(area)+'</option>').join('')+'</select></label>';
  }
  const inventoryAreas=()=>model.byArea(current.inventory.rows);
- function comparison(areas){
-  const max=Math.max(0,...areas.flatMap(({value,agedValue})=>[value,agedValue]).filter(finite));
-  const series=(value,label,alert)=>'<div class="ic-bar-series'+(alert?' ic-bar-alert':'')+'">'+
-   '<div class="ic-bar-shape" style="--ic-bar-size:'+(max>0&&finite(value)?Math.max(0,value)/max*100:0)+'%">'+
-   '<span class="ic-bar-amount"><span class="ic-sr-only">'+label+' </span>'+money(value)+'</span>'+
-   (finite(value)&&value>0?'<i aria-hidden="true"></i>':'')+'</div></div>';
-  const groups=areas.map(row=>'<div class="ic-bar-group" role="group" aria-label="'+html(row.area)+'">'+
-   '<div class="ic-bar-pair">'+series(row.value,'Costo total',false)+series(row.agedValue,'Costo de más de 90 días',true)+'</div>'+
-   '<div class="ic-bar-caption"><strong>'+html(row.area)+'</strong><small>'+
-   (row.cutoffs.length?'Corte '+row.cutoffs.map(date).join(' · '):'Fuente por integrar')+'</small></div></div>').join('');
-  return '<figure class="ic-comparison"><div class="ic-chart-key"><span>Costo total</span><span>Más de 90 días</span></div>'+
-   '<div class="ic-bar-groups">'+groups+'</div><figcaption>El saldo de más de 90 días está incluido en el costo total. — Valoración no disponible.</figcaption></figure>';
- }
  function drawCurrent(body){
   const {inventory,ops,inv}=current,wip=ops.wipValue;
   body.innerHTML='<div class="ic-kpis">'+kpi('Costo consolidado',money(inventory.total),inventory.partial?'Valoración parcial · COP':'COP')+
@@ -69,13 +78,13 @@
    kpi('Valoración WIP',money(wip?.value),wip?wip.withCost+' de '+wip.ops+' OP con costo · '+date(wip.cutoff):'Sin corte de costo disponible')+
    kpi('Unidades PT sin costo',num(inv.missingCostUnits),'Cobertura de la valoración ERP')+'</div>'+
    '<article class="ic-card"><div class="ic-report-head"><div><h2>Costo de inventario por área</h2><p>Saldo al último corte de cada fuente · COP</p></div>'+
-   reportButton('history','Ver histórico mensual ↗')+'</div>'+comparison(inventoryAreas())+'</article>';
+   reportButton('history','Ver histórico mensual ↗')+'</div>'+comparison(inventory.rows)+'</article>';
  }
  function drawSections(body){
   const {inventory}=current;
   const ranked=inventory.rows.filter(row=>row.value>0&&(!sectionArea||row.area===sectionArea)).sort((a,b)=>b.value-a.value);
   body.innerHTML='<article class="ic-card"><div class="ic-report-head"><div><h2>Participación en el costo consolidado</h2>'+
-   '<p>Costo por sección y participación sobre el total de la empresa seleccionada.</p></div>'+areaFilter(sectionArea)+'</div>'+
+   '<p>Costo por sección y participación sobre el total del alcance seleccionado.</p></div>'+areaFilter(sectionArea)+'</div>'+
    (ranked.length?'<div class="ic-section-bars">'+ranked.map(row=>'<div><span>'+html(row.section)+'</span><strong>'+
     money(row.value)+' · '+share(row.value,inventory.total)+'</strong><div class="ic-track" aria-hidden="true"><i style="width:'+
     Math.min(100,row.value/inventory.total*100)+'%"></i></div></div>').join('')+'</div>':'')+
@@ -115,7 +124,8 @@
   const caption=[
    loading.length?'Consultando '+loading.join(' y ')+'…':'',
    failed.length?'No se pudo actualizar '+failed.join(' y ')+'.':''
-  ].filter(Boolean).join(' ')||'Cortes publicados por Inventario PT y Logística.';
+  ].filter(Boolean).join(' ')||'Cortes publicados por Inventario PT y Logística.'+
+   (embedded&&(current.filters.line.length||current.filters.category.length)?' Los cortes históricos se consultan por empresa.':'');
   const value=(p,key)=>{
    const item=p.values[key];
    return item?money(item.value)+(item.partial?' *':'')+'<small>'+date(item.cutoff)+' · '+(item.exact?'Cierre exacto':'Último corte del mes')+'</small>':'—';
@@ -161,18 +171,26 @@
   return Promise.all(historyRequests.values());
  }
  const reports={current:drawCurrent,sections:drawSections,aging:drawAging,wip:drawWip,history:drawHistory};
+ function suspend(){chart?.destroy();chart=null;}
  function draw(){
-  if(!current||root.hidden)return;
+  if(!current||!visible())return;
   const focused=['[data-ic-area]','[data-ic-close]'].find(selector=>document.activeElement?.matches(selector));
-  chart?.destroy();chart=null;
+  suspend();
   root.querySelectorAll('.ic-nav [data-ic-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.icView===view)));
   reports[view]($('[data-ic-body]'));
   if(focused)$(focused)?.focus({preventScroll:true});
  }
- function render(){
-  if(root.hidden)return;
-  const {inv,log,wip}=PccExecutiveSource();
-  current=PccAtlasModel.build({inv,log,wip},{company:company?[company]:[]});
+ function render(snapshot,nextView){
+  if(nextView)view=nextView;
+  if(!visible())return;
+  if(embedded){
+   current=snapshot||current;
+   const companies=current.filters.company;
+   company=companies.length===1?companies[0]:'';
+  }else{
+   const {inv,log,wip}=PccExecutiveSource();
+   current=PccAtlasModel.build({inv,log,wip},{company:company?[company]:[]});
+  }
   if(view==='history')refreshHistory();
   draw();
  }
@@ -199,10 +217,13 @@
  });
  for(const id of Object.values(historyFrames)){
   document.getElementById(id)?.addEventListener('load',()=>{
-   if(!root.hidden&&view==='history')render();
+   if(visible()&&view==='history')render();
   });
  }
- window.PccInventoryCost={render,refreshHistory:()=>refreshHistory(true),
+ return {render,suspend,refreshHistory:()=>refreshHistory(true),
   print:()=>PccPrintView($('[data-ic-body]'),'Costo inventarios / '+pages[view],company?'Empresa '+company:'Todas las empresas')};
- render();
+ }
+ const page=createReport(document.getElementById('page-invcost'));
+ window.PccInventoryCost={...page,comparison,mountModal:host=>createReport(host,true)};
+ page.render();
 })();

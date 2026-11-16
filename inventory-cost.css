@@ -57,6 +57,21 @@ body[data-gerencia=invcost] :is(.nav,.page,#loadOv,#errBar,#pcc-freshness){displ
 .ic-bar-caption{text-align:center;padding:8px 3px 0;font-size:13px;color:#173553}
 .ic-bar-caption small,.ic-comparison figcaption{display:block;font-size:11px;color:#4d6379}
 .ic-comparison figcaption{margin-top:14px;line-height:1.4}
+.ic-comparison-compact .ic-chart-key,.ic-comparison-compact .ic-bar-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ic-comparison-compact .ic-chart-key{border-bottom:1px solid #e5edf4;padding:3px 0 5px;margin:0;font-size:10px}
+.ic-comparison-compact .ic-chart-key span{white-space:nowrap}
+.ic-comparison-compact .ic-bar-groups{grid-template-columns:1fr;gap:0}
+.ic-comparison-compact .ic-bar-group{display:grid;padding:3px 0;border-bottom:1px solid #e5edf4}
+.ic-comparison-compact .ic-bar-group:last-child{border-bottom:0}
+.ic-comparison-compact .ic-bar-caption{grid-row:1;text-align:left;padding:0 0 1px;font-size:11px}
+.ic-comparison-compact .ic-bar-caption small{display:none}
+.ic-comparison-compact .ic-bar-pair{justify-content:stretch;height:auto;padding:0;border:0;background:none}
+.ic-comparison-compact .ic-bar-shape{height:auto;flex-direction:column;gap:2px}
+.ic-comparison-compact .ic-bar-shape i{width:var(--ic-bar-size);height:4px;border-radius:2px}
+.ic-comparison-compact .ic-bar-amount{position:static;display:flex;flex-wrap:wrap;gap:0 5px;align-items:baseline;
+ padding:0;font-size:clamp(10px,.68vw,12px);line-height:1.2;background:none}
+.ic-bar-share{font-size:.86em;color:inherit;font-weight:500}
+.ic-comparison-compact figcaption{margin:4px 0 0;font-size:10px}
 .ic-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .ic-empty,.ic-note{padding:8px 0;line-height:1.45}
 .ic-chart{position:relative;height:clamp(230px,35vh,345px);margin:12px 0}
