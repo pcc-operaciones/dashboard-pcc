@@ -21,13 +21,13 @@
   const series=(value,total,label,alert)=>'<div class="ic-bar-series'+(alert?' ic-bar-alert':'')+'">'+
    '<div class="ic-bar-shape" style="--ic-bar-size:'+(max>0&&finite(value)?Math.max(0,value)/max*100:0)+'%">'+
    '<span class="ic-bar-amount"><span class="ic-sr-only">'+label+' </span>'+money(value)+
-   (compact&&finite(value)&&total>0?'<small class="ic-bar-share">'+share(value,total)+' del total</small>':'')+'</span>'+
+   (compact&&finite(value)&&total>0?'<small class="ic-bar-share">'+share(value,total)+(alert?' del área':' del total')+'</small>':'')+'</span>'+
    (finite(value)&&value>0?'<i aria-hidden="true"></i>':'')+'</div></div>';
   const total=areas.reduce((sum,row)=>sum+(row.value??0),0);
   const groups=areas.map(row=>{
    const caption=row.cutoffs.length?'Corte '+row.cutoffs.map(date).join(' · '):row.area==='Ventas'?'Fuente por integrar':'Corte sin confirmar';
    return '<div class="ic-bar-group" role="group" aria-label="'+html(row.area)+'">'+
-    '<div class="ic-bar-pair">'+series(row.value,total,'Costo total',false)+series(row.agedValue,total,'Costo de más de 90 días',true)+'</div>'+
+    '<div class="ic-bar-pair">'+series(row.value,total,'Costo total',false)+series(row.agedValue,row.value,'Costo de más de 90 días',true)+'</div>'+
     '<div class="ic-bar-caption"><strong>'+html(row.area)+'</strong><small>'+html(caption)+'</small></div></div>';
   }).join('');
   return '<figure class="ic-comparison'+(compact?' ic-comparison-compact':'')+'"><div class="ic-chart-key"><span>Costo total</span><span>Más de 90 días</span></div>'+
