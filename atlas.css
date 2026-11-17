@@ -306,13 +306,6 @@ body[data-gerencia=gg] #pcc-data-quality{display:none}
  #pcc-atlas .ax-dialog:is([data-detail-area=ops],[data-detail-area=cos]) select{min-height:30px;padding:5px 8px;font-size:11px}
  #pcc-atlas .ax-dialog:is([data-detail-area=ops],[data-detail-area=cos]) .ax-enlarged{min-height:0}
  #pcc-atlas .ax-dialog:is([data-detail-area=ops],[data-detail-area=cos]) .ax-modal-note{font-size:11px;line-height:1.4;padding-top:8px;margin:8px 0 0}
- #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-full-bars{gap:3px}
- #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-full-bar{grid-template-columns:220px minmax(0,1fr) 135px;gap:12px;min-height:20px;font-size:11px}
- #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-full-bar>span:last-child{display:flex;align-items:baseline;justify-content:flex-end;gap:10px}
- #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-full-bar strong{font-size:13px}
- #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-full-bar small{min-width:44px;font-size:10.5px}
- #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-track{height:8px}
- #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-detail-link{font-size:11px;padding:2px 0}
  #pcc-atlas .ax-dialog[data-detail-view=stages] .atlas-large-chart{height:clamp(130px,calc(100dvh - 470px),280px)}
  #pcc-atlas .ax-dialog[data-detail-view=stages] .ax-series-button{font-size:11px;padding:2px 0}
  #pcc-atlas .ax-dialog[data-detail-view=performance] .atlas-performance-chart{height:clamp(110px,calc(100dvh - 510px),210px)}
@@ -323,11 +316,28 @@ body[data-gerencia=gg] #pcc-data-quality{display:none}
  #pcc-atlas .ax-dialog[data-detail-view=stages] .atlas-large-chart{height:200px}
  #pcc-atlas .atlas-process-row{grid-template-columns:115px minmax(20px,1fr) 58px;gap:6px}
 }
-@media(min-width:900px) and (min-height:600px) and (max-height:680px){
- #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-full-bars{gap:2px}
- #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-full-bar{min-height:18px;line-height:1.2}
- #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-detail-link{padding:0;line-height:1.2}
- #pcc-atlas .ax-dialog[data-detail-view=wip] .ax-full-bar strong{line-height:1.2}
+#pcc-atlas .ax-wip-state-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+#pcc-atlas .ax-wip-state-table :is(th,td){padding:3px 6px;text-align:right}
+#pcc-atlas .ax-wip-state-table th:first-child{text-align:left;overflow-wrap:anywhere}
+#pcc-atlas .ax-wip-state-table thead th:first-child{width:clamp(170px,23vw,225px)}
+#pcc-atlas .ax-wip-state-table tbody th{font-weight:400}
+#pcc-atlas .ax-wip-state-table thead th{font-size:11px;color:var(--ax-muted);background:#edf3f7}
+#pcc-atlas .ax-wip-state-table thead .ax-wip-volume{text-align:left}
+#pcc-atlas .ax-wip-state-table thead th:nth-last-child(3){width:76px}
+#pcc-atlas .ax-wip-state-table thead th:nth-last-child(2){width:55px}
+#pcc-atlas .ax-wip-state-table thead th:last-child{width:160px}
+#pcc-atlas .ax-wip-state-table :is(th,td):nth-last-child(-n+3){white-space:nowrap}
+#pcc-atlas .ax-wip-state-table .ax-detail-link{padding:1px 0;font-size:11px;text-align:left;line-height:1.2}
+#pcc-atlas .ax-wip-state-table .ax-wip-cost{font-weight:700}
+#pcc-atlas .ax-wip-state-table tfoot{background:#edf6f4;font-weight:700}
+#pcc-atlas .ax-wip-cost-note{margin-top:5px}
+@media(max-width:650px){
+ #pcc-atlas .ax-wip-state-table .ax-wip-volume{display:none}
+ #pcc-atlas .ax-wip-state-table thead th:first-child{width:auto}
+ #pcc-atlas .ax-wip-state-table :is(th,td){padding-inline:4px}
+ #pcc-atlas .ax-wip-state-table thead th:nth-last-child(3){width:58px}
+ #pcc-atlas .ax-wip-state-table thead th:nth-last-child(2){width:38px}
+ #pcc-atlas .ax-wip-state-table thead th:last-child{width:118px;white-space:normal}
 }
 #pcc-atlas .ax-modal-controls[hidden],#pcc-atlas .ax-modal-kpis[hidden]{display:none}
 #pcc-atlas .ax-modal-kpis strong{overflow-wrap:anywhere}

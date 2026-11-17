@@ -84,9 +84,27 @@ function unavailable(id,target){
 const empty=text=>'<div class="ax-empty-chart">'+esc(text)+'</div>';
 function legendHTML(setting){const short={'Planeación':'Plan.','Confección':'Conf.','Tintorería':'Tint.','Presentación':'Pres.'};return setting.series.map(s=>'<span class="ax-key" title="'+esc(s.name)+'" style="--key:'+s.color+'">'+esc(short[s.name]||s.name)+'</span>').join('');}
 function chartButton(id,target,title,height){const data=descriptor(target);return action(id,target,'<span class="ax-chart-title">'+esc(title)+'<span aria-hidden="true">↗</span></span><span class="atlas-chart" style="height:'+height+'px" data-chart="'+target+'"></span><span class="ax-compact-legend">'+legendHTML(data)+'</span>','ax-chart-button','Ampliar '+title+' de '+areaNames[id]);}
-function bars(items,interactive=false){
+function bars(items){
  const max=Math.max(1,...items.map(r=>r.value));
- return '<div class="ax-full-bars">'+items.map(r=>'<div class="ax-full-bar"><span>'+(interactive?'<button type="button" class="ax-detail-link" data-state="'+esc(r.name)+'">'+esc(r.name)+' ↗</button>':esc(r.name))+'</span><div class="ax-track"><div class="ax-fill" style="width:'+Math.max(0,r.value/max*100)+'%;background:'+(r.color||colors[1])+'"></div></div><span><strong'+(r.aging?' class="ax-aging-value"':'')+'>'+esc(r.label)+'</strong><small>'+esc(r.sub||'')+'</small></span></div>').join('')+'</div>';
+ return '<div class="ax-full-bars">'+items.map(r=>'<div class="ax-full-bar"><span>'+esc(r.name)+'</span><div class="ax-track"><div class="ax-fill" style="width:'+Math.max(0,r.value/max*100)+'%;background:'+(r.color||colors[1])+'"></div></div><span><strong'+(r.aging?' class="ax-aging-value"':'')+'>'+esc(r.label)+'</strong><small>'+esc(r.sub||'')+'</small></span></div>').join('')+'</div>';
+}
+function wipStateTable(rows){
+ const wip=v.ops.wipValue;
+ const stages=new Map((wip?.stages||[]).map(stage=>[stage.name,stage]));
+ const max=Math.max(1,...rows.map(row=>row.units));
+ return '<table class="ax-wip-state-table"><thead><tr><th scope="col">Estado</th><th scope="col" class="ax-wip-volume">Volumen</th>'+
+  '<th scope="col">Unidades</th><th scope="col">Lotes</th><th scope="col">Costo conocido (COP)</th></tr></thead><tbody>'+
+  rows.map(row=>{
+   const stage=stages.get(row.name);
+   const color=row.name==='NO CONFORME'?'#cc9748':colors[1];
+   const partial=finite(stage?.value)&&stage.withCost<stage.ops;
+   return '<tr><th scope="row"><button type="button" class="ax-detail-link" data-state="'+esc(row.name)+'">'+esc(row.name)+' ↗</button></th>'+
+    '<td class="ax-wip-volume"><div class="ax-track" aria-hidden="true"><div class="ax-fill" style="width:'+(row.units/max*100)+'%;background:'+color+'"></div></div></td>'+
+    '<td>'+num(row.units)+'</td><td>'+num(row.lots)+'</td><td class="ax-wip-cost">'+exact(stage?.value)+(partial?' *':'')+'</td></tr>';
+  }).join('')+'</tbody><tfoot><tr><th scope="row">Total WIP</th><td class="ax-wip-volume"></td><td>'+num(v.ops.wipUnits)+
+  '</td><td>'+num(v.ops.lots.length)+'</td><td class="ax-wip-cost">'+exact(wip?.value)+'</td></tr></tfoot></table>'+
+  '<p class="ax-sub ax-wip-cost-note">'+(wip?'Valoración al '+date(wip.cutoff)+' · '+num(wip.withCost)+' de '+num(wip.ops)+
+   ' OP con costo. * Valoración parcial del estado. — Costo no disponible.':'Valoración WIP no disponible para este alcance.')+'</p>';
 }
 function chartValueLabels(setting,large){
  return {
@@ -380,7 +398,7 @@ function drawDetail(reportView){
  if(['stock','logage','company'].includes(view)&&(!v.log.ready||view==='logage'&&!v.log.ageReady)){host.innerHTML=empty(v.log.ageMessage||unavailable('log',view));return;}
  if(view==='wip'){
   const rows=order==='volume'?[...v.ops.states].sort((a,b)=>b.units-a.units):v.ops.states;
-  host.innerHTML=rows.length?bars(rows.map(r=>({name:r.name,value:r.units,label:num(r.units),sub:num(r.lots)+' lotes',color:r.name==='NO CONFORME'?'#cc9748':colors[1]})),true):empty('Sin lotes en el alcance seleccionado');
+  host.innerHTML=rows.length?wipStateTable(rows):empty('Sin lotes en el alcance seleccionado');
  }else if(view==='lots'||view==='wipaged'){
   const aged=view==='wipaged';
   const rows=aged?v.ops.agedLots:v.ops.lots.filter(r=>r.estado===stateFilter);
