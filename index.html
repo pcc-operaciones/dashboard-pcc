@@ -20,6 +20,9 @@
 <script src="executive-model.js?v=2.4"></script>
 <script src="cost-model.js?v=1.4"></script>
 <script src="wip-cost-groups.js?v=2"></script>
+<script src="operations-history-model.js?v=2"></script>
+<script src="operations-history.js?v=2"></script>
+<link rel="stylesheet" href="operations-history.css?v=2">
 <script src="atlas-model.js?v=1.8"></script>
 <script src="inventory-cost-model.js?v=3"></script>
 <link rel="stylesheet" href="inventory-cost.css?v=3">
@@ -333,6 +336,7 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
   <button class="nav-btn" onclick="showPage('alertas',this)" style="color:var(--red);font-weight:700" id="btnNavAlertas">🚨 Alertas OP</button>
   <button class="nav-btn" onclick="showPage('wip',this)" style="color:var(--teal);font-weight:700">📊 WIP</button>
   <button class="nav-btn" onclick="showPage('ppto',this)" style="color:var(--navy);font-weight:700" id="btnNavPpto">📋 Presupuesto</button>
+  <button class="nav-btn" onclick="showPage('historicos',this)">Históricos</button>
   <button class="btn-pdf" onclick="exportarPDFTab()" title="Exportar pestaña como PDF" style="margin:auto 0 auto auto;align-self:center;">📄 PDF</button>
 </div>
 
@@ -1183,8 +1187,42 @@ th.wf-activo .wf-ico{opacity:1;color:#1D4ED8;}
 </div><!-- /page-wip -->
 
 <!-- ═══════════════════════════════════════════════════ -->
-<!-- PRESUPUESTO DE PRODUCCIÓN — page-ppto               -->
+<!-- CIERRES MENSUALES DE OPERACIONES                    -->
 <!-- ═══════════════════════════════════════════════════ -->
+<section class="page" id="page-historicos" aria-labelledby="ops-history-title">
+  <div class="ops-history" id="ops-history-panel">
+    <header class="ops-history-head">
+      <div>
+        <h1 id="ops-history-title">Cierres mensuales de Operaciones</h1>
+        <p>Indicadores archivados desde el cierre del 30 de noviembre de 2026.</p>
+      </div>
+      <label class="ops-history-filter">Año <select id="ops-history-year"><option value="">Todos los años</option></select></label>
+    </header>
+    <p id="ops-history-status" role="status"></p>
+    <p id="ops-history-empty" hidden></p>
+    <div class="ops-history-close">
+      <button type="button" id="ops-history-prepare" hidden>Preparar cierre del mes</button>
+      <p id="ops-history-capture-status" role="status"></p>
+      <div id="ops-history-snapshot" hidden>
+        <label for="ops-history-payload">Copiar al panel Carga WIP → Registrar cierre de Operaciones, después de confirmar las cifras finales.</label>
+        <textarea id="ops-history-payload" readonly rows="2"></textarea>
+      </div>
+    </div>
+    <div class="ops-history-scroll" id="ops-history-table" role="region" aria-label="Tabla de cierres mensuales" tabindex="0" hidden>
+      <table>
+        <caption id="ops-history-caption" class="ops-history-visually-hidden"></caption>
+        <thead>
+          <tr><th scope="col" rowspan="2">Período</th><th scope="col" rowspan="2">Eficiencia</th><th scope="col" rowspan="2">Rentabilidad</th><th scope="col" rowspan="2">Cumplimiento</th><th scope="col" rowspan="2">No conforme</th><th scope="colgroup" colspan="2">WIP al cierre</th></tr>
+          <tr><th scope="col">Unidades</th><th scope="col">Valor conocido</th></tr>
+        </thead>
+        <tbody id="ops-history-body"></tbody>
+      </table>
+    </div>
+    <p class="ops-history-notes">Eficiencia, rentabilidad y cumplimiento son los indicadores globales de Operaciones. No conforme usa las OP con fin de Presentación en el mes. WIP corresponde al paquete archivado del mismo corte.</p>
+  </div>
+</section>
+
+<!-- PRESUPUESTO DE PRODUCCIÓN -->
 <div class="page" id="page-ppto" style="padding:12px;">
 
   <!-- Cabecera con filtros -->
@@ -2226,14 +2264,43 @@ let modFilt='todos', estFilt='todos';
 // ═══════════════════════════════════════════════════
 // FETCH SHEETS
 // ═══════════════════════════════════════════════════
-async function fetchSheet(sid, sheet, range, meta={}) {
+async function fetchSheet(sid, sheet, range, {unformatted=false, track=true, ...meta}={}) {
   const key = window._apiKey || API_KEY_DEFAULT;
-  const url = `${BASE}/${sid}/values/${encodeURIComponent(sheet+'!'+range)}?key=${key}&_=${Date.now()}${sheet==='Costos Unificados'?'&valueRenderOption=UNFORMATTED_VALUE':''}`;
-  return PccData.load(sheet + ' · ' + sid.slice(-6), async () => {
+  const renderOption = unformatted || sheet==='Costos Unificados' ? '&valueRenderOption=UNFORMATTED_VALUE' : '';
+  const url = `${BASE}/${sid}/values/${encodeURIComponent(sheet+'!'+range)}?key=${key}&_=${Date.now()}${renderOption}`;
+  const read = async () => {
     const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(20000) });
-    if (!r.ok) { const e=await r.json(); throw new Error(e.error?.message||r.status); }
+    if (!r.ok) {
+      const response = await r.json().catch(() => ({}));
+      throw Object.assign(new Error(response.error?.message || r.status), {status:r.status, code:response.error?.code});
+    }
     return (await r.json()).values || [];
-  },{group:sheet==='Costos Unificados'?'cos':'ops',sheet,...meta});
+  };
+  return track ? PccData.load(sheet + ' · ' + sid.slice(-6), read, {group:sheet==='Costos Unificados'?'cos':'ops',sheet,...meta}) : read();
+}
+
+function loadOpsHistory(force=false) {
+  return window.PccOpsHistory.load((sheet, range) => fetchSheet(KPI_ID, sheet, range, {unformatted:true, track:false}), window._pccConfig, collectOpsClose, force);
+}
+
+async function collectOpsClose(cutoff) {
+  const model = window.PccOpsHistoryModel;
+  const config = window._pccConfig;
+  if (model.eligibleCutoff(config) !== cutoff) throw new Error('El período configurado debe ser el último mes terminado.');
+  const {items} = PccData.tasks(CFG, config);
+  const modules = [];
+  for (const {pk, mk} of items) {
+    const source = CFG[pk];
+    try {
+      const rows = await fetchSheet(source.id, source.mods[mk], 'A1:AF90', {track:false});
+      modules.push({pk, daily:parseDailyWithMap(rows).daily});
+    } catch (error) {
+      console.warn('Fuente del cierre:', pk, mk, error.message);
+    }
+  }
+  const quality = await fetchSheet(KPI_ID, 'CALIDAD_BD', 'A:N', {unformatted:true, track:false});
+  if (window._pccConfig !== config || model.eligibleCutoff(config) !== cutoff) throw new Error('El período cambió durante la consulta.');
+  return model.snapshot(cutoff, modules, items.length, model.qualityForMonth(quality, cutoff.slice(0, 7)), PccData.ops);
 }
 
 // ═══════════════════════════════════════════════════
@@ -3039,6 +3106,7 @@ function showPage(id,btn){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   g('page-'+id).classList.add('active');
   if(btn) btn.classList.add('active');
+  if(id==='historicos') loadOpsHistory();
 }
 function filtMod(f,btn){
   document.querySelectorAll('#page-modulos .tbtn').forEach(b=>{if(!b.id)b.classList.remove('active');});
@@ -4276,6 +4344,7 @@ function renderTablaAlertas() { renderKanban(); }
 let WIP_DATA = [];
 let WIP_COSTOS = new Map();
 let WIP_COSTOS_CORTE = '';
+let WIP_COSTOS_ESTADO = '';
 const formatearCostoWip = value => '$ '+value.toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2});
 let WIP_UDS_DIA = {};
 let wipFiltEmpresa = 'TODAS', wipFiltCliente = 'TODAS';
@@ -4294,13 +4363,15 @@ async function loadWip() {
       fetchSheet(KPI_ID, 'EU_Lotes', 'A:AW'),
       fetchSheet(KPI_ID, 'TEX_Lotes', 'A:AX'),
     ]);
-    const costsPromise=fetchSheet(KPI_ID, 'WIP_COSTOS', 'A:I').catch(error=>{
+    const costsPromise=fetchSheet(KPI_ID, 'WIP_COSTOS', 'A:I', {unformatted:true}).catch(error=>{
       console.warn('Costos WIP no disponibles:', error);
       return [];
     });
-    const [[rowsEU, rowsTEX], costRows] = await Promise.all([window.PccWipRowsPromise, costsPromise]);
+    const controlPromise=fetchSheet(KPI_ID, 'CONTROL_WIP', 'B3', {track:false}).catch(() => []);
+    const [[rowsEU, rowsTEX], costRows, control] = await Promise.all([window.PccWipRowsPromise, costsPromise, controlPromise]);
     WIP_COSTOS = new Map();
     WIP_COSTOS_CORTE = '';
+    WIP_COSTOS_ESTADO = String(control[0]?.[0] || '');
     try { if(costRows.length>1){
       const header=costRows[0].map(x=>String(x||'').trim().toUpperCase());
       const col=name=>header.indexOf(name);
@@ -4313,7 +4384,7 @@ async function loadWip() {
         if(!empresa||!op)continue;
         if(WIP_COSTOS_CORTE && WIP_COSTOS_CORTE!==corte)throw new Error('WIP_COSTOS mezcla fechas de corte.');
         WIP_COSTOS_CORTE=corte;
-        const values=['MP_COP','MO_COP','CIF_COP','TOTAL_COP'].map(name=>pN(row[col(name)]));
+        const values=['MP_COP','MO_COP','CIF_COP','TOTAL_COP'].map(name=>row[col(name)]);
         if(values.some(value=>value===null||!Number.isFinite(value)))throw new Error('Costo WIP inválido para '+empresa+' '+op);
         const key=empresa+'|'+op;
         if(WIP_COSTOS.has(key))throw new Error('Costo WIP duplicado: '+key);
@@ -4535,9 +4606,9 @@ function filtrarWip() {
 }
 
 function renderWip() {
-  if (!WIP_DATA.length) return;
   const datos = filtrarWip();
   renderCostosWip(datos);
+  if (!WIP_DATA.length) return;
   const COLORES_CL = {
     'LINEA EU':'#1B3A5C','MODA EU':'#4A3B8C','TWO&TWO':'#0D6B5E','YETRO':'#6B3A8C',
     'TEX EVA y LAXO':'#1E7A40','TEX DISNEY':'#B03030'
@@ -4637,16 +4708,19 @@ function renderCostosWip(datos) {
   const money=formatearCostoWip;
   const unique=new Map();
   datos.forEach(lote=>{
-    const key=lote.empresa+'|'+String(lote.ordenCorte||'').trim().toUpperCase();
+    const op=String(lote.ordenCorte||'').trim().toUpperCase();
+    if(!op)return;
+    const key=lote.empresa+'|'+op;
     if(!unique.has(key))unique.set(key,lote);
   });
   const linked=[...unique].map(([key,lote])=>({lote,cost:WIP_COSTOS.get(key)})).filter(item=>item.cost);
   const without=unique.size-linked.length;
   g('wip-cost-scope').textContent=WIP_COSTOS_CORTE
-    ? 'Corte declarado: '+WIP_COSTOS_CORTE+' · '+linked.length+' de '+unique.size+' OP activas con costo · '+without+' sin costo informado. Los totales incluyen solo OP con costo y respetan los filtros.'
-    : 'Pendiente de publicar el primer corte de costos WIP.';
+    ? 'Último corte de costos publicado: '+WIP_COSTOS_CORTE+' · '+linked.length+' de '+unique.size+' OP activas con costo · '+without+' sin costo informado. Los totales incluyen solo OP con costo y respetan los filtros.'
+    : 'Costos WIP sin datos disponibles.';
+  if(WIP_COSTOS_ESTADO) g('wip-cost-scope').textContent+=' Estado de carga: '+WIP_COSTOS_ESTADO;
   const sums=linked.reduce((a,item)=>{a.mp+=item.cost.mp;a.mo+=item.cost.mo;a.cif+=item.cost.cif;a.total+=item.cost.total;return a;},{mp:0,mo:0,cif:0,total:0});
-  for(const part of ['total','mp','mo','cif'])g('wip-cost-'+part).textContent=WIP_COSTOS_CORTE?money(sums[part]):'—';
+  for(const part of ['total','mp','mo','cif'])g('wip-cost-'+part).textContent=linked.length?money(sums[part]):'—';
   g('wip-cost-rows').innerHTML=linked.length?linked.sort((a,b)=>b.cost.total-a.cost.total).map(({lote,cost})=>
     '<tr><td>'+cost.empresa+'</td><td>'+cost.op+'</td><td>'+String(lote.estado||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td><td>'+money(cost.mp)+'</td><td>'+money(cost.mo)+'</td><td>'+money(cost.cif)+'</td><td>'+money(cost.total)+'</td></tr>'
   ).join(''):'<tr><td colspan="7">No hay OP con costo para este filtro.</td></tr>';
@@ -6054,14 +6128,7 @@ function switchGerenciaArea(ger, btn, silencioso) {
     if (errBar) errBar.style.display = '';
     // Activar la primera página de Operaciones si ninguna está activa
     const anyActive = document.querySelector('.page.active:not(#page-costos)');
-    if (!anyActive) {
-      const firstOpsPage = document.querySelector('.page:not(#page-costos)');
-      if (firstOpsPage) {
-        firstOpsPage.classList.add('active');
-        const firstBtn = document.querySelector('.nav-btn');
-        if (firstBtn) firstBtn.classList.add('active');
-      }
-    }
+    if (!anyActive) showPage('area', navOps.querySelector('.nav-btn'));
     // Ocultar costos
     const pc = g('page-costos');
     if (pc) pc.style.display = 'none';
@@ -6135,7 +6202,9 @@ async function doUpdate() {
       const inv=g('iframe-inventario')?.contentWindow;
       if(inv && typeof inv.cargarTodo==='function') await inv.cargarTodo();
     } else if(_gerenciaActiva==='ops') {
-      await Promise.allSettled([loadAll(),loadAlertas(),loadWip(),loadCalidad()]);
+      const loads=[loadAll(),loadAlertas(),loadWip(),loadCalidad()];
+      if(g('page-historicos').classList.contains('active')) loads.push(loadOpsHistory(true));
+      await Promise.allSettled(loads);
       _updTimestamps.ops=new Date();
     } else {
       await loadCostos(); _updTimestamps.cos=new Date();
@@ -9886,6 +9955,7 @@ function exportarPDFTab() {
   }
   const active=document.querySelector('.page.active:not(#page-costos)');
   const name=document.querySelector('.nav .nav-btn.active')?.textContent.trim()||'Resumen';
+  if(active?.id==='page-historicos')return PccPrintView(active,'Operaciones PCC / Históricos',window.PccOpsHistory.scope());
   return PccPrintView(active,'Operaciones PCC / '+name,[window._pccConfig?.mes,window._pccConfig?.año].filter(Boolean).join(' '));
 }
 

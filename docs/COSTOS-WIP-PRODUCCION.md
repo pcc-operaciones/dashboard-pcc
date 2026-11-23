@@ -41,6 +41,10 @@ El botón de proceso guarda la fecha común en `CONTROL_WIP!B2`, ejecuta `sincro
 
 Si aparece `Sheets API HTTP 403` indicando que la API no está habilitada, añadir el servicio Google Sheets API según el primer párrafo y ejecutar solo `calcularKPIs()` si `sincronizarDatos()` ya terminó correctamente. No se requiere volver a reemplazar los Excel.
 
-## Alcance y límite
+## Cierres mensuales
 
-Este cambio publica el **último corte de costos WIP**. No crea todavía cierres mensuales de WIP. `SyncExcel` continúa copiando los lotes y generando `KPI_ALERTAS` como antes. El script que compartió el usuario es la fuente de referencia para el punto de inserción; no hay acceso de edición desde esta sesión al proyecto privado, por lo que el pegado y la primera ejecución deben hacerse en su cuenta.
+Con la versión actualizada de `CostosWip.gs` instalada en `SyncExcel`, cuando el paquete de cuatro Excel corresponde al último día calendario del mes, la misma publicación registra un cierre en `OPS_WIP_CIERRES` a partir del **30 de noviembre de 2026**. El primer cierre crea la hoja. Las nuevas ejecuciones del mismo corte conservan el registro existente. Los cortes intermedios siguen actualizando `WIP_COSTOS`.
+
+El cierre suma las unidades de los lotes activos de EU y TEX y el costo conocido de sus OP. Cada OP con costo suma una sola vez por empresa. La cobertura identifica las OP activas y cuántas tienen costo. Los lotes entregados y cancelados quedan fuera.
+
+Históricos vincula el saldo archivado con el cierre de Operaciones de la misma fecha. El valor queda vacío si hay lotes activos sin ninguna OP con costo. [Registro del cierre de Operaciones](OPERACIONES.md#registrar-el-cierre-mensual)

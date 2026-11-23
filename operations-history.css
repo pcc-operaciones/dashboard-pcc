@@ -1,0 +1,27 @@
+#page-historicos { padding: clamp(12px, 2.2vw, 28px); color: var(--navy); }
+.ops-history { max-width: 1460px; margin: 0 auto; }
+.ops-history-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.ops-history-head h1 { font-size: clamp(19px, 2vw, 25px); margin: 0 0 5px; }
+.ops-history-head p, .ops-history-notes { color: var(--muted); font-size: 12px; line-height: 1.45; margin: 0; }
+.ops-history-filter { display: flex; gap: 8px; align-items: center; font-weight: 700; font-size: 12px; }
+.ops-history-filter select { padding: 7px 10px; border: 1px solid var(--border); border-radius: 5px; background: white; color: inherit; font: inherit; }
+#ops-history-status:not(:empty) { margin: 0 0 12px; padding: 9px 12px; background: #eaf2f8; border-left: 3px solid var(--teal); border-radius: 4px; font-size: 12px; }
+#ops-history-empty { padding: 16px; border: 1px solid var(--border); border-radius: 8px; }
+.ops-history-scroll { max-height: 65vh; overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: white; }
+.ops-history table { width: 100%; min-width: 710px; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
+.ops-history th, .ops-history td { padding: 9px 12px; border-bottom: 1px solid #e6ecf1; text-align: right; }
+.ops-history thead { position: sticky; top: 0; z-index: 1; }
+.ops-history thead th { background: #edf4f8; color: var(--navy); font-size: 11px; }
+.ops-history thead th[colspan] { text-align: center; }
+.ops-history th:first-child, .ops-history tbody th { text-align: left; }
+.ops-history tbody th { font-weight: 600; }
+.ops-history tbody tr:nth-child(even) { background: #f8fafc; }
+.ops-history small { display: block; font-size: 10px; color: var(--muted); margin-top: 3px; }
+.ops-history-notes { margin-top: 10px; }
+.ops-history-close button { background: var(--teal); color: white; border: 0; border-radius: 5px; padding: 8px 12px; font: inherit; cursor: pointer; }
+.ops-history-close p:not(:empty), .ops-history-close label { display: block; margin: 8px 0; color: var(--navy); }
+.ops-history-close textarea { width: 100%; padding: 6px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 5px; }
+.ops-history-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.pcc-print-view .ops-history-scroll { max-height: none; overflow: visible; }
+.pcc-print-view :is(.ops-history-filter,.ops-history-close) { display: none; }
+.pcc-print-view .ops-history thead { position: static; }

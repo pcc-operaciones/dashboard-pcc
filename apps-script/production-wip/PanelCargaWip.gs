@@ -13,12 +13,13 @@ function abrirPanelCargaWip() {
 <html><head><base target="_top"><style>
   body{font:13px Arial,sans-serif;color:#17324f;margin:0;padding:18px;line-height:1.4}
   h2{font-size:17px;margin:0 0 8px}p{color:#53677d;margin:0 0 16px}
-  label{display:block;font-weight:700;margin-bottom:5px}input{box-sizing:border-box;width:100%;padding:9px;border:1px solid #b8c9d9;border-radius:6px;font:inherit}
+  label{display:block;font-weight:700;margin-bottom:5px}input,textarea{box-sizing:border-box;width:100%;padding:9px;border:1px solid #b8c9d9;border-radius:6px;font:inherit}
   button{width:100%;padding:10px;margin-top:12px;border:0;border-radius:6px;background:#116d61;color:white;font:700 13px Arial,sans-serif;cursor:pointer}
   button.secondary{background:#e7edf3;color:#17324f;margin-top:7px}button:disabled{opacity:.55;cursor:wait}
   #estado{white-space:pre-wrap;border:1px solid #d8e2ec;border-radius:6px;padding:10px;margin-top:16px;min-height:48px;background:#f7fafc}
   #estado.ok{border-color:#a7d7bd;background:#eef9f1}#estado.error{border-color:#efb4b4;background:#fff4f4}
   small{display:block;color:#60758a;margin-top:10px}
+  details{margin-top:16px}summary{cursor:pointer;font-weight:700}details label{margin-top:10px}
 </style></head><body>
   <h2>Carga de Producción y WIP</h2>
   <p>Reemplaza primero los cuatro Excel de lotes y costos EU/TEX en Drive. Todos deben corresponder al mismo corte.</p>
@@ -28,6 +29,13 @@ function abrirPanelCargaWip() {
   <button id="consultar" class="secondary" type="button">Consultar estado</button>
   <small>El proceso copia los lotes y luego calcula las alertas y costos. Mantén abierto este panel hasta ver el resultado.</small>
   <div id="estado" role="status" aria-live="polite">Esperando tu fecha de corte.</div>
+  <details>
+    <summary>Registrar cierre de Operaciones</summary>
+    <label for="cierreOps">Cierre generado en Operaciones → Históricos</label>
+    <textarea id="cierreOps" rows="3"></textarea>
+    <button id="guardarOps" type="button">Registrar cierre</button>
+    <small id="estadoOps" role="status"></small>
+  </details>
 <script>
   var el=function(id){return document.getElementById(id)};
   function mostrar(message,kind){el('estado').textContent=message;el('estado').className=kind||''}
@@ -37,6 +45,7 @@ function abrirPanelCargaWip() {
     else if(name==='sincronizarDatos')call.sincronizarDatos();
     else if(name==='calcularKPIs')call.calcularKPIs();
     else if(name==='estadoPanelWip')call.estadoPanelWip();
+    else if(name==='registrarCierreOperaciones')call.registrarCierreOperaciones(args[0]);
     else reject(new Error('Acción desconocida'));
   })}
   function ocupado(value){el('procesar').disabled=value;el('consultar').disabled=value;el('corte').disabled=value}
@@ -63,6 +72,15 @@ function abrirPanelCargaWip() {
   }
   el('procesar').addEventListener('click',procesar);
   el('consultar').addEventListener('click',consultar);
+  el('guardarOps').addEventListener('click',async function(){
+    var payload=el('cierreOps').value.trim();
+    if(!payload){el('estadoOps').textContent='Pega el cierre generado en el tablero.';return}
+    el('guardarOps').disabled=true;
+    el('estadoOps').textContent='Guardando el cierre…';
+    try{el('estadoOps').textContent=await ejecutar('registrarCierreOperaciones',[payload]);el('cierreOps').value=''}
+    catch(error){el('estadoOps').textContent=(error&&error.message)||String(error)}
+    finally{el('guardarOps').disabled=false}
+  });
   consultar();
 </script></body></html>`);
   html.setTitle('Carga de Producción y WIP').setWidth(360);

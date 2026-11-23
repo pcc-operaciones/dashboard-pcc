@@ -21,7 +21,7 @@ function load(extra = {}) {
   return {ctx, items, sidebars};
 }
 
-test('el menú abre un panel con dos botones y cliente válido', () => {
+test('el menú abre el panel de carga y de registro mensual con cliente válido', () => {
   const {ctx, items, sidebars} = load();
   ctx.onOpen();
   assert.deepEqual(items, [['menu', 'Carga WIP'], ['Abrir panel de carga', 'abrirPanelCargaWip']]);
@@ -30,6 +30,7 @@ test('el menú abre un panel con dos botones y cliente válido', () => {
   const html = sidebars[0].html;
   assert.match(html, /Procesar los cuatro Excel/);
   assert.match(html, /Consultar estado/);
+  assert.match(html, /Registrar cierre de Operaciones/);
   const client = html.match(/<script>([\s\S]*?)<\/script>/)[1];
   new vm.Script(client);
   assert.ok(client.indexOf("await ejecutar('sincronizarDatos')") < client.indexOf("await ejecutar('calcularKPIs')"));

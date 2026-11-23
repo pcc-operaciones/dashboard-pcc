@@ -48,6 +48,10 @@ Cada frente muestra fechas del origen, período y detalle de sus fuentes. Ver [c
 
 Propuestas de gráficos y cambios visuales: [revisión visual](docs/REVISION-VISUAL.md).
 
+## Operaciones PCC
+
+[Guía de continuidad de Operaciones](docs/OPERACIONES.md) con el mapa de vistas y fuentes, la revisión local y los pendientes de conciliación.
+
 ## Configuración
 
 `config.json` define período, archivos, módulos y metas. El período del encabezado no certifica la vigencia del contenido de las hojas. Si la configuración falla, Operaciones no consulta automáticamente los archivos antiguos incrustados.
