@@ -41,7 +41,7 @@ El primer corte es el **30 de noviembre de 2026**. La pestaña muestra una fila 
 
 ### Registrar el cierre mensual
 
-1. Instalar las versiones actualizadas de [CostosWip.gs](../apps-script/production-wip/CostosWip.gs) y [PanelCargaWip.gs](../apps-script/production-wip/PanelCargaWip.gs) en `SyncExcel`. Publicar la versión del tablero que incluye Históricos.
+1. El tablero con Históricos ya está publicado. El 24 de noviembre de 2026 se instalaron [CostosWip.gs](../apps-script/production-wip/CostosWip.gs), como bloque al final de `Código.gs`, y [PanelCargaWip.gs](../apps-script/production-wip/PanelCargaWip.gs) en `SyncExcel`. Se verificó el formulario de registro en el libro de producción.
 2. Con las hojas de módulos y calidad definitivas, mantener el mes que se va a cerrar en `config.json`. Para noviembre, preparar el cierre a partir del 1 de diciembre en hora Colombia, antes de cambiar la configuración a diciembre.
 3. En **Operaciones → Históricos → Preparar cierre del mes**, revisar la cobertura y copiar el cierre generado. En `KPI PCC MENSUAL`, abrir **Carga WIP → Abrir panel de carga → Registrar cierre de Operaciones**, pegar el cierre y registrarlo. El proceso crea `OPS_CIERRES` al guardar la primera fila y conserva los cortes ya registrados.
 4. Procesar los cuatro Excel WIP del mismo fin de mes en el panel de carga. Al actualizar el tablero, verificar que Históricos muestre la fila y su cobertura WIP. Si el paquete aún está pendiente, la fila muestra los indicadores de Operaciones y deja WIP sin corte. [Cierres WIP](COSTOS-WIP-PRODUCCION.md#cierres-mensuales)

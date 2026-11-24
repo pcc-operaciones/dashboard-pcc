@@ -15,6 +15,33 @@ const PCC_OPS_CIERRES = 'OPS_CIERRES';
 const PCC_OPS_CIERRES_HEADER = ['FECHA_CORTE','EFICIENCIA','RENTABILIDAD','CUMPLIMIENTO','UNIDADES_CALIDAD','UNIDADES_NO_CONFORMES','MODULOS_CON_DATOS','MODULOS_CONFIGURADOS'];
 const PCC_WIP_PROP = 'PCC_WIP_COSTOS_FUENTES_V1';
 const PCC_WIP_LOTES_COPIADOS_PROP = 'PCC_WIP_LOTES_COPIADOS_V1';
+const PCC_WIP_ARCHIVOS = [['lotEu','Lotes EU'],['lotTex','Lotes TEX'],['costEu','Costos EU'],['costTex','Costos TEX']];
+
+function pccWipFechas_(versions) {
+  return PCC_WIP_ARCHIVOS.map(function(item) {
+    return {label:item[1], date:Utilities.formatDate(new Date(versions[item[0]]), 'America/Bogota', 'yyyy-MM-dd')};
+  });
+}
+
+function pccWipVersiones_(euFile, texFile) {
+  var versions = pccWipVersionesLotes_();
+  versions.costEu = euFile.getLastUpdated().getTime();
+  versions.costTex = texFile.getLastUpdated().getTime();
+  return versions;
+}
+
+function pccWipPaquete_(cutoff, versions) {
+  return [cutoff].concat(PCC_WIP_ARCHIVOS.map(function(item) { return versions[item[0]]; })).join('|');
+}
+
+function pccWipValidarFechas_(cutoff, versions, lateConfirmed) {
+  var dates = pccWipFechas_(versions);
+  var detail = function(files) { return files.map(function(file) { return file.label + ' ' + file.date; }).join(', '); };
+  var before = dates.filter(function(file) { return file.date < cutoff; });
+  if (before.length) throw new Error('Anteriores al corte ' + cutoff + ': ' + detail(before) + '. Sustituye esos Excel por los del corte real.');
+  var late = dates.filter(function(file) { return Date.parse(file.date) - Date.parse(cutoff) > 86400000; });
+  if (late.length && !lateConfirmed) throw new Error('Cargados más de un día después del corte ' + cutoff + ': ' + detail(late) + '. Confirma el corte de los cuatro Excel en el panel.');
+}
 
 function pccWipVersionesLotes_() {
   return {
@@ -264,9 +291,7 @@ function sincronizarCostosWip_(ss) {
 function pccWipSincronizar_(ss) {
   var euFile = DriveApp.getFileById(PCC_WIP_EU_FILE_ID);
   var texFile = DriveApp.getFileById(PCC_WIP_TEX_FILE_ID);
-  var versions = pccWipVersionesLotes_();
-  versions.costEu = euFile.getLastUpdated().getTime();
-  versions.costTex = texFile.getLastUpdated().getTime();
+  var versions = pccWipVersiones_(euFile, texFile);
   var props = PropertiesService.getScriptProperties();
   var previous = JSON.parse(props.getProperty(PCC_WIP_PROP) || '{}');
   var keys = ['lotEu', 'lotTex', 'costEu', 'costTex'];
@@ -274,6 +299,7 @@ function pccWipSincronizar_(ss) {
   var published = (pccWipApi_('get', '?fields=sheets(properties(title))').sheets || [])
     .some(function(sheet) { return sheet.properties.title === PCC_WIP_HOJA; });
   if (published && same) {
+    pccWipEstado_(ss, 'PUBLICADO: corte ' + previous.cutoff + ' · los cuatro Excel ya se procesaron.');
     Logger.log('WIP costos: mismos cuatro Excel; no se reprocesan.');
     return;
   }
@@ -289,15 +315,10 @@ function pccWipSincronizar_(ss) {
     return;
   }
   pccWipEstado_(ss, 'VALIDANDO');
-  var cutoffRows = pccWipValores_(PCC_WIP_CONTROL + '!B2');
+  var cutoffRows = pccWipValores_(PCC_WIP_CONTROL + '!B2:B4');
   var cutoff = pccWipFecha_(cutoffRows[0] && cutoffRows[0][0]);
-  keys.map(function(key) { return versions[key]; }).forEach(function(version) {
-    var uploadDate = Utilities.formatDate(new Date(version), 'America/Bogota', 'yyyy-MM-dd');
-    var lagDays = Math.floor((Date.parse(uploadDate + 'T12:00:00Z') - Date.parse(cutoff + 'T12:00:00Z')) / 86400000);
-    if (lagDays < 0 || lagDays > 1) {
-      throw new Error('La fecha de CONTROL_WIP!B2 debe ser la del cargue de los cuatro Excel o el día anterior.');
-    }
-  });
+  var confirmation = cutoffRows[2] && cutoffRows[2][0];
+  pccWipValidarFechas_(cutoff, versions, confirmation === pccWipPaquete_(cutoff, versions));
   if (previous.cutoff && cutoff < previous.cutoff) throw new Error('El corte WIP no puede retroceder.');
 
   var eu = pccWipLeerCostos_(leerExcel(PCC_WIP_EU_FILE_ID), 'EU');

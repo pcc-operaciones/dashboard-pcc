@@ -6,6 +6,16 @@ const vm = require('node:vm');
 const source = fs.readFileSync(require('node:path').join(__dirname, '../apps-script/production-wip/CostosWip.gs'), 'utf8');
 const header = ['O.P. Número', 'ESTADO OP:', 'Real acum. MP', 'Real acum. MO', 'Real acum. CIF', 'Real acum.'];
 
+test('identifica archivos anteriores y exige confirmar el paquete tardío', () => {
+  const app = context();
+  const regular = Date.parse('2026-11-24T15:00Z');
+  const dates = {lotEu:regular, lotTex:regular, costEu:regular, costTex:Date.parse('2026-11-25T15:00Z')};
+  assert.throws(() => app.pccWipValidarFechas_('2026-11-23',dates,false), /Costos TEX 2026-11-25/);
+  assert.doesNotThrow(() => app.pccWipValidarFechas_('2026-11-23',dates,true));
+  assert.throws(() => app.pccWipValidarFechas_('2026-11-25',dates,true), /Anteriores.*Lotes EU/);
+  assert.notEqual(app.pccWipPaquete_('2026-11-23',dates), app.pccWipPaquete_('2026-11-23',{...dates,costTex:regular}));
+});
+
 function context(overrides = {}) {
   const sandbox = {
     Date, JSON, String, Number, Object, Array, Math, Error, isFinite,

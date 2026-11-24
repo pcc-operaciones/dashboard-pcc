@@ -20,11 +20,13 @@ function abrirPanelCargaWip() {
   #estado.ok{border-color:#a7d7bd;background:#eef9f1}#estado.error{border-color:#efb4b4;background:#fff4f4}
   small{display:block;color:#60758a;margin-top:10px}
   details{margin-top:16px}summary{cursor:pointer;font-weight:700}details label{margin-top:10px}
+  label.confirmacion{font-weight:400;margin:8px 0}label.confirmacion input{width:auto}
 </style></head><body>
   <h2>Carga de Producción y WIP</h2>
   <p>Reemplaza primero los cuatro Excel de lotes y costos EU/TEX en Drive. Todos deben corresponder al mismo corte.</p>
   <label for="corte">Fecha real del corte de los cuatro Excel</label>
   <input id="corte" type="date" required>
+  <label class="confirmacion"><input type="checkbox" id="cargaTardia"> Confirmo que los cuatro Excel cargados con atraso corresponden al corte indicado.</label>
   <button id="procesar" type="button">Procesar los cuatro Excel</button>
   <button id="consultar" class="secondary" type="button">Consultar estado</button>
   <small>El proceso copia los lotes y luego calcula las alertas y costos. Mantén abierto este panel hasta ver el resultado.</small>
@@ -41,16 +43,16 @@ function abrirPanelCargaWip() {
   function mostrar(message,kind){el('estado').textContent=message;el('estado').className=kind||''}
   function ejecutar(name,args){return new Promise(function(resolve,reject){
     var call=google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
-    if(name==='guardarFechaPanelWip')call.guardarFechaPanelWip(args[0]);
+    if(name==='guardarFechaPanelWip')call.guardarFechaPanelWip(args[0],args[1]);
     else if(name==='sincronizarDatos')call.sincronizarDatos();
     else if(name==='calcularKPIs')call.calcularKPIs();
     else if(name==='estadoPanelWip')call.estadoPanelWip();
     else if(name==='registrarCierreOperaciones')call.registrarCierreOperaciones(args[0]);
     else reject(new Error('Acción desconocida'));
   })}
-  function ocupado(value){el('procesar').disabled=value;el('consultar').disabled=value;el('corte').disabled=value}
+  function ocupado(value){el('procesar').disabled=value;el('consultar').disabled=value;el('corte').disabled=value;el('cargaTardia').disabled=value}
   async function consultar(){
-    try{var x=await ejecutar('estadoPanelWip');mostrar('Fecha declarada: '+(x.cutoff||'pendiente')+'\\nEstado: '+x.status+'\\nOP publicadas: '+x.rows,(x.status||'').indexOf('PUBLICADO')===0?'ok':'')}
+    try{var x=await ejecutar('estadoPanelWip');mostrar('Fecha declarada: '+(x.cutoff||'pendiente')+'\\nEstado: '+x.status+'\\nOP publicadas: '+x.rows+'\\nDrive: '+x.files.map(function(file){return file.label+' '+file.date}).join(', '),(x.status||'').indexOf('PUBLICADO')===0?'ok':'')}
     catch(e){mostrar((e&&e.message)||String(e),'error')}
   }
   async function procesar(){
@@ -59,7 +61,8 @@ function abrirPanelCargaWip() {
     ocupado(true);
     try{
       mostrar('Guardando la fecha del corte…');
-      await ejecutar('guardarFechaPanelWip',[cutoff]);
+      await ejecutar('guardarFechaPanelWip',[cutoff,el('cargaTardia').checked]);
+      el('cargaTardia').checked=false;
       mostrar('Paso 1 de 2: copiando los Excel de lotes y calidad…');
       await ejecutar('sincronizarDatos');
       mostrar('Paso 2 de 2: calculando alertas y costos WIP…');
@@ -87,13 +90,16 @@ function abrirPanelCargaWip() {
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
-function guardarFechaPanelWip(value) {
+function guardarFechaPanelWip(value, lateConfirmed) {
   var cutoff = pccWipFecha_(value);
   var today = Utilities.formatDate(new Date(), 'America/Bogota', 'yyyy-MM-dd');
   if (cutoff > today) throw new Error('La fecha de corte no puede ser futura.');
-  pccWipEscribir_(PCC_WIP_CONTROL + '!A2:B3', [
+  var versions = pccWipVersiones_(DriveApp.getFileById(PCC_WIP_EU_FILE_ID), DriveApp.getFileById(PCC_WIP_TEX_FILE_ID));
+  pccWipValidarFechas_(cutoff, versions, lateConfirmed === true);
+  pccWipEscribir_(PCC_WIP_CONTROL + '!A2:B4', [
     ['Fecha de corte EU y TEX (AAAA-MM-DD)', cutoff],
-    ['Estado de costos WIP', 'FECHA REGISTRADA · pendiente de procesar los cuatro Excel']
+    ['Estado de costos WIP', 'FECHA REGISTRADA · pendiente de procesar los cuatro Excel'],
+    ['Confirmación de carga tardía', lateConfirmed === true ? pccWipPaquete_(cutoff, versions) : '']
   ]);
   return cutoff;
 }
@@ -106,6 +112,7 @@ function estadoPanelWip() {
   return {
     cutoff: String(control[0] && control[0][0] || ''),
     status: String(control[1] && control[1][0] || 'Sin procesar'),
-    rows: Math.max(0, costs.length - 1)
+    rows: Math.max(0, costs.length - 1),
+    files: pccWipFechas_(pccWipVersiones_(DriveApp.getFileById(PCC_WIP_EU_FILE_ID), DriveApp.getFileById(PCC_WIP_TEX_FILE_ID)))
   };
 }

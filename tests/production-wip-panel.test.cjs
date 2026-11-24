@@ -42,11 +42,16 @@ test('guarda una fecha única en CONTROL_WIP y rechaza fechas futuras', () => {
     KPI_SPREADSHEET_ID:'book',
     Utilities:{formatDate:()=>'2026-11-14'},
     pccWipFecha_:value=>value,
+    pccWipVersiones_:()=>({}), pccWipValidarFechas_:()=>{}, pccWipPaquete_:()=> 'paquete',
+    DriveApp:{getFileById:()=>({})}, PCC_WIP_EU_FILE_ID:'eu', PCC_WIP_TEX_FILE_ID:'tex',
     pccWipEscribir_:(range, values) => written.push([range, values]),
     PCC_WIP_CONTROL:'CONTROL_WIP',
   });
   assert.equal(ctx.guardarFechaPanelWip('2026-11-13'), '2026-11-13');
-  assert.equal(written[0][0], 'CONTROL_WIP!A2:B3');
+  assert.equal(written[0][0], 'CONTROL_WIP!A2:B4');
   assert.equal(written[0][1][0][1], '2026-11-13');
+  assert.equal(written[0][1][2][1], '');
+  ctx.guardarFechaPanelWip('2026-11-13',true);
+  assert.equal(written[1][1][2][1], 'paquete');
   assert.throws(() => ctx.guardarFechaPanelWip('2026-11-15'), /futura/);
 });
